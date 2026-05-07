@@ -1,10 +1,11 @@
 import { fetchLaptops } from "@/lib/supabase";
 import TrackerClient from "@/components/TrackerClient";
+import type { Laptop } from "@/lib/supabase";
 
 export const revalidate = 60; // ISR: revalidate every 60s
 
 export default async function Home() {
-  let laptops = [];
+  let laptops: Laptop[] = [];
   let error = null;
 
   try {
