@@ -6,7 +6,7 @@ export const revalidate = 60; // ISR: revalidate every 60s
 
 export default async function Home() {
   let laptops: Laptop[] = [];
-  let error = null;
+  let error: string | null = null;
 
   try {
     laptops = await fetchLaptops();

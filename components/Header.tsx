@@ -1,5 +1,7 @@
 "use client";
 
+import ThemeToggle from "./ThemeToggle";
+
 export default function Header({ onAdd }: { onAdd: () => void }) {
   return (
     <header style={{
@@ -41,26 +43,29 @@ export default function Header({ onAdd }: { onAdd: () => void }) {
         </p>
       </div>
 
-      <button
-        onClick={onAdd}
-        style={{
-          background: "var(--accent)",
-          color: "#fff",
-          border: "none",
-          borderRadius: 10,
-          padding: "12px 24px",
-          fontFamily: "'Syne', sans-serif",
-          fontWeight: 700,
-          fontSize: 14,
-          cursor: "pointer",
-          transition: "opacity 0.15s, transform 0.15s",
-          whiteSpace: "nowrap",
-        }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = "0.85"; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
-      >
-        + Add Laptop
-      </button>
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <ThemeToggle />
+        <button
+          onClick={onAdd}
+          style={{
+            background: "var(--accent)",
+            color: "#fff",
+            border: "none",
+            borderRadius: 10,
+            padding: "12px 24px",
+            fontFamily: "'Syne', sans-serif",
+            fontWeight: 700,
+            fontSize: 14,
+            cursor: "pointer",
+            transition: "opacity 0.15s, transform 0.15s",
+            whiteSpace: "nowrap",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = "0.85"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+        >
+          + Add Laptop
+        </button>
+      </div>
     </header>
   );
 }
