@@ -99,7 +99,7 @@ function scoreLaptop(
   }
 
   // Prefer discounted laptops
-  if (laptop.original_price && laptop.current_price && laptop.current_price < laptop.original_price) {
+  if (laptop.retail_price && laptop.current_price && laptop.current_price < laptop.retail_price) {
     score += 2;
   }
 
