@@ -242,9 +242,9 @@ export default function BestPicksPage() {
             <>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16, marginBottom: 40 }}>
                 {results.map((l) => {
-                  const hasDiscount = l.original_price && l.current_price && l.current_price < l.original_price;
+                  const hasDiscount = l.retail_price && l.current_price && l.current_price < l.retail_price;
                   const discount = hasDiscount
-                    ? Math.round((1 - (l.current_price! / l.original_price!)) * 100)
+                    ? Math.round((1 - (l.current_price! / l.retail_price!)) * 100)
                     : null;
                   return (
                     <div key={l.id}
