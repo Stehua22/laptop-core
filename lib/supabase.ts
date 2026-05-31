@@ -1,17 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
-<<<<<<< HEAD
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-=======
-// Fallbacks avoid `createClient` throwing at build-time when env vars are
-// absent (e.g. during Vercel's static analysis). Actual requests will fail
-// loudly at runtime, which we handle via try/catch in the page and client.
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
->>>>>>> origin/fix/vercel-build-and-theme-toggle
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -28,13 +18,10 @@ export type Laptop = {
   created_at: string;
   price_history?: PriceEntry[];
   current_price?: number;
-<<<<<<< HEAD
   is_deal?: boolean;
   image_url?: string;
   pros?: string[];
   cons?: string[];
-=======
->>>>>>> origin/fix/vercel-build-and-theme-toggle
 };
 
 export type PriceEntry = {
@@ -44,7 +31,6 @@ export type PriceEntry = {
   recorded_at: string;
 };
 
-// ── Fetch all laptops with their latest price ─────────────────────────────────
 export async function fetchLaptops(): Promise<Laptop[]> {
   const { data: laptops, error } = await supabase
     .from("laptops")
@@ -66,29 +52,20 @@ export async function fetchLaptops(): Promise<Laptop[]> {
   });
 }
 
-// ── Add a new laptop ──────────────────────────────────────────────────────────
 export async function addLaptop(
   laptop: Omit<Laptop, "id" | "created_at" | "price_history" | "current_price">,
   initialPrice: number
 ) {
-  const { data, error } = await supabase
-    .from("laptops")
-    .insert(laptop)
-    .select()
-    .single();
-
+  const { data, error } = await supabase.from("laptops").insert(laptop).select().single();
   if (error) throw error;
-
   await supabase.from("price_history").insert({
     laptop_id: data.id,
     price: initialPrice,
     recorded_at: new Date().toISOString().split("T")[0],
   });
-
   return data;
 }
 
-// ── Update price ──────────────────────────────────────────────────────────────
 export async function addPriceEntry(laptopId: number, price: number) {
   const { error } = await supabase.from("price_history").insert({
     laptop_id: laptopId,
@@ -98,7 +75,6 @@ export async function addPriceEntry(laptopId: number, price: number) {
   if (error) throw error;
 }
 
-// ── Delete a laptop ───────────────────────────────────────────────────────────
 export async function deleteLaptop(id: number) {
   const { error } = await supabase.from("laptops").delete().eq("id", id);
   if (error) throw error;
