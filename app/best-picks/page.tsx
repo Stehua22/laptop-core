@@ -78,7 +78,7 @@ function scoreLaptop(
   portability: string
 ): number {
   let score = 0;
-  const price = laptop.current_price ?? laptop.original_price ?? 0;
+  const price = laptop.current_price ?? laptop.retail_price ?? 0;
   const [min, max] = BUDGET_RANGES[budget] ?? [0, Infinity];
   const searchText = `${laptop.model} ${laptop.brand} ${(laptop as any).specs ?? ""}`.toLowerCase();
 
