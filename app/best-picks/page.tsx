@@ -268,11 +268,11 @@ export default function BestPicksPage() {
                         {/* Price */}
                         <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
                           <span style={{ fontSize: 24, fontWeight: 800, color: accent3, letterSpacing: "-0.03em" }}>
-                            {fmtPrice(l.current_price ?? l.original_price ?? 0)}
+                            {fmtPrice(l.current_price ?? l.retail_price ?? 0)}
                           </span>
                           {hasDiscount && (
                             <>
-                              <span style={{ fontSize: 13, color: textMuted, textDecoration: "line-through" }}>{fmtPrice(l.original_price!)}</span>
+                              <span style={{ fontSize: 13, color: textMuted, textDecoration: "line-through" }}>{fmtPrice(l.retail_price!)}</span>
                               <span style={{ fontSize: 11, fontWeight: 700, color: accent2, background: isDark ? "rgba(247,194,106,0.12)" : "rgba(217,147,14,0.1)", border: `1px solid ${isDark ? "rgba(247,194,106,0.3)" : "rgba(217,147,14,0.25)"}`, borderRadius: 6, padding: "2px 8px" }}>-{discount}%</span>
                             </>
                           )}
