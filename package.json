@@ -1,3 +1,48 @@
+Mode                 LastWriteTime         Length Name                                                                                        
+----                 -------------         ------ ----                                                                                        
+d-----        2026-05-29  10:21 PM                .claude                                                                                     
+d-----        2026-05-31   9:18 AM                app                                                                                         
+d-----        2026-05-29  10:38 PM                components                                                                                  
+d-----        2026-05-29  10:21 PM                laptop-core-master                                                                          
+d-----        2026-05-29  10:38 PM                lib                                                                                         
+d-----        2026-05-29  10:24 PM                node_modules                                                                                
+d-----        2026-05-29  10:21 PM                scripts                                                                                     
+-a----        2026-05-29  10:38 PM            262 .env.example                                                                                
+-a----        2026-05-29  10:21 PM            286 .gitignore                                                                                  
+-a----        2026-05-29  10:21 PM             94 next.config.js                                                                              
+-a----        2026-05-29  10:38 PM         241552 package-lock.json                                                                           
+-a----        2026-05-29  10:38 PM           1288 package.json                                                                                
+-a----        2026-05-29  10:21 PM             83 postcss.config.js                                                                           
+-a----        2026-05-29  10:21 PM           3382 README.md                                                                                   
+-a----        2026-05-29  10:38 PM           9676 supabase-schema.sql                                                                         
+-a----        2026-05-29  10:21 PM            397 tailwind.config.js                                                                          
+-a----        2026-05-29  10:21 PM            538 tsconfig.json                                                                               
+
+
+PS C:\Users\huach\Downloads\laptop-core-master> cat next.config.js
+/** @type {import('next').NextConfig} */
+const nextConfig = {};
+
+module.exports = nextConfig;
+PS C:\Users\huach\Downloads\laptop-core-master> echo "" > .nvmrc
+PS C:\Users\huach\Downloads\laptop-core-master> echo "20" > .node-version
+PS C:\Users\huach\Downloads\laptop-core-master> git add .
+>> git commit -m "fix: set node version"
+>> git push
+[master 6d5b9bc] fix: set node version
+ 2 files changed, 0 insertions(+), 0 deletions(-)
+ create mode 100644 .node-version
+ create mode 100644 .nvmrc
+Enumerating objects: 5, done.
+Counting objects: 100% (5/5), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (2/2), done.
+Writing objects: 100% (4/4), 339 bytes | 339.00 KiB/s, done.
+Total 4 (delta 1), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (1/1), completed with 1 local object.
+To https://github.com/Stehua22/laptop-core.git
+   8d3f282..6d5b9bc  master -> master
+PS C:\Users\huach\Downloads\laptop-core-master> cat package.json
 {
   "name": "laptop-price-tracker",
   "version": "0.1.0",
@@ -50,3 +95,4 @@
 >>>>>>> origin/fix/vercel-build-and-theme-toggle
   }
 }
+PS C:\Users\huach\Downloads\laptop-core-master> 
