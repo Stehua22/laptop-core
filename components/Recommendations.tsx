@@ -1,13 +1,8 @@
 "use client";
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/fix/vercel-build-and-theme-toggle
 import type { Laptop } from "@/lib/supabase";
 import LaptopCard from "./LaptopCard";
 
 const CATEGORIES = [
-<<<<<<< HEAD
   { key: "student", label: "Students", icon: "🎓" },
   { key: "home", label: "Home", icon: "🏠" },
   { key: "business", label: "Business", icon: "💼" },
@@ -51,7 +46,6 @@ export default function Recommendations({ laptops, allLaptops, category, recomme
           )}
         </div>
       </div>
-
       {isAdmin && (
         <div className="animate-scale-in" style={{ background: "var(--surface)", border: "1px solid var(--accent)", borderRadius: 14, padding: "16px 20px", marginBottom: 20 }}>
           <p style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>
@@ -62,8 +56,7 @@ export default function Recommendations({ laptops, allLaptops, category, recomme
               const selected = currentIds.includes(l.id);
               return (
                 <button key={l.id} onClick={() => onToggleRecommendation(category, l.id)}
-                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 10, cursor: "pointer", border: `1px solid ${selected ? "var(--accent)" : "var(--border)"}`, background: selected ? "rgba(139,179,245,0.1)" : "transparent", color: "inherit", textAlign: "left" }}
-                >
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 10, cursor: "pointer", border: `1px solid ${selected ? "var(--accent)" : "var(--border)"}`, background: selected ? "rgba(139,179,245,0.1)" : "transparent", color: "inherit", textAlign: "left" }}>
                   <span style={{ width: 18, height: 18, borderRadius: 5, flexShrink: 0, border: `1.5px solid ${selected ? "var(--accent)" : "var(--border)"}`, background: selected ? "var(--accent)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 700 }}>{selected ? "✓" : ""}</span>
                   <span style={{ fontSize: 12, lineHeight: 1.3 }}>
                     <span style={{ display: "block", fontWeight: 500 }}>{l.model}</span>
@@ -75,7 +68,6 @@ export default function Recommendations({ laptops, allLaptops, category, recomme
           </div>
         </div>
       )}
-
       {laptops.length > 0 ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
           {laptops.map((l) => <LaptopCard key={l.id} laptop={l} onSelect={onSelect} onHistory={onHistory} currency={currency} cadToUsd={cadToUsd} />)}
@@ -83,94 +75,8 @@ export default function Recommendations({ laptops, allLaptops, category, recomme
       ) : (
         <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)", fontSize: 13, background: "var(--surface)", borderRadius: 14, border: "1px solid var(--border)" }}>
           {isAdmin ? "Check laptops above to add them to this category." : "No picks yet for this category."}
-=======
-  { key: "student",  label: "Students" },
-  { key: "home",     label: "Home" },
-  { key: "business", label: "Business" },
-];
-
-type Props = {
-  laptops: Laptop[];
-  category: string;
-  onCategoryChange: (c: string) => void;
-  onSelect: (l: Laptop) => void;
-  onHistory: (l: Laptop) => void;
-};
-
-export default function Recommendations({ laptops, category, onCategoryChange, onSelect, onHistory }: Props) {
-  return (
-    <section style={{ marginBottom: 40 }}>
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        flexWrap: "wrap",
-        gap: 12,
-        marginBottom: 16,
-      }}>
-        <div style={{
-          fontFamily: "'DM Mono', monospace",
-          fontSize: 11,
-          color: "var(--text-muted)",
-          textTransform: "uppercase",
-          letterSpacing: "0.12em",
-        }}>
-          // best picks
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          {CATEGORIES.map((c) => (
-            <button
-              key={c.key}
-              onClick={() => onCategoryChange(c.key)}
-              style={{
-                background: category === c.key ? "var(--accent)" : "transparent",
-                border: `1px solid ${category === c.key ? "var(--accent)" : "var(--border)"}`,
-                borderRadius: 8,
-                color: category === c.key ? "#fff" : "var(--text-muted)",
-                fontFamily: "'DM Mono', monospace",
-                fontSize: 11,
-                padding: "6px 14px",
-                cursor: "pointer",
-                transition: "all 0.15s",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-              }}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {laptops.length > 0 ? (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-          gap: 14,
-        }}>
-          {laptops.map((l) => (
-            <LaptopCard key={l.id} laptop={l} onSelect={onSelect} onHistory={onHistory} />
-          ))}
-        </div>
-      ) : (
-        <div style={{
-          padding: "32px",
-          textAlign: "center",
-          color: "var(--text-muted)",
-          fontFamily: "'DM Mono', monospace",
-          fontSize: 12,
-          background: "var(--surface)",
-          borderRadius: 12,
-          border: "1px solid var(--border)",
-        }}>
-          No picks yet for this category.
->>>>>>> origin/fix/vercel-build-and-theme-toggle
         </div>
       )}
     </section>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> origin/fix/vercel-build-and-theme-toggle
