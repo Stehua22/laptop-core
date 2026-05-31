@@ -1,5 +1,8 @@
 "use client";
+<<<<<<< HEAD
 import { useState } from "react";
+=======
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
 
 type Props = {
   search: string;
@@ -11,6 +14,7 @@ type Props = {
   onSort: (v: string) => void;
 };
 
+<<<<<<< HEAD
 export default function Controls({
   search, onSearch, brands, brandFilter, onBrandFilter, sortBy, onSort,
 }: Props) {
@@ -40,6 +44,33 @@ export default function Controls({
         fontSize: 10, color: "var(--text-muted)",
         textTransform: "uppercase", letterSpacing: "0.14em",
         marginBottom: 12, fontWeight: 600,
+=======
+const inputStyle: React.CSSProperties = {
+  background: "var(--surface)",
+  border: "1px solid var(--border)",
+  borderRadius: 10,
+  padding: "10px 14px",
+  color: "var(--text)",
+  fontFamily: "'DM Mono', monospace",
+  fontSize: 13,
+  outline: "none",
+  transition: "border-color 0.2s",
+  width: "100%",
+};
+
+export default function Controls({
+  search, onSearch, brands, brandFilter, onBrandFilter, sortBy, onSort,
+}: Props) {
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <div style={{
+        fontFamily: "'DM Mono', monospace",
+        fontSize: 11,
+        color: "var(--text-muted)",
+        textTransform: "uppercase",
+        letterSpacing: "0.12em",
+        marginBottom: 12,
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
       }}>
         // filter & sort
       </div>
@@ -47,6 +78,7 @@ export default function Controls({
         display: "grid",
         gridTemplateColumns: "1fr auto auto",
         gap: 10,
+<<<<<<< HEAD
       }}>
         {/* Search */}
         <div style={{ position: "relative" }}>
@@ -102,10 +134,30 @@ export default function Controls({
           }}
           onFocus={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 0 0 3px rgba(139,179,245,0.1)"; }}
           onBlur={(e) => { (e.currentTarget as HTMLElement).style.borderColor = brandFilter ? "var(--accent)" : "var(--border)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+=======
+        flexWrap: "wrap",
+      }}>
+        <input
+          type="text"
+          placeholder="Search brand, model, specs..."
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          style={inputStyle}
+          onFocus={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)"; }}
+          onBlur={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
+        />
+        <select
+          value={brandFilter}
+          onChange={(e) => onBrandFilter(e.target.value)}
+          style={{ ...inputStyle, width: "auto", minWidth: 140, cursor: "pointer" }}
+          onFocus={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)"; }}
+          onBlur={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
         >
           <option value="">All Brands</option>
           {brands.map((b) => <option key={b} value={b}>{b}</option>)}
         </select>
+<<<<<<< HEAD
 
         {/* Sort */}
         <select
@@ -114,6 +166,14 @@ export default function Controls({
           style={{ ...selectStyle, minWidth: 170 }}
           onFocus={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 0 0 3px rgba(139,179,245,0.1)"; }}
           onBlur={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+=======
+        <select
+          value={sortBy}
+          onChange={(e) => onSort(e.target.value)}
+          style={{ ...inputStyle, width: "auto", minWidth: 160, cursor: "pointer" }}
+          onFocus={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)"; }}
+          onBlur={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
         >
           <option value="newest">Newest First</option>
           <option value="priceAsc">Price: Low → High</option>

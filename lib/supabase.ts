@@ -1,7 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 
+<<<<<<< HEAD
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+=======
+// Fallbacks avoid `createClient` throwing at build-time when env vars are
+// absent (e.g. during Vercel's static analysis). Actual requests will fail
+// loudly at runtime, which we handle via try/catch in the page and client.
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+const supabaseAnonKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -18,10 +28,13 @@ export type Laptop = {
   created_at: string;
   price_history?: PriceEntry[];
   current_price?: number;
+<<<<<<< HEAD
   is_deal?: boolean;
   image_url?: string;
   pros?: string[];
   cons?: string[];
+=======
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
 };
 
 export type PriceEntry = {

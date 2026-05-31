@@ -1,9 +1,15 @@
 "use client";
 
+<<<<<<< HEAD
 import { useRouter } from "next/navigation";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import type { Laptop } from "@/lib/supabase";
 import { addLaptop, addPriceEntry, deleteLaptop, supabase } from "@/lib/supabase";
+=======
+import { useState, useMemo, useCallback } from "react";
+import type { Laptop } from "@/lib/supabase";
+import { addLaptop, addPriceEntry, deleteLaptop } from "@/lib/supabase";
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
 import Header from "./Header";
 import StatsBar from "./StatsBar";
 import Controls from "./Controls";
@@ -13,6 +19,7 @@ import PriceHistoryModal from "./PriceHistoryModal";
 import AddLaptopModal from "./AddLaptopModal";
 import Recommendations from "./Recommendations";
 import Toast from "./Toast";
+<<<<<<< HEAD
 import AdminPanel from "./AdminPanel";
 
 type ToastMsg = { id: number; message: string; type: "success" | "error" };
@@ -36,6 +43,17 @@ export function formatPrice(price: number, currency: "CAD" | "USD", rate = CAD_T
   }).format(value);
 }
 
+=======
+
+type ToastMsg = { id: number; message: string; type: "success" | "error" };
+
+const RECOMMENDATION_IDS: Record<string, number[]> = {
+  student:  [49, 5, 42, 13],
+  home:     [8, 20, 50, 25],
+  business: [4, 18, 21, 41],
+};
+
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
 export default function TrackerClient({
   initialLaptops,
   dbError,
@@ -48,12 +66,16 @@ export default function TrackerClient({
   const [brandFilter, setBrandFilter] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [recCategory, setRecCategory] = useState("student");
+<<<<<<< HEAD
   const [recommendationIds, setRecommendationIds] = useState<Record<string, number[]>>(DEFAULT_RECOMMENDATION_IDS);
   const [recsLoaded, setRecsLoaded] = useState(false);
+=======
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
 
   const [selectedLaptop, setSelectedLaptop] = useState<Laptop | null>(null);
   const [historyLaptop, setHistoryLaptop] = useState<Laptop | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+<<<<<<< HEAD
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
   const [loading, setLoading] = useState(false);
@@ -142,6 +164,10 @@ export default function TrackerClient({
       setAuthError("Incorrect password. Try again.");
     }
   };
+=======
+  const [toasts, setToasts] = useState<ToastMsg[]>([]);
+  const [loading, setLoading] = useState(false);
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
 
   // ── Toast helpers ─────────────────────────────────────────────────────────
   const showToast = useCallback((message: string, type: "success" | "error" = "success") => {
@@ -152,7 +178,11 @@ export default function TrackerClient({
 
   // ── Derived data ──────────────────────────────────────────────────────────
   const brands = useMemo(
+<<<<<<< HEAD
     () => Array.from(new Set(laptops.map((l) => l.brand))).sort(),
+=======
+    () => [...new Set(laptops.map((l) => l.brand))].sort(),
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
     [laptops]
   );
 
@@ -166,6 +196,10 @@ export default function TrackerClient({
       const matchesBrand = !brandFilter || l.brand === brandFilter;
       return matchesSearch && matchesBrand;
     });
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
     switch (sortBy) {
       case "priceAsc":  list = [...list].sort((a, b) => (a.current_price ?? 0) - (b.current_price ?? 0)); break;
       case "priceDesc": list = [...list].sort((a, b) => (b.current_price ?? 0) - (a.current_price ?? 0)); break;
@@ -175,9 +209,15 @@ export default function TrackerClient({
   }, [laptops, search, brandFilter, sortBy]);
 
   const recommendations = useMemo(() => {
+<<<<<<< HEAD
     const ids = recommendationIds[recCategory] ?? [];
     return ids.map((id) => laptops.find((l) => l.id === id)).filter(Boolean) as Laptop[];
   }, [laptops, recCategory, recommendationIds]);
+=======
+    const ids = RECOMMENDATION_IDS[recCategory] ?? [];
+    return ids.map((id) => laptops.find((l) => l.id === id)).filter(Boolean) as Laptop[];
+  }, [laptops, recCategory]);
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
 
   const stats = useMemo(() => {
     if (!laptops.length) return { count: 0, avg: 0, min: 0, max: 0 };
@@ -190,6 +230,7 @@ export default function TrackerClient({
     };
   }, [laptops]);
 
+<<<<<<< HEAD
   // ── Recommendation management ─────────────────────────────────────────────
   const handleToggleRecommendation = async (category: string, laptopId: number) => {
     const current = recommendationIds[category] ?? [];
@@ -208,11 +249,17 @@ export default function TrackerClient({
     }
   };
 
+=======
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
   // ── Actions ───────────────────────────────────────────────────────────────
   const handleAddLaptop = async (data: {
     brand: string; model: string; specs: string;
     store: string; url: string; retail_price: number;
+<<<<<<< HEAD
     release_year: number | null; image_url: string;
+=======
+    release_year: number | null;
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
   }) => {
     setLoading(true);
     try {
@@ -220,6 +267,10 @@ export default function TrackerClient({
         { ...data, date_added: new Date().toISOString().split("T")[0] },
         data.retail_price
       );
+<<<<<<< HEAD
+=======
+      // Re-fetch to get the new record with price history
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
       const { fetchLaptops } = await import("@/lib/supabase");
       setLaptops(await fetchLaptops());
       setShowAddModal(false);
@@ -263,6 +314,7 @@ export default function TrackerClient({
     }
   };
 
+<<<<<<< HEAD
   const handleMoveToDeals = async (laptop: Laptop) => {
     if (!confirm(`Move "${laptop.model}" to Crazy Deals?`)) return;
     try {
@@ -281,19 +333,33 @@ export default function TrackerClient({
   const handleAdminClick = () => requireAuth(() => setShowAdminPanel(true));
   const handleDeleteClick = (id: number) => requireAuth(() => handleDeleteLaptop(id));
 
+=======
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
   return (
     <div style={{ position: "relative", zIndex: 1 }}>
       <div style={{ maxWidth: 1300, margin: "0 auto", padding: "32px 20px" }}>
         {dbError && (
           <div style={{
+<<<<<<< HEAD
             background: "rgba(247,106,106,0.1)", border: "1px solid rgba(247,106,106,0.3)",
             borderRadius: 12, padding: "14px 20px", marginBottom: 24,
             color: "#f76a6a", fontSize: 13,
+=======
+            background: "rgba(247, 106, 106, 0.1)",
+            border: "1px solid rgba(247, 106, 106, 0.3)",
+            borderRadius: 12,
+            padding: "14px 20px",
+            marginBottom: 24,
+            color: "#f76a6a",
+            fontFamily: "'DM Mono', monospace",
+            fontSize: 13,
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
           }}>
             ⚠ {dbError}
           </div>
         )}
 
+<<<<<<< HEAD
         <Header
           onAdd={handleAddClick}
           isDark={isDark}
@@ -318,6 +384,16 @@ export default function TrackerClient({
           onUnlockAdmin={() => requireAuth(() => {})}
           currency={currency}
           cadToUsd={cadToUsd}
+=======
+        <Header onAdd={() => setShowAddModal(true)} />
+        <StatsBar stats={stats} />
+        <Recommendations
+          laptops={recommendations}
+          category={recCategory}
+          onCategoryChange={setRecCategory}
+          onSelect={setSelectedLaptop}
+          onHistory={setHistoryLaptop}
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
         />
         <Controls
           search={search}
@@ -332,11 +408,14 @@ export default function TrackerClient({
           laptops={filtered}
           onSelect={setSelectedLaptop}
           onHistory={setHistoryLaptop}
+<<<<<<< HEAD
           isAdmin={unlocked}
           onMoveToDeals={(l) => requireAuth(() => handleMoveToDeals(l))}
           onDelete={(id) => requireAuth(() => handleDeleteLaptop(id))}
           currency={currency}
           cadToUsd={cadToUsd}
+=======
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
         />
       </div>
 
@@ -345,10 +424,15 @@ export default function TrackerClient({
           laptop={selectedLaptop}
           onClose={() => setSelectedLaptop(null)}
           onUpdatePrice={handleUpdatePrice}
+<<<<<<< HEAD
           onDelete={handleDeleteClick}
           onHistory={(l) => { setSelectedLaptop(null); setHistoryLaptop(l); }}
           currency={currency}
           cadToUsd={cadToUsd}
+=======
+          onDelete={handleDeleteLaptop}
+          onHistory={(l) => { setSelectedLaptop(null); setHistoryLaptop(l); }}
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
         />
       )}
 
@@ -356,8 +440,11 @@ export default function TrackerClient({
         <PriceHistoryModal
           laptop={historyLaptop}
           onClose={() => setHistoryLaptop(null)}
+<<<<<<< HEAD
           currency={currency}
           cadToUsd={cadToUsd}
+=======
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
         />
       )}
 
@@ -369,6 +456,7 @@ export default function TrackerClient({
         />
       )}
 
+<<<<<<< HEAD
       {showAdminPanel && (
         <AdminPanel
           laptops={laptops}
@@ -426,6 +514,8 @@ export default function TrackerClient({
         </div>
       )}
 
+=======
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
       <div style={{ position: "fixed", top: 20, right: 20, display: "flex", flexDirection: "column", gap: 10, zIndex: 9999 }}>
         {toasts.map((t) => <Toast key={t.id} message={t.message} type={t.type} />)}
       </div>

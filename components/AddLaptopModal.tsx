@@ -7,7 +7,11 @@ type Props = {
   onSubmit: (data: {
     brand: string; model: string; specs: string;
     store: string; url: string; retail_price: number;
+<<<<<<< HEAD
     release_year: number | null; image_url: string;
+=======
+    release_year: number | null;
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
   }) => void;
   loading: boolean;
 };
@@ -38,7 +42,11 @@ const labelStyle: React.CSSProperties = {
 export default function AddLaptopModal({ onClose, onSubmit, loading }: Props) {
   const [form, setForm] = useState({
     brand: "", model: "", specs: "", store: "", url: "",
+<<<<<<< HEAD
     retail_price: "", release_year: "", image_url: "",
+=======
+    retail_price: "", release_year: "",
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
   });
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -54,7 +62,10 @@ export default function AddLaptopModal({ onClose, onSubmit, loading }: Props) {
       url: form.url.trim(),
       retail_price: parseFloat(form.retail_price),
       release_year: form.release_year ? parseInt(form.release_year) : null,
+<<<<<<< HEAD
       image_url: form.image_url.trim(),
+=======
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
     });
   };
 
@@ -138,6 +149,7 @@ export default function AddLaptopModal({ onClose, onSubmit, loading }: Props) {
               onFocus={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)"; }}
               onBlur={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }} />
           </div>
+<<<<<<< HEAD
 
           <div>
             <label style={labelStyle}>Image URL</label>
@@ -153,6 +165,8 @@ export default function AddLaptopModal({ onClose, onSubmit, loading }: Props) {
               Tip: right-click any product image → "Copy image address"
             </p>
           </div>
+=======
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
         </div>
 
         <div style={{ padding: "16px 24px", borderTop: "1px solid var(--border)", display: "flex", gap: 10, justifyContent: "flex-end" }}>

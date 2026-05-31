@@ -1,8 +1,13 @@
+<<<<<<< HEAD
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+=======
+@import url("https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700;800&display=swap");
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+<<<<<<< HEAD
 html {
   background-color: var(--bg);
   color-scheme: dark;
@@ -64,10 +69,64 @@ html {
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
+=======
+
+:root,
+:root[data-theme="dark"] {
+  --bg: #0a0a0f;
+  --surface: #111118;
+  --surface-2: #1a1a24;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-hover: rgba(255, 255, 255, 0.14);
+  --text: #e8e8f0;
+  --text-muted: #6b6b80;
+  --text-dim: #3a3a4a;
+  --accent: #7c6af7;
+  --accent-2: #f7c26a;
+  --accent-3: #6af7b8;
+  --accent-red: #f76a6a;
+  --glow: rgba(124, 106, 247, 0.15);
+  --grid-line: rgba(124, 106, 247, 0.03);
+  --scroll-track: var(--surface);
+  --scroll-thumb: var(--surface-2);
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f6f6fb;
+  --surface: #ffffff;
+  --surface-2: #f0f0f6;
+  --border: rgba(10, 10, 20, 0.08);
+  --border-hover: rgba(10, 10, 20, 0.18);
+  --text: #1a1a24;
+  --text-muted: #5c5c70;
+  --text-dim: #a0a0b0;
+  --accent: #6249e6;
+  --accent-2: #c98a1a;
+  --accent-3: #15a877;
+  --accent-red: #d94545;
+  --glow: rgba(98, 73, 230, 0.18);
+  --grid-line: rgba(98, 73, 230, 0.05);
+  --scroll-track: #e8e8f0;
+  --scroll-thumb: #c5c5d5;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
 
 body {
   background-color: var(--bg);
   color: var(--text);
+<<<<<<< HEAD
   font-family: "Inter", sans-serif;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
@@ -77,11 +136,21 @@ body {
 }
 
 /* Subtle grid */
+=======
+  font-family: "Syne", sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Grid overlay background */
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   background-image:
+<<<<<<< HEAD
     linear-gradient(rgba(139,179,245,0.022) 1px, transparent 1px),
     linear-gradient(90deg, rgba(139,179,245,0.022) 1px, transparent 1px);
   background-size: 72px 72px;
@@ -114,10 +183,32 @@ body::after {
   from { opacity: 0; transform: translateY(24px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+=======
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--scroll-track); }
+::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+<<<<<<< HEAD
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.93) translateY(10px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
@@ -130,10 +221,19 @@ body::after {
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(220%); }
 }
+=======
+
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+>>>>>>> origin/fix/vercel-build-and-theme-toggle
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+<<<<<<< HEAD
 @keyframes float {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
   33%       { transform: translateY(-6px) rotate(1.5deg); }
@@ -289,3 +389,26 @@ input:focus, button:focus-visible {
   background: rgba(139, 179, 245, 0.25);
   color: var(--text);
 }
+=======
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--glow); }
+  50%       { box-shadow: 0 0 30px 4px var(--glow); }
+}
+
+.animate-fade-up { animation: fadeUp 0.5s ease forwards; }
+.animate-fade-in { animation: fadeIn 0.4s ease forwards; }
+.animate-spin    { animation: spin 1s linear infinite; }
+
+/* Stagger children */
+.stagger > *:nth-child(1)  { animation-delay: 0.05s; }
+.stagger > *:nth-child(2)  { animation-delay: 0.10s; }
+.stagger > *:nth-child(3)  { animation-delay: 0.15s; }
+.stagger > *:nth-child(4)  { animation-delay: 0.20s; }
+.stagger > *:nth-child(5)  { animation-delay: 0.25s; }
+.stagger > *:nth-child(6)  { animation-delay: 0.30s; }
+.stagger > *:nth-child(7)  { animation-delay: 0.35s; }
+.stagger > *:nth-child(8)  { animation-delay: 0.40s; }
+.stagger > *:nth-child(9)  { animation-delay: 0.45s; }
+.stagger > *:nth-child(10) { animation-delay: 0.50s; }
+>>>>>>> origin/fix/vercel-build-and-theme-toggle

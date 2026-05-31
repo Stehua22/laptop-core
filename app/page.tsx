@@ -29,7 +29,6 @@ export default function LandingPage() {
   const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
-    // Apply theme to html element
     document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
   }, [isDark]);
 
@@ -39,7 +38,6 @@ export default function LandingPage() {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
-  // Theme-aware style helpers
   const bg = isDark ? "#080b12" : "#f4f6ff";
   const surface = isDark ? "#0f1220" : "#ffffff";
   const surface2 = isDark ? "#171b2b" : "#eef1fb";
@@ -67,8 +65,9 @@ export default function LandingPage() {
 
       {/* Background grid */}
       <div style={{ position: "fixed", inset: 0, backgroundImage: `linear-gradient(${isDark ? "rgba(139,179,245,0.022)" : "rgba(94,143,232,0.04)"} 1px, transparent 1px), linear-gradient(90deg, ${isDark ? "rgba(139,179,245,0.022)" : "rgba(94,143,232,0.04)"} 1px, transparent 1px)`, backgroundSize: "72px 72px", pointerEvents: "none", zIndex: 0 }} />
-      {/* Top glow */}
-      <div style={{ position: "fixed", top: "-25vh", left: "50%", transform: "translateX(-50%)", width: "90vw", height: "70vh", background: `radial-gradient(ellipse at center, ${isDark ? "rgba(139,179,245,0.06)" : "rgba(94,143,232,0.08)"} 0%, transparent 65%)`, pointerEvents: "none", zIndex: 0 }} />
+
+      {/* Top glow — hidden in light mode to prevent the gradient blob bug */}
+      <div style={{ position: "fixed", top: "-25vh", left: "50%", transform: "translateX(-50%)", width: "90vw", height: "70vh", background: `radial-gradient(ellipse at center, ${isDark ? "rgba(139,179,245,0.06)" : "rgba(94,143,232,0.04)"} 0%, transparent 65%)`, pointerEvents: "none", zIndex: 0, opacity: isDark ? 1 : 0, transition: "opacity 0.35s ease" }} />
 
       {/* Nav */}
       <nav style={{
@@ -87,7 +86,7 @@ export default function LandingPage() {
             {[
               { label: "Home", href: "/" },
               { label: "Deals", href: "/deals" },
-              { label: "Best Picks", href: "/tracker#picks" },
+              { label: "Best Picks", href: "/best-picks" },
               { label: "Shop", href: "/tracker" },
             ].map(({ label, href }) => (
               <button key={label} onClick={() => router.push(href)}
@@ -126,7 +125,7 @@ export default function LandingPage() {
 
         <h1 className="animate-fade-up" style={{ fontSize: "clamp(3.2rem, 8vw, 5.5rem)", fontWeight: 900, lineHeight: 1.03, letterSpacing: "-0.05em", marginBottom: 28, animationDelay: "0.05s", color: text }}>
           Track laptop prices.<br />
-          <span style={{ background: `linear-gradient(135deg, ${accent} 0%, ${accent3} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Never overpay again.</span>
+          <span style={{ background: `linear-gradient(135deg, ${accent} 0%, ${accent3} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", display: "inline-block" }}>Never overpay again.</span>
         </h1>
 
         <p className="animate-fade-up" style={{ fontSize: 18, color: textMuted, lineHeight: 1.8, maxWidth: 500, margin: "0 auto 52px", animationDelay: "0.1s" }}>
@@ -183,7 +182,6 @@ export default function LandingPage() {
         </div>
 
         <div style={{ background: surface, border: `1px solid ${border}`, borderRadius: 20, overflow: "hidden", boxShadow: isDark ? "0 24px 64px rgba(0,0,0,0.4), 0 0 0 1px rgba(139,179,245,0.05)" : "0 24px 64px rgba(0,0,0,0.1)", transition: "all 0.35s" }}>
-          {/* Browser chrome */}
           <div style={{ padding: "14px 20px", borderBottom: `1px solid ${border}`, display: "flex", alignItems: "center", gap: 8, background: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)" }}>
             <div style={{ width: 10, height: 10, borderRadius: 99, background: "#f76a6a" }} />
             <div style={{ width: 10, height: 10, borderRadius: 99, background: "#f7c26a" }} />
