@@ -251,7 +251,7 @@ export default function BestPicksPage() {
                       style={{ background: surface, border: `1px solid ${border}`, borderRadius: 18, overflow: "hidden", transition: "all 0.25s", cursor: "pointer" }}
                       onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = borderHover; el.style.transform = "translateY(-4px)"; el.style.boxShadow = isDark ? "0 16px 40px rgba(0,0,0,0.35)" : "0 16px 40px rgba(0,0,0,0.1)"; }}
                       onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = border; el.style.transform = "translateY(0)"; el.style.boxShadow = "none"; }}
-                      onClick={() => router.push("/tracker")}
+                      onClick={() => router.push(`/laptop/${l.id}`)}
                     >
                       {/* Top accent line */}
                       <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}, ${accent3})` }} />
