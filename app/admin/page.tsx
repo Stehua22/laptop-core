@@ -223,7 +223,7 @@ export default function AdminPage() {
         {/* ── BEST PICKS TAB ── */}
         {tab === "picks" && (
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 24 }}>
-            <h2 style={{ fontWeight: 700, fontSize: 16, marginBottom: 20 }}>Best Picks Editor</h2>
+            <h2 style={{ fontWeight: 700, fontSize: 16, marginBottom: 24 }}>Best Picks Editor</h2>
 
             {/* Category groups */}
             {CATEGORY_GROUPS.map(group => (
