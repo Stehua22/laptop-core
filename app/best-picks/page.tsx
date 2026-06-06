@@ -78,7 +78,7 @@ function scoreLaptop(
   portability: string
 ): number {
   let score = 0;
-  const price = laptop.current_price ?? laptop.original_price ?? 0;
+  const price = laptop.current_price ?? laptop.retail_price ?? 0;
   const [min, max] = BUDGET_RANGES[budget] ?? [0, Infinity];
   const searchText = `${laptop.model} ${laptop.brand} ${(laptop as any).specs ?? ""}`.toLowerCase();
 
@@ -99,7 +99,7 @@ function scoreLaptop(
   }
 
   // Prefer discounted laptops
-  if (laptop.original_price && laptop.current_price && laptop.current_price < laptop.original_price) {
+  if (laptop.retail_price && laptop.current_price && laptop.current_price < laptop.retail_price) {
     score += 2;
   }
 
@@ -242,9 +242,9 @@ export default function BestPicksPage() {
             <>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16, marginBottom: 40 }}>
                 {results.map((l) => {
-                  const hasDiscount = l.original_price && l.current_price && l.current_price < l.original_price;
+                  const hasDiscount = l.retail_price && l.current_price && l.current_price < l.retail_price;
                   const discount = hasDiscount
-                    ? Math.round((1 - (l.current_price! / l.original_price!)) * 100)
+                    ? Math.round((1 - (l.current_price! / l.retail_price!)) * 100)
                     : null;
                   return (
                     <div key={l.id}
@@ -268,11 +268,11 @@ export default function BestPicksPage() {
                         {/* Price */}
                         <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
                           <span style={{ fontSize: 24, fontWeight: 800, color: accent3, letterSpacing: "-0.03em" }}>
-                            {fmtPrice(l.current_price ?? l.original_price ?? 0)}
+                            {fmtPrice(l.current_price ?? l.retail_price ?? 0)}
                           </span>
                           {hasDiscount && (
                             <>
-                              <span style={{ fontSize: 13, color: textMuted, textDecoration: "line-through" }}>{fmtPrice(l.original_price!)}</span>
+                              <span style={{ fontSize: 13, color: textMuted, textDecoration: "line-through" }}>{fmtPrice(l.retail_price!)}</span>
                               <span style={{ fontSize: 11, fontWeight: 700, color: accent2, background: isDark ? "rgba(247,194,106,0.12)" : "rgba(217,147,14,0.1)", border: `1px solid ${isDark ? "rgba(247,194,106,0.3)" : "rgba(217,147,14,0.25)"}`, borderRadius: 6, padding: "2px 8px" }}>-{discount}%</span>
                             </>
                           )}
