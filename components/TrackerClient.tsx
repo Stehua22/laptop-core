@@ -218,7 +218,7 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
             ⚠ {dbError}
           </div>
         )}
-        <StatsBar stats={stats} currency={currency} cadToUsd={cadToUsd} />
+        <Header onAdd={handleAddClick} isDark={isDark} onThemeToggle={() => setIsDark(!isDark)} onDeals={() => router.push("/deals")} onAdmin={handleAdminClick} currency={currency} onCurrencyToggle={toggleCurrency} cadToUsd={cadToUsd} />
         
         <Controls search={search} onSearch={setSearch} brands={brands} brandFilter={brandFilter} onBrandFilter={setBrandFilter} sortBy={sortBy} onSort={setSortBy} />
         <LaptopGrid laptops={filtered} onSelect={setSelectedLaptop} onHistory={setHistoryLaptop} isAdmin={unlocked} onMoveToDeals={(l) => requireAuth(() => handleMoveToDeals(l))} onDelete={(id) => requireAuth(() => handleDeleteLaptop(id))} currency={currency} cadToUsd={cadToUsd} />
