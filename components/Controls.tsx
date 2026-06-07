@@ -5,6 +5,9 @@ type Props = {
   search: string; onSearch: (v: string) => void;
   brands: string[]; brandFilter: string; onBrandFilter: (v: string) => void;
   sortBy: string; onSort: (v: string) => void;
+  minPrice?: number; maxPrice?: number;
+  priceMin?: number; priceMax?: number;
+  onPriceMin?: (v: number) => void; onPriceMax?: (v: number) => void;
 };
 
 export default function Controls({ search, onSearch, brands, brandFilter, onBrandFilter, sortBy, onSort }: Props) {
@@ -19,25 +22,27 @@ export default function Controls({ search, onSearch, brands, brandFilter, onBran
   };
 
   return (
-    <div style={{ marginBottom: 32 }}>
-      <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.14em", marginBottom: 12, fontWeight: 600 }}>
-        // filter & sort
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 10 }}>
-        <div style={{ position: "relative" }}>
+    <div style={{ marginBottom: 24 }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        {/* Search */}
+        <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
           <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: searchFocused ? "var(--accent)" : "var(--text-muted)", fontSize: 14, pointerEvents: "none", transition: "color 0.2s" }}>🔍</div>
           <input type="text" placeholder="Search brand, model, specs..." value={search} onChange={(e) => onSearch(e.target.value)}
             onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)}
-            style={{ background: "var(--surface)", border: `1px solid ${searchFocused ? "var(--accent)" : "var(--border)"}`, borderRadius: 10, padding: "10px 14px 10px 36px", color: "var(--text)", fontSize: 13, outline: "none", width: "100%", transition: "border-color 0.2s" }} />
+            style={{ background: "var(--surface)", border: `1px solid ${searchFocused ? "var(--accent)" : "var(--border)"}`, borderRadius: 10, padding: "10px 36px 10px 36px", color: "var(--text)", fontSize: 13, outline: "none", width: "100%", transition: "border-color 0.2s", boxSizing: "border-box" }} />
           {search && (
             <button onClick={() => onSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 14, padding: "2px 4px" }}>✕</button>
           )}
         </div>
+
+        {/* Brand */}
         <select value={brandFilter} onChange={(e) => onBrandFilter(e.target.value)} style={{ ...selectStyle, borderColor: brandFilter ? "var(--accent)" : "var(--border)" }}
           onFocus={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; }} onBlur={(e) => { e.currentTarget.style.borderColor = brandFilter ? "var(--accent)" : "var(--border)"; }}>
           <option value="">All Brands</option>
           {brands.map((b) => <option key={b} value={b}>{b}</option>)}
         </select>
+
+        {/* Sort */}
         <select value={sortBy} onChange={(e) => onSort(e.target.value)} style={{ ...selectStyle, minWidth: 170 }}
           onFocus={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; }} onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}>
           <option value="newest">Newest First</option>

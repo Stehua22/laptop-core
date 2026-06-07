@@ -17,16 +17,16 @@ export default function StatsBar({ stats, currency = "CAD", cadToUsd = 0.73 }: {
   ];
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 40 }}>
-      {STATS.map((s, i) => (
-        <div key={s.key} className="animate-fade-up stats-card"
-          style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "20px 22px", position: "relative", overflow: "hidden", animationDelay: `${i * 0.07}s`, cursor: "default" }}
-          onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = s.color; el.style.transform = "translateY(-3px)"; el.style.boxShadow = `0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px ${s.color}33`; }}
-          onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border)"; el.style.transform = "translateY(0)"; el.style.boxShadow = "none"; }}
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 32 }}>
+      {STATS.map((s) => (
+        <div key={s.key}
+          style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "16px 20px", position: "relative", overflow: "hidden", transition: "all 0.2s" }}
+          onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = s.color; el.style.transform = "translateY(-2px)"; }}
+          onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border)"; el.style.transform = "translateY(0)"; }}
         >
-          <div style={{ position: "absolute", top: 0, right: 0, width: 80, height: 80, background: `radial-gradient(circle at top right, ${s.color}28, transparent 70%)`, pointerEvents: "none" }} />
-          <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10, fontWeight: 600 }}>{s.label}</div>
-          <div style={{ fontSize: "1.9rem", fontWeight: 800, color: s.color, lineHeight: 1, letterSpacing: "-0.03em", transition: "all 0.3s cubic-bezier(0.22,1,0.36,1)" }}>{s.value}</div>
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: s.color, opacity: 0.8 }} />
+          <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 8, fontWeight: 600 }}>{s.label}</div>
+          <div style={{ fontSize: "1.6rem", fontWeight: 800, color: s.color, lineHeight: 1, letterSpacing: "-0.03em" }}>{s.value}</div>
         </div>
       ))}
     </div>
