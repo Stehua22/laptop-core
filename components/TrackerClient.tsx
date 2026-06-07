@@ -218,7 +218,7 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
             ⚠ {dbError}
           </div>
         )}
-        <Header onAdd={handleAddClick} isDark={isDark} onThemeToggle={() => setIsDark((d) => !d)} currency={currency} onCurrencyToggle={toggleCurrency} onAdminClick={handleAdminClick} />
+        <Header onAdd={handleAddClick} isDark={isDark} onThemeToggle={() => set
         <StatsBar stats={stats} currency={currency} cadToUsd={cadToUsd} />
         
         <Controls search={search} onSearch={setSearch} brands={brands} brandFilter={brandFilter} onBrandFilter={setBrandFilter} sortBy={sortBy} onSort={setSortBy} />
