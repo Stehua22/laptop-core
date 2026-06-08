@@ -18,10 +18,6 @@ function fmt(n: number, currency: "CAD" | "USD" = "CAD", rate = 0.73) {
   return new Intl.NumberFormat("en-CA", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
 }
 
-function parseSpecs(specs: string) {
-  return specs.split(",").map(s => s.trim()).filter(Boolean);
-}
-
 export default function LaptopCard({ laptop, onSelect, onHistory, isAdmin, onMoveToDeals, onDelete, currency = "CAD", cadToUsd = 0.73 }: Props) {
   const price       = laptop.current_price ?? 0;
   const retail      = laptop.retail_price ?? price;
@@ -33,59 +29,58 @@ export default function LaptopCard({ laptop, onSelect, onHistory, isAdmin, onMov
   const [imgLoaded, setImgLoaded]     = useState(false);
   const [hovered, setHovered]         = useState(false);
 
-  const specParts  = laptop.specs ? parseSpecs(laptop.specs) : [];
-  const goodForTags = laptop.good_for
-    ? laptop.good_for.split(",").map(s => s.trim()).filter(Boolean).slice(0, 2)
-    : [];
+  const specParts   = laptop.specs ? laptop.specs.split(",").map(s => s.trim()).filter(Boolean) : [];
+  const goodForTags = laptop.good_for ? laptop.good_for.split(",").map(s => s.trim()).filter(Boolean).slice(0, 3) : [];
+
+  const visitUrl = laptop.url || `https://www.google.com/search?q=${encodeURIComponent(laptop.brand + " " + laptop.model)}`;
 
   return (
     <>
       <div
-        onClick={() => window.location.href = `/laptop/${laptop.id}`}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
-          background: hovered ? "var(--surface-2)" : "var(--surface)",
-          border: `1px solid ${hovered ? "rgba(139,179,245,0.3)" : "var(--border)"}`,
-          borderRadius: 16,
+          background: "var(--surface)",
+          border: `1px solid ${hovered ? "rgba(139,179,245,0.35)" : "var(--border)"}`,
+          borderRadius: 18,
           overflow: "hidden",
+          display: "grid",
+          gridTemplateColumns: "200px 1fr auto",
           cursor: "pointer",
-          display: "flex",
-          flexDirection: "row",
-          alignItems: "stretch",
-          transition: "all 0.18s ease",
-          transform: hovered ? "translateY(-2px)" : "translateY(0)",
-          boxShadow: hovered ? "0 10px 40px rgba(0,0,0,0.25)" : "none",
+          transition: "all 0.2s ease",
+          transform: hovered ? "translateY(-3px)" : "translateY(0)",
+          boxShadow: hovered
+            ? "0 16px 48px rgba(0,0,0,0.3), 0 0 0 1px rgba(139,179,245,0.1)"
+            : "0 2px 8px rgba(0,0,0,0.15)",
         }}
+        onClick={() => window.location.href = `/laptop/${laptop.id}`}
       >
-        {/* Left accent bar */}
+        {/* ── IMAGE COLUMN ── */}
         <div style={{
-          width: 3, flexShrink: 0,
-          background: hasDiscount
-            ? "linear-gradient(180deg, var(--accent-2), var(--accent-3))"
-            : "linear-gradient(180deg, var(--accent), var(--accent-3))",
-          opacity: hovered ? 1 : 0.45,
-          transition: "opacity 0.18s",
-        }} />
-
-        {/* Image */}
-        <div style={{
-          width: 160, flexShrink: 0,
-          background: "var(--surface-2)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "20px 16px",
+          background: "linear-gradient(135deg, rgba(139,179,245,0.06) 0%, rgba(106,247,184,0.04) 100%)",
           borderRight: "1px solid var(--border)",
-          position: "relative",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: 24, position: "relative", minHeight: 160,
         }}>
+          {/* Discount badge */}
           {hasDiscount && (
             <div style={{
-              position: "absolute", top: 10, left: 10,
-              fontSize: 9, fontWeight: 800, letterSpacing: "0.06em",
-              color: "var(--accent-2)", background: "rgba(247,194,106,0.15)",
-              border: "1px solid rgba(247,194,106,0.3)",
-              borderRadius: 5, padding: "2px 6px",
-            }}>-{discountPct}% OFF</div>
+              position: "absolute", top: 12, left: 12,
+              background: "linear-gradient(135deg, #f7c26a, #f4a830)",
+              color: "#1a1200", fontSize: 10, fontWeight: 900,
+              borderRadius: 6, padding: "3px 8px", letterSpacing: "0.04em",
+            }}>-{discountPct}%</div>
           )}
+          {(laptop as any).is_deal && (
+            <div style={{
+              position: "absolute", top: hasDiscount ? 38 : 12, left: 12,
+              background: "linear-gradient(135deg, rgba(106,247,184,0.2), rgba(106,247,184,0.1))",
+              border: "1px solid rgba(106,247,184,0.3)",
+              color: "var(--accent-3)", fontSize: 9, fontWeight: 800,
+              borderRadius: 6, padding: "3px 8px", letterSpacing: "0.06em",
+            }}>HOT DEAL</div>
+          )}
+
           {(laptop as any).image_url && !imgError ? (
             <img
               src={(laptop as any).image_url}
@@ -93,139 +88,160 @@ export default function LaptopCard({ laptop, onSelect, onHistory, isAdmin, onMov
               onLoad={() => setImgLoaded(true)}
               onError={() => setImgError(true)}
               style={{
-                maxHeight: 110, maxWidth: 130, objectFit: "contain",
+                maxHeight: 120, maxWidth: 160, objectFit: "contain",
                 opacity: imgLoaded ? 1 : 0,
-                transition: "opacity 0.3s, transform 0.2s",
-                transform: hovered ? "scale(1.06)" : "scale(1)",
+                transition: "opacity 0.3s, transform 0.25s",
+                transform: hovered ? "scale(1.08) translateY(-2px)" : "scale(1)",
+                filter: hovered ? "drop-shadow(0 8px 16px rgba(0,0,0,0.3))" : "none",
               }}
             />
           ) : (
-            <div style={{ fontSize: 44, opacity: 0.25 }}>💻</div>
+            <div style={{ fontSize: 52, opacity: 0.15, transition: "transform 0.25s", transform: hovered ? "scale(1.08)" : "scale(1)" }}>💻</div>
           )}
         </div>
 
-        {/* Main content */}
-        <div style={{ flex: 1, padding: "18px 22px", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }}>
+        {/* ── MAIN CONTENT ── */}
+        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }}>
           <div>
-            {/* Brand + store + year */}
-            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8, flexWrap: "wrap" }}>
+            {/* Brand chip + meta */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
               <span style={{
-                fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase",
-                color: "var(--accent)", background: "rgba(139,179,245,0.1)",
-                border: "1px solid rgba(139,179,245,0.2)", borderRadius: 4, padding: "2px 7px",
+                fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase",
+                color: "var(--accent)", background: "rgba(139,179,245,0.12)",
+                border: "1px solid rgba(139,179,245,0.25)", borderRadius: 6, padding: "3px 9px",
               }}>{laptop.brand}</span>
-              {(laptop as any).is_deal && !hasDiscount && (
-                <span style={{ fontSize: 9, fontWeight: 700, color: "var(--accent-3)", background: "rgba(106,247,184,0.1)", border: "1px solid rgba(106,247,184,0.2)", borderRadius: 4, padding: "2px 7px" }}>✦ DEAL</span>
-              )}
-              <span style={{ fontSize: 11, color: "var(--text-dim)", marginLeft: "auto" }}>
-                {laptop.store} · {laptop.release_year ?? laptop.date_added?.slice(0, 4) ?? "—"}
+              <span style={{ fontSize: 11, color: "var(--text-dim)" }}>
+                {laptop.store && `${laptop.store} · `}{laptop.release_year ?? laptop.date_added?.slice(0, 4) ?? ""}
               </span>
             </div>
 
             {/* Model name */}
-            <div style={{ fontWeight: 800, fontSize: 16, color: "var(--text)", marginBottom: 10, lineHeight: 1.25, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {laptop.model}
-            </div>
+            <h3 style={{
+              fontWeight: 800, fontSize: 18, color: "var(--text)",
+              margin: "0 0 12px 0", lineHeight: 1.2,
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            }}>{laptop.model}</h3>
 
             {/* Spec pills */}
             {specParts.length > 0 && (
-              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
                 {specParts.slice(0, 4).map((s, i) => (
                   <span key={i} style={{
-                    fontSize: 10, color: "var(--text-muted)",
-                    background: "var(--surface-2)", border: "1px solid var(--border)",
-                    borderRadius: 5, padding: "2px 8px", whiteSpace: "nowrap",
+                    fontSize: 11, color: "var(--text-muted)",
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: 6, padding: "3px 10px",
                   }}>{s}</span>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Bottom: screen/weight/good-for badges */}
+          {/* Bottom row: screen/weight/tags */}
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
             {laptop.screen_size && (
-              <span style={{ fontSize: 10, color: "var(--text-muted)", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 5, padding: "2px 8px" }}>
-                🖥 {laptop.screen_size}"
+              <span style={{ fontSize: 10, color: "var(--text-dim)", background: "transparent", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 5, padding: "2px 8px" }}>
+                {laptop.screen_size}" display
               </span>
             )}
             {laptop.weight_kg && (
-              <span style={{ fontSize: 10, color: "var(--text-muted)", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 5, padding: "2px 8px" }}>
-                ⚖ {laptop.weight_kg} kg
+              <span style={{ fontSize: 10, color: "var(--text-dim)", background: "transparent", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 5, padding: "2px 8px" }}>
+                {laptop.weight_kg} kg
               </span>
             )}
             {goodForTags.map(tag => (
               <span key={tag} style={{
-                fontSize: 10, color: "var(--accent)", opacity: 0.8,
-                background: "rgba(139,179,245,0.07)", border: "1px solid rgba(139,179,245,0.15)",
+                fontSize: 10, color: "var(--accent)", fontWeight: 600,
+                background: "rgba(139,179,245,0.08)",
+                border: "1px solid rgba(139,179,245,0.18)",
                 borderRadius: 5, padding: "2px 8px",
               }}>{tag}</span>
             ))}
           </div>
         </div>
 
-        {/* Right: price + actions */}
+        {/* ── PRICE + ACTIONS COLUMN ── */}
         <div style={{
-          flexShrink: 0, padding: "18px 20px",
-          display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "space-between",
-          borderLeft: "1px solid var(--border)", minWidth: 170,
-          background: hovered ? "rgba(139,179,245,0.03)" : "transparent",
-          transition: "background 0.18s",
+          borderLeft: "1px solid var(--border)",
+          padding: "20px 22px",
+          display: "flex", flexDirection: "column",
+          alignItems: "flex-end", justifyContent: "space-between",
+          minWidth: 190,
+          background: hovered
+            ? "linear-gradient(180deg, rgba(139,179,245,0.04) 0%, transparent 100%)"
+            : "transparent",
+          transition: "background 0.2s",
         }}>
-          {/* Price */}
+          {/* Price block */}
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 26, fontWeight: 900, color: "var(--accent-3)", letterSpacing: "-0.04em", lineHeight: 1 }}>
+            <div style={{
+              fontSize: 28, fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 1,
+              color: hasDiscount ? "var(--accent-3)" : "var(--text)",
+              background: hasDiscount
+                ? "linear-gradient(135deg, var(--accent-3), #4dffc3)"
+                : "none",
+              WebkitBackgroundClip: hasDiscount ? "text" : "unset",
+              WebkitTextFillColor: hasDiscount ? "transparent" : "unset",
+            }}>
               {fmt(price, currency, cadToUsd)}
             </div>
             {hasDiscount && (
-              <>
-                <div style={{ fontSize: 12, color: "var(--text-dim)", textDecoration: "line-through", marginTop: 4, opacity: 0.7 }}>
+              <div style={{ marginTop: 5 }}>
+                <div style={{ fontSize: 12, color: "var(--text-dim)", textDecoration: "line-through", opacity: 0.6 }}>
                   {fmt(retail, currency, cadToUsd)}
                 </div>
-                <div style={{ fontSize: 11, color: "var(--accent-2)", fontWeight: 700, marginTop: 3 }}>
+                <div style={{ fontSize: 12, color: "#f7c26a", fontWeight: 700, marginTop: 2 }}>
                   Save {fmt(retail - price, currency, cadToUsd)}
                 </div>
-              </>
+              </div>
             )}
           </div>
 
           {/* Buttons */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7, width: "100%" }} onClick={e => e.stopPropagation()}>
             <button
               onClick={() => window.location.href = `/laptop/${laptop.id}`}
-              style={{ width: "100%", background: "var(--accent)", border: "none", borderRadius: 9, color: "var(--bg)", fontSize: 12, fontWeight: 700, padding: "9px 12px", cursor: "pointer", transition: "opacity 0.15s, transform 0.15s" }}
-              onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; e.currentTarget.style.transform = "scale(1.02)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "scale(1)"; }}
-            >View Details</button>
+              style={{
+                width: "100%", border: "none", borderRadius: 10,
+                background: "linear-gradient(135deg, var(--accent), #6ab4f5)",
+                color: "#fff", fontSize: 12, fontWeight: 700,
+                padding: "10px 14px", cursor: "pointer",
+                transition: "opacity 0.15s, transform 0.15s",
+                boxShadow: "0 4px 14px rgba(139,179,245,0.25)",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; e.currentTarget.style.transform = "scale(1.02)"; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "scale(1)"; }}
+            >View Details →</button>
 
-            <div style={{ display: "flex", gap: 5 }}>
+            <div style={{ display: "flex", gap: 6 }}>
               <button
                 onClick={() => onHistory(laptop)}
-                style={{ flex: 1, background: "transparent", border: "1px solid var(--border)", borderRadius: 7, color: "var(--text-muted)", fontSize: 10, padding: "7px 0", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 3, transition: "all 0.15s" }}
-                onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--accent)"; el.style.color = "var(--accent)"; el.style.background = "rgba(139,179,245,0.06)"; }}
-                onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border)"; el.style.color = "var(--text-muted)"; el.style.background = "transparent"; }}
+                style={{ flex: 1, background: "transparent", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text-muted)", fontSize: 10, fontWeight: 600, padding: "7px 0", cursor: "pointer", transition: "all 0.15s" }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--accent)"; el.style.color = "var(--accent)"; el.style.background = "rgba(139,179,245,0.07)"; }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border)"; el.style.color = "var(--text-muted)"; el.style.background = "transparent"; }}
               >📈 History</button>
               <button
-                onClick={() => { const url = laptop.url || `https://www.google.com/search?q=${encodeURIComponent(laptop.brand + " " + laptop.model)}`; setPendingUrl(url); setShowWarning(true); }}
-                style={{ flex: 1, background: "transparent", border: "1px solid var(--border)", borderRadius: 7, color: "var(--text-muted)", fontSize: 10, padding: "7px 0", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 3, transition: "all 0.15s" }}
-                onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--accent-3)"; el.style.color = "var(--accent-3)"; el.style.background = "rgba(106,247,184,0.06)"; }}
-                onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border)"; el.style.color = "var(--text-muted)"; el.style.background = "transparent"; }}
+                onClick={() => { setPendingUrl(visitUrl); setShowWarning(true); }}
+                style={{ flex: 1, background: "transparent", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text-muted)", fontSize: 10, fontWeight: 600, padding: "7px 0", cursor: "pointer", transition: "all 0.15s" }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--accent-3)"; el.style.color = "var(--accent-3)"; el.style.background = "rgba(106,247,184,0.07)"; }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border)"; el.style.color = "var(--text-muted)"; el.style.background = "transparent"; }}
               >🔗 Visit</button>
             </div>
 
             {isAdmin && (
-              <div style={{ display: "flex", gap: 5 }}>
+              <div style={{ display: "flex", gap: 6 }}>
                 {onMoveToDeals && (
                   <button onClick={() => onMoveToDeals(laptop)}
                     style={{ flex: 1, background: "rgba(247,194,106,0.08)", border: "1px solid rgba(247,194,106,0.3)", borderRadius: 7, color: "var(--accent-2)", fontSize: 10, padding: "6px 0", cursor: "pointer", transition: "background 0.15s" }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(247,194,106,0.18)"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(247,194,106,0.08)"; }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(247,194,106,0.2)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(247,194,106,0.08)"; }}
                   >🔥 Deal</button>
                 )}
                 {onDelete && (
                   <button onClick={() => onDelete(laptop.id)}
                     style={{ flex: 1, background: "rgba(247,106,106,0.08)", border: "1px solid rgba(247,106,106,0.3)", borderRadius: 7, color: "var(--accent-red)", fontSize: 10, padding: "6px 0", cursor: "pointer", transition: "background 0.15s" }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(247,106,106,0.18)"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "rgba(247,106,106,0.08)"; }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(247,106,106,0.2)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(247,106,106,0.08)"; }}
                   >🗑</button>
                 )}
               </div>
@@ -236,12 +252,12 @@ export default function LaptopCard({ laptop, onSelect, onHistory, isAdmin, onMov
 
       {showWarning && (
         <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(5px)" }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)" }}
           onClick={() => setShowWarning(false)}
         >
           <div
             style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "1.5rem", maxWidth: 360, margin: "1rem" }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>⚠️ Price Warning</p>
             <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20, lineHeight: 1.6 }}>Prices may not be accurate. The price shown may differ from what's currently on the store website.</p>
