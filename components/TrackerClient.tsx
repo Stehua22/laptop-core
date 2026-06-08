@@ -37,6 +37,11 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
   const [search, setSearch] = useState("");
   const [brandFilter, setBrandFilter] = useState("");
   const [sortBy, setSortBy] = useState("newest");
+  const [goodForFilter, setGoodForFilter] = useState("");
+  const [screenFilter, setScreenFilter] = useState("");
+  const [weightFilter, setWeightFilter] = useState("");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
   const [recCategory, setRecCategory] = useState("student");
   const [recommendationIds, setRecommendationIds] = useState<Record<string, number[]>>(DEFAULT_RECOMMENDATION_IDS);
   const [selectedLaptop, setSelectedLaptop] = useState<Laptop | null>(null);
@@ -123,17 +128,49 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
   const filtered = useMemo(() => {
     let list = laptops.filter((l) => {
       const term = search.toLowerCase();
-      const matchesSearch = l.brand.toLowerCase().includes(term) || l.model.toLowerCase().includes(term) || l.specs?.toLowerCase().includes(term);
+      const matchesSearch =
+        l.brand.toLowerCase().includes(term) ||
+        l.model.toLowerCase().includes(term) ||
+        l.specs?.toLowerCase().includes(term);
       const matchesBrand = !brandFilter || l.brand === brandFilter;
-      return matchesSearch && matchesBrand;
+
+      const matchesGoodFor =
+        !goodForFilter ||
+        (l.good_for ?? "").split(",").map(s => s.trim().toLowerCase()).includes(goodForFilter);
+
+      const sz = l.screen_size ?? null;
+      const matchesScreen =
+        !screenFilter || (
+          screenFilter === "small"  ? sz !== null && sz <= 13 :
+          screenFilter === "medium" ? sz !== null && sz > 13 && sz < 15 :
+          screenFilter === "large"  ? sz !== null && sz >= 15 && sz < 17 :
+          screenFilter === "xlarge" ? sz !== null && sz >= 17 : true
+        );
+
+      const wt = l.weight_kg ?? null;
+      const matchesWeight =
+        !weightFilter || (
+          weightFilter === "ultralight" ? wt !== null && wt < 1.2 :
+          weightFilter === "light"      ? wt !== null && wt >= 1.2 && wt < 1.6 :
+          weightFilter === "medium"     ? wt !== null && wt >= 1.6 && wt < 2.2 :
+          weightFilter === "heavy"      ? wt !== null && wt >= 2.2 : true
+        );
+
+      const price = l.current_price ?? 0;
+      const matchesPrice =
+        (!priceMin || price >= parseFloat(priceMin)) &&
+        (!priceMax || price <= parseFloat(priceMax));
+
+      return matchesSearch && matchesBrand && matchesGoodFor && matchesScreen && matchesWeight && matchesPrice;
     });
+
     switch (sortBy) {
       case "priceAsc":  list = [...list].sort((a, b) => (a.current_price ?? 0) - (b.current_price ?? 0)); break;
       case "priceDesc": list = [...list].sort((a, b) => (b.current_price ?? 0) - (a.current_price ?? 0)); break;
       case "newest":    list = [...list].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); break;
     }
     return list;
-  }, [laptops, search, brandFilter, sortBy]);
+  }, [laptops, search, brandFilter, sortBy, goodForFilter, screenFilter, weightFilter, priceMin, priceMax]);
 
   const recommendations = useMemo(() => {
     const ids = recommendationIds[recCategory] ?? [];
@@ -206,8 +243,8 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     setLaptops((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
   };
 
-  const handleAddClick = () => requireAuth(() => setShowAddModal(true));
-  const handleAdminClick = () => requireAuth(() => setShowAdminPanel(true));
+  const handleAddClick    = () => requireAuth(() => setShowAddModal(true));
+  const handleAdminClick  = () => requireAuth(() => setShowAdminPanel(true));
   const handleDeleteClick = (id: number) => requireAuth(() => handleDeleteLaptop(id));
 
   return (
@@ -218,10 +255,29 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
             ⚠ {dbError}
           </div>
         )}
-        <Header onAdd={handleAddClick} isDark={isDark} onThemeToggle={() => setIsDark(!isDark)} onDeals={() => router.push("/deals")} onAdmin={handleAdminClick} currency={currency} onCurrencyToggle={toggleCurrency} cadToUsd={cadToUsd} />
-        
-        <Controls search={search} onSearch={setSearch} brands={brands} brandFilter={brandFilter} onBrandFilter={setBrandFilter} sortBy={sortBy} onSort={setSortBy} />
-        <LaptopGrid laptops={filtered} onSelect={setSelectedLaptop} onHistory={setHistoryLaptop} isAdmin={unlocked} onMoveToDeals={(l) => requireAuth(() => handleMoveToDeals(l))} onDelete={(id) => requireAuth(() => handleDeleteLaptop(id))} currency={currency} cadToUsd={cadToUsd} />
+        <Header
+          onAdd={handleAddClick} isDark={isDark} onThemeToggle={() => setIsDark(!isDark)}
+          onDeals={() => router.push("/deals")} onAdmin={handleAdminClick}
+          currency={currency} onCurrencyToggle={toggleCurrency} cadToUsd={cadToUsd}
+        />
+
+        <Controls
+          search={search} onSearch={setSearch}
+          brands={brands} brandFilter={brandFilter} onBrandFilter={setBrandFilter}
+          sortBy={sortBy} onSort={setSortBy}
+          goodForFilter={goodForFilter} onGoodForFilter={setGoodForFilter}
+          screenFilter={screenFilter} onScreenFilter={setScreenFilter}
+          weightFilter={weightFilter} onWeightFilter={setWeightFilter}
+          priceMin={priceMin} priceMax={priceMax}
+          onPriceMin={setPriceMin} onPriceMax={setPriceMax}
+        />
+
+        <LaptopGrid
+          laptops={filtered} onSelect={setSelectedLaptop} onHistory={setHistoryLaptop}
+          isAdmin={unlocked} onMoveToDeals={(l) => requireAuth(() => handleMoveToDeals(l))}
+          onDelete={(id) => requireAuth(() => handleDeleteLaptop(id))}
+          currency={currency} cadToUsd={cadToUsd}
+        />
       </div>
 
       {selectedLaptop && <LaptopModal laptop={selectedLaptop} onClose={() => setSelectedLaptop(null)} onUpdatePrice={handleUpdatePrice} onDelete={handleDeleteClick} onHistory={(l) => { setSelectedLaptop(null); setHistoryLaptop(l); }} currency={currency} cadToUsd={cadToUsd} />}
@@ -230,14 +286,19 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
       {showAdminPanel && <AdminPanel laptops={laptops} currency={currency} cadToUsd={cadToUsd} onClose={() => setShowAdminPanel(false)} onLaptopUpdated={handleLaptopUpdatedFromAdmin} />}
 
       {showAuthModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)" }}
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowAuthModal(false); }}>
           <div className="modal-content" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "1.75rem", width: "100%", maxWidth: 400, margin: "1rem", boxShadow: "var(--shadow-lg)" }}>
             <div style={{ height: 3, background: "linear-gradient(90deg, var(--accent), var(--accent-3))", borderRadius: 99, marginBottom: 20, marginLeft: -28, marginRight: -28, marginTop: -28 }} />
             <p style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>🔒 Admin access</p>
             <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20 }}>Enter the password to unlock admin actions.</p>
-            <input type="password" placeholder="Enter password…" value={authInput} onChange={(e) => setAuthInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submitAuth()} autoFocus
-              style={{ width: "100%", padding: "10px 12px", fontSize: 13, border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface-2)", color: "inherit", fontFamily: "inherit", outline: "none", marginBottom: 6, boxSizing: "border-box" }} />
+            <input
+              type="password" placeholder="Enter password…" value={authInput}
+              onChange={(e) => setAuthInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submitAuth()} autoFocus
+              style={{ width: "100%", padding: "10px 12px", fontSize: 13, border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface-2)", color: "inherit", fontFamily: "inherit", outline: "none", marginBottom: 6, boxSizing: "border-box" }}
+            />
             {authError && <p style={{ fontSize: 12, color: "#f76a6a", marginBottom: 8 }}>{authError}</p>}
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
               <button onClick={() => setShowAuthModal(false)} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 9, border: "1px solid var(--border)", background: "transparent", color: "inherit", cursor: "pointer" }}>Cancel</button>

@@ -4,7 +4,6 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
 export type Laptop = {
   id: number;
   brand: string;
@@ -22,6 +21,9 @@ export type Laptop = {
   image_url?: string;
   pros?: string[];
   cons?: string[];
+  screen_size?: number | null;      // e.g. 13.3, 14, 15.6
+  weight_kg?: number | null;        // e.g. 1.2, 1.8
+  good_for?: string | null;         // e.g. "gaming,programming"
 };
 
 export type PriceEntry = {

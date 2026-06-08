@@ -11,50 +11,56 @@ const CATEGORY_GROUPS = [
   {
     label: "By Audience",
     categories: [
-      { key: "student", label: "Students", icon: "🎓" },
-      { key: "home", label: "Home", icon: "🏠" },
-      { key: "business", label: "Business", icon: "💼" },
+      { key: "student",  label: "Students",  icon: "🎓" },
+      { key: "home",     label: "Home",       icon: "🏠" },
+      { key: "business", label: "Business",   icon: "💼" },
     ],
   },
   {
     label: "By Budget",
     categories: [
-      { key: "budget", label: "Budget (Under $800)", icon: "$" },
-      { key: "value", label: "Value ($800–$1,200)", icon: "$$" },
-      { key: "premium", label: "Premium ($1,200–$1,700)", icon: "$$$" },
-      { key: "unlimited", label: "Unlimited ($1,700+)", icon: "$$$$" },
+      { key: "budget",    label: "Budget (Under $800)",    icon: "$"    },
+      { key: "value",     label: "Value ($800–$1,200)",    icon: "$$"   },
+      { key: "premium",   label: "Premium ($1,200–$1,700)", icon: "$$$"  },
+      { key: "unlimited", label: "Unlimited ($1,700+)",    icon: "$$$$" },
     ],
   },
   {
     label: "By Use Case",
     categories: [
-      { key: "basic", label: "Basic Use", icon: "🖥️" },
-      { key: "school", label: "School", icon: "📚" },
-      { key: "gaming", label: "Gaming", icon: "🎮" },
-      { key: "programming", label: "Programming", icon: "💻" },
-      { key: "engineering", label: "Engineering", icon: "⚙️" },
-      { key: "video", label: "Video Editing", icon: "🎬" },
-      { key: "trading", label: "Trading & Investing", icon: "📈" },
-      { key: "data", label: "Data Science", icon: "🔬" },
-      { key: "corporate", label: "Corporate Buyers", icon: "💼" },
+      { key: "basic",       label: "Basic Use",          icon: "🖥️" },
+      { key: "school",      label: "School",             icon: "📚" },
+      { key: "gaming",      label: "Gaming",             icon: "🎮" },
+      { key: "programming", label: "Programming",        icon: "💻" },
+      { key: "engineering", label: "Engineering",        icon: "⚙️" },
+      { key: "video",       label: "Video Editing",      icon: "🎬" },
+      { key: "trading",     label: "Trading & Investing", icon: "📈" },
+      { key: "data",        label: "Data Science",       icon: "🔬" },
+      { key: "corporate",   label: "Corporate Buyers",   icon: "💼" },
     ],
   },
   {
     label: "By Portability",
     categories: [
-      { key: "light", label: "Light & Portable", icon: "🪶" },
-      { key: "medium", label: "Somewhat Portable", icon: "🎒" },
-      { key: "performance", label: "Performance matters more", icon: "⚡" },
+      { key: "light",       label: "Light & Portable",          icon: "🪶" },
+      { key: "medium",      label: "Somewhat Portable",         icon: "🎒" },
+      { key: "performance", label: "Performance matters more",  icon: "⚡" },
     ],
   },
 ];
 
 const ALL_CATEGORIES = CATEGORY_GROUPS.flatMap(g => g.categories);
 
+const GOOD_FOR_OPTIONS = [
+  "gaming", "programming", "school", "video", "business",
+  "basic", "data", "engineering", "trading",
+];
+
 type EditForm = {
   brand: string; model: string; specs: string; store: string;
   url: string; image_url: string; retail_price: string;
   current_price: string; release_year: string; is_deal: boolean;
+  screen_size: string; weight_kg: string; good_for: string;
 };
 
 export default function AdminPage() {
@@ -112,7 +118,21 @@ export default function AdminPage() {
 
   const startEdit = (l: Laptop) => {
     setEditingId(l.id);
-    setEditForm({ brand: l.brand ?? "", model: l.model ?? "", specs: l.specs ?? "", store: l.store ?? "", url: l.url ?? "", image_url: (l as any).image_url ?? "", retail_price: String(l.retail_price ?? ""), current_price: String(l.current_price ?? ""), release_year: String(l.release_year ?? ""), is_deal: (l as any).is_deal ?? false });
+    setEditForm({
+      brand: l.brand ?? "",
+      model: l.model ?? "",
+      specs: l.specs ?? "",
+      store: l.store ?? "",
+      url: l.url ?? "",
+      image_url: (l as any).image_url ?? "",
+      retail_price: String(l.retail_price ?? ""),
+      current_price: String(l.current_price ?? ""),
+      release_year: String(l.release_year ?? ""),
+      is_deal: (l as any).is_deal ?? false,
+      screen_size: l.screen_size != null ? String(l.screen_size) : "",
+      weight_kg: l.weight_kg != null ? String(l.weight_kg) : "",
+      good_for: l.good_for ?? "",
+    });
     setSaveMsg("");
   };
 
@@ -122,11 +142,29 @@ export default function AdminPage() {
     if (!editForm) return;
     setSaving(true);
     try {
-      const retailPrice = parseFloat(editForm.retail_price);
+      const retailPrice  = parseFloat(editForm.retail_price);
       const currentPrice = parseFloat(editForm.current_price);
-      await supabase.from("laptops").update({ brand: editForm.brand, model: editForm.model, specs: editForm.specs, store: editForm.store, url: editForm.url, image_url: editForm.image_url, retail_price: isNaN(retailPrice) ? null : retailPrice, release_year: editForm.release_year ? parseInt(editForm.release_year) : null, is_deal: editForm.is_deal }).eq("id", id);
+      await supabase.from("laptops").update({
+        brand: editForm.brand,
+        model: editForm.model,
+        specs: editForm.specs,
+        store: editForm.store,
+        url: editForm.url,
+        image_url: editForm.image_url,
+        retail_price: isNaN(retailPrice) ? null : retailPrice,
+        release_year: editForm.release_year ? parseInt(editForm.release_year) : null,
+        is_deal: editForm.is_deal,
+        screen_size: editForm.screen_size ? parseFloat(editForm.screen_size) : null,
+        weight_kg: editForm.weight_kg ? parseFloat(editForm.weight_kg) : null,
+        good_for: editForm.good_for.trim() || null,
+      }).eq("id", id);
+
       if (!isNaN(currentPrice)) {
-        await supabase.from("price_history").insert({ laptop_id: id, price: currentPrice, recorded_at: new Date().toISOString().split("T")[0] });
+        await supabase.from("price_history").insert({
+          laptop_id: id,
+          price: currentPrice,
+          recorded_at: new Date().toISOString().split("T")[0],
+        });
       }
       const updated = await fetchLaptops();
       setLaptops(updated);
@@ -149,9 +187,19 @@ export default function AdminPage() {
     if (!addForm.brand || !addForm.model || !addForm.retail_price) return;
     setAdding(true);
     try {
-      const { data } = await supabase.from("laptops").insert({ brand: addForm.brand, model: addForm.model, specs: addForm.specs, store: addForm.store, url: addForm.url, image_url: addForm.image_url, retail_price: parseFloat(addForm.retail_price), release_year: addForm.release_year ? parseInt(addForm.release_year) : null, date_added: new Date().toISOString().split("T")[0] }).select().single();
+      const { data } = await supabase.from("laptops").insert({
+        brand: addForm.brand, model: addForm.model, specs: addForm.specs,
+        store: addForm.store, url: addForm.url, image_url: addForm.image_url,
+        retail_price: parseFloat(addForm.retail_price),
+        release_year: addForm.release_year ? parseInt(addForm.release_year) : null,
+        date_added: new Date().toISOString().split("T")[0],
+      }).select().single();
       if (data) {
-        await supabase.from("price_history").insert({ laptop_id: data.id, price: parseFloat(addForm.current_price || addForm.retail_price), recorded_at: new Date().toISOString().split("T")[0] });
+        await supabase.from("price_history").insert({
+          laptop_id: data.id,
+          price: parseFloat(addForm.current_price || addForm.retail_price),
+          recorded_at: new Date().toISOString().split("T")[0],
+        });
       }
       const updated = await fetchLaptops();
       setLaptops(updated);
@@ -167,23 +215,40 @@ export default function AdminPage() {
   };
 
   const savePicks = async () => {
-    setPicksSaving(true);
-    setPicksMsg("");
+    setPicksSaving(true); setPicksMsg("");
     try {
-      await supabase.from("recommendations").upsert({ category: picksCategory, laptop_ids: recommendationIds[picksCategory] ?? [] }, { onConflict: "category" });
+      await supabase.from("recommendations").upsert(
+        { category: picksCategory, laptop_ids: recommendationIds[picksCategory] ?? [] },
+        { onConflict: "category" }
+      );
       setPicksMsg("✅ Saved!");
     } catch { setPicksMsg("❌ Failed to save"); }
     finally { setPicksSaving(false); setTimeout(() => setPicksMsg(""), 3000); }
   };
 
+  // Toggle a good_for tag on/off in the edit form
+  const toggleGoodFor = (tag: string) => {
+    if (!editForm) return;
+    const current = editForm.good_for.split(",").map(s => s.trim()).filter(Boolean);
+    const next = current.includes(tag) ? current.filter(t => t !== tag) : [...current, tag];
+    setEditForm(prev => prev ? { ...prev, good_for: next.join(", ") } : prev);
+  };
+
   const currentPickIds = recommendationIds[picksCategory] ?? [];
-  const picksFiltered = laptops.filter(l => {
+  const picksFiltered  = laptops.filter(l => {
     const t = picksSearch.toLowerCase();
     return l.brand.toLowerCase().includes(t) || l.model.toLowerCase().includes(t);
   });
 
-  const inputStyle: React.CSSProperties = { padding: "7px 10px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 7, background: "var(--surface-2)", color: "inherit", fontFamily: "inherit", outline: "none", width: "100%", boxSizing: "border-box" };
-  const labelStyle: React.CSSProperties = { fontSize: 9, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, display: "block", marginBottom: 4 };
+  const inputStyle: React.CSSProperties  = { padding: "7px 10px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 7, background: "var(--surface-2)", color: "inherit", fontFamily: "inherit", outline: "none", width: "100%", boxSizing: "border-box" };
+  const labelStyle: React.CSSProperties  = { fontSize: 9, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600, display: "block", marginBottom: 4 };
+  const tagPill = (active: boolean): React.CSSProperties => ({
+    padding: "4px 10px", borderRadius: 99, fontSize: 11, cursor: "pointer",
+    border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+    background: active ? "rgba(139,179,245,0.12)" : "transparent",
+    color: active ? "var(--accent)" : "var(--text-muted)",
+    fontWeight: active ? 600 : 400, transition: "all 0.15s",
+  });
 
   if (!unlocked) return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -224,8 +289,6 @@ export default function AdminPage() {
         {tab === "picks" && (
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 24 }}>
             <h2 style={{ fontWeight: 700, fontSize: 16, marginBottom: 24 }}>Best Picks Editor</h2>
-
-            {/* Category groups */}
             {CATEGORY_GROUPS.map(group => (
               <div key={group.label} style={{ marginBottom: 14 }}>
                 <p style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 600, marginBottom: 8 }}>{group.label}</p>
@@ -239,8 +302,6 @@ export default function AdminPage() {
                 </div>
               </div>
             ))}
-
-            {/* Selected count + save */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, marginTop: 8 }}>
               <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
                 <span style={{ color: "var(--accent)", fontWeight: 700 }}>{currentPickIds.length}</span> laptop{currentPickIds.length !== 1 ? "s" : ""} selected for <span style={{ color: "var(--accent)", fontWeight: 600 }}>{ALL_CATEGORIES.find(c => c.key === picksCategory)?.label}</span>
@@ -252,8 +313,6 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
-
-            {/* Selected chips */}
             {currentPickIds.length > 0 && (
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
                 {laptops.filter(l => currentPickIds.includes(l.id)).map(l => (
@@ -264,12 +323,7 @@ export default function AdminPage() {
                 ))}
               </div>
             )}
-
-            {/* Search */}
-            <input placeholder="🔍 Search laptops to add..." value={picksSearch} onChange={e => setPicksSearch(e.target.value)}
-              style={{ ...inputStyle, padding: "10px 14px", fontSize: 13, marginBottom: 12 }} />
-
-            {/* Laptop list */}
+            <input placeholder="🔍 Search laptops to add..." value={picksSearch} onChange={e => setPicksSearch(e.target.value)} style={{ ...inputStyle, padding: "10px 14px", fontSize: 13, marginBottom: 12 }} />
             <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 480, overflowY: "auto" }}>
               {picksFiltered.map(l => {
                 const selected = currentPickIds.includes(l.id);
@@ -302,7 +356,11 @@ export default function AdminPage() {
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "24px", marginBottom: 24 }}>
             <h2 style={{ fontWeight: 700, fontSize: 16, marginBottom: 20 }}>Add New Laptop</h2>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14, marginBottom: 14 }}>
-              {[{ key: "brand", label: "Brand *" }, { key: "model", label: "Model *" }, { key: "store", label: "Store" }, { key: "retail_price", label: "Retail Price ($) *" }, { key: "current_price", label: "Current Price ($)" }, { key: "release_year", label: "Release Year" }].map(({ key, label }) => (
+              {[
+                { key: "brand", label: "Brand *" }, { key: "model", label: "Model *" },
+                { key: "store", label: "Store" }, { key: "retail_price", label: "Retail Price ($) *" },
+                { key: "current_price", label: "Current Price ($)" }, { key: "release_year", label: "Release Year" },
+              ].map(({ key, label }) => (
                 <div key={key}>
                   <label style={labelStyle}>{label}</label>
                   <input value={addForm[key as keyof typeof addForm]} onChange={(e) => setAddForm(prev => ({ ...prev, [key]: e.target.value }))} style={inputStyle} type={key.includes("price") || key === "release_year" ? "number" : "text"} />
@@ -343,6 +401,7 @@ export default function AdminPage() {
                   const isEditing = editingId === l.id;
                   return (
                     <div key={l.id} style={{ background: "var(--surface)", border: `1px solid ${isEditing ? "var(--accent)" : "var(--border)"}`, borderRadius: 14, overflow: "hidden", boxShadow: isEditing ? "0 0 0 2px rgba(139,179,245,0.15)" : "none" }}>
+                      {/* Row header */}
                       <div style={{ padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 200 }}>
                           {(l as any).image_url && (<img src={(l as any).image_url} alt={l.model} style={{ width: 48, height: 36, objectFit: "contain", borderRadius: 6, background: "var(--surface-2)", padding: 4 }} />)}
@@ -353,7 +412,17 @@ export default function AdminPage() {
                               <span style={{ fontSize: 10, color: "var(--text-dim)" }}>#{l.id}</span>
                             </div>
                             <div style={{ fontWeight: 700, fontSize: 14 }}>{l.model}</div>
-                            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{l.specs?.slice(0, 70)}{(l.specs?.length ?? 0) > 70 ? "…" : ""}</div>
+                            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                              {l.specs?.slice(0, 70)}{(l.specs?.length ?? 0) > 70 ? "…" : ""}
+                            </div>
+                            {/* Filter metadata badges */}
+                            <div style={{ display: "flex", gap: 5, marginTop: 5, flexWrap: "wrap" }}>
+                              {l.screen_size && <span style={{ fontSize: 9, background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 4, padding: "1px 6px", color: "var(--text-muted)" }}>{l.screen_size}"</span>}
+                              {l.weight_kg && <span style={{ fontSize: 9, background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 4, padding: "1px 6px", color: "var(--text-muted)" }}>{l.weight_kg} kg</span>}
+                              {l.good_for && l.good_for.split(",").map(s => s.trim()).filter(Boolean).map(tag => (
+                                <span key={tag} style={{ fontSize: 9, background: "rgba(139,179,245,0.08)", border: "1px solid rgba(139,179,245,0.2)", borderRadius: 4, padding: "1px 6px", color: "var(--accent)" }}>{tag}</span>
+                              ))}
+                            </div>
                           </div>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -370,36 +439,83 @@ export default function AdminPage() {
                         </div>
                       </div>
 
+                      {/* Edit form */}
                       {isEditing && editForm && (
                         <div style={{ borderTop: "1px solid var(--border)", padding: "20px", background: "var(--surface-2)" }}>
+
+                          {/* Main fields grid */}
                           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12, marginBottom: 12 }}>
-                            {[{ key: "brand", label: "Brand" }, { key: "model", label: "Model" }, { key: "store", label: "Store" }, { key: "retail_price", label: "Retail Price ($)" }, { key: "current_price", label: "Current Price ($)" }, { key: "release_year", label: "Release Year" }].map(({ key, label }) => (
+                            {[
+                              { key: "brand",        label: "Brand"           },
+                              { key: "model",        label: "Model"           },
+                              { key: "store",        label: "Store"           },
+                              { key: "retail_price", label: "Retail Price ($)" },
+                              { key: "current_price",label: "Current Price ($)"},
+                              { key: "release_year", label: "Release Year"    },
+                              { key: "screen_size",  label: 'Screen Size (")' },
+                              { key: "weight_kg",    label: "Weight (kg)"     },
+                            ].map(({ key, label }) => (
                               <div key={key}>
                                 <label style={labelStyle}>{label}</label>
-                                <input value={editForm[key as keyof EditForm] as string} onChange={(e) => setEditForm(prev => prev ? { ...prev, [key]: e.target.value } : prev)} style={inputStyle} type={key.includes("price") || key === "release_year" ? "number" : "text"} />
+                                <input
+                                  value={editForm[key as keyof EditForm] as string}
+                                  onChange={(e) => setEditForm(prev => prev ? { ...prev, [key]: e.target.value } : prev)}
+                                  style={inputStyle}
+                                  type={key.includes("price") || ["release_year", "screen_size", "weight_kg"].includes(key) ? "number" : "text"}
+                                  step={["screen_size", "weight_kg"].includes(key) ? "0.1" : undefined}
+                                />
                               </div>
                             ))}
                           </div>
+
+                          {/* Good For tag picker */}
+                          <div style={{ marginBottom: 12 }}>
+                            <label style={labelStyle}>Good For</label>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                              {GOOD_FOR_OPTIONS.map(tag => {
+                                const active = editForm.good_for.split(",").map(s => s.trim()).includes(tag);
+                                return (
+                                  <button key={tag} onClick={() => toggleGoodFor(tag)} style={tagPill(active)}>{tag}</button>
+                                );
+                              })}
+                            </div>
+                            <input
+                              value={editForm.good_for}
+                              onChange={(e) => setEditForm(prev => prev ? { ...prev, good_for: e.target.value } : prev)}
+                              style={inputStyle}
+                              placeholder="or type manually: gaming, school, ..."
+                            />
+                          </div>
+
+                          {/* Specs */}
                           <div style={{ marginBottom: 12 }}>
                             <label style={labelStyle}>Specs</label>
                             <textarea value={editForm.specs} onChange={(e) => setEditForm(prev => prev ? { ...prev, specs: e.target.value } : prev)} rows={2} style={{ ...inputStyle, resize: "vertical" }} />
                           </div>
+
+                          {/* URLs */}
                           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                             <div><label style={labelStyle}>Store URL</label><input value={editForm.url} onChange={(e) => setEditForm(prev => prev ? { ...prev, url: e.target.value } : prev)} style={inputStyle} placeholder="https://..." /></div>
                             <div><label style={labelStyle}>Image URL</label><input value={editForm.image_url} onChange={(e) => setEditForm(prev => prev ? { ...prev, image_url: e.target.value } : prev)} style={inputStyle} placeholder="https://..." /></div>
                           </div>
+
+                          {/* Image preview */}
                           {editForm.image_url && (
                             <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
                               <img src={editForm.image_url} alt="preview" style={{ height: 60, maxWidth: 100, objectFit: "contain", borderRadius: 8, background: "var(--surface)", padding: 6 }} />
                               <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Image preview</span>
                             </div>
                           )}
+
+                          {/* Deal toggle */}
                           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
                             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13 }}>
                               <input type="checkbox" checked={editForm.is_deal} onChange={(e) => setEditForm(prev => prev ? { ...prev, is_deal: e.target.checked } : prev)} style={{ width: 16, height: 16, cursor: "pointer" }} />
                               🔥 Mark as Crazy Deal
                             </label>
                           </div>
+
+                          {/* Save / cancel */}
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <button onClick={() => saveEdit(l.id)} disabled={saving} style={{ fontSize: 13, padding: "8px 22px", borderRadius: 9, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 700 }}>{saving ? "Saving..." : "✓ Save Changes"}</button>
                             <button onClick={cancelEdit} style={{ fontSize: 13, padding: "8px 16px", borderRadius: 9, border: "1px solid var(--border)", background: "transparent", color: "inherit", cursor: "pointer" }}>Cancel</button>
@@ -418,4 +534,3 @@ export default function AdminPage() {
     </div>
   );
 }
-// updated
