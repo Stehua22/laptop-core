@@ -112,18 +112,15 @@ export default function LaptopCard({ laptop, onSelect, onHistory, isAdmin, onMov
               ))}
             </div>
 
-            {onCompareToggle && (
-              <div
-                onClick={e => { e.stopPropagation(); if (!compareDisabled || compareSelected) onCompareToggle(laptop); }}
-                style={{ display: "flex", alignItems: "center", gap: 6, cursor: compareDisabled && !compareSelected ? "not-allowed" : "pointer", opacity: compareDisabled && !compareSelected ? 0.4 : 1, flexShrink: 0 }}
-                title={compareSelected ? "Remove from compare" : compareDisabled ? "Max 3 laptops" : "Add to compare"}
-              >
-                <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${compareSelected ? "var(--accent)" : "var(--border)"}`, background: compareSelected ? "var(--accent)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
-                  {compareSelected && <span style={{ color: "#fff", fontSize: 11, fontWeight: 900, lineHeight: 1 }}>✓</span>}
-                </div>
-                <span style={{ fontSize: 10, color: compareSelected ? "var(--accent)" : "var(--text-muted)", fontWeight: 600 }}>Compare</span>
-              </div>
-            )}
+           {onCompareToggle && (
+  <button
+    onClick={e => { e.stopPropagation(); if (!compareDisabled || compareSelected) onCompareToggle(laptop); }}
+    disabled={compareDisabled && !compareSelected}
+    style={{ fontSize: 11, padding: "4px 12px", borderRadius: 7, border: `1px solid ${compareSelected ? "var(--accent)" : "var(--border)"}`, background: compareSelected ? "rgba(139,179,245,0.15)" : "transparent", color: compareSelected ? "var(--accent)" : "var(--text-muted)", cursor: compareDisabled && !compareSelected ? "not-allowed" : "pointer", fontWeight: 600, transition: "all 0.15s", opacity: compareDisabled && !compareSelected ? 0.4 : 1, flexShrink: 0 }}
+  >
+    {compareSelected ? "✓ Added" : "+ Compare"}
+  </button>
+)}
           </div>
         </div>
 
