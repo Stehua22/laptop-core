@@ -31,26 +31,28 @@ Reply with ONLY this JSON, nothing else before or after:
       }),
     });
 
+    const rawText = await response.text();
+    console.log("Anthropic raw response:", rawText);
+
     if (!response.ok) {
-      const err = await response.text();
-      console.error("Anthropic API error:", err);
-      return NextResponse.json({ error: "API error" }, { status: 500 });
+      console.error("Anthropic API error:", rawText);
+      return NextResponse.json({ error: "API error: " + rawText }, { status: 500 });
     }
 
-    const data = await response.json();
+    const data = JSON.parse(rawText);
     const text = (data.content?.[0]?.text ?? "").trim();
+    console.log("Claude text:", text);
 
-    // Extract JSON from response
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) {
       console.error("No JSON found in response:", text);
-      return NextResponse.json({ error: "Invalid response" }, { status: 500 });
+      return NextResponse.json({ error: "Invalid response: " + text }, { status: 500 });
     }
 
     const parsed = JSON.parse(match[0]);
     return NextResponse.json(parsed);
   } catch (err) {
     console.error("AI generation error:", err);
-    return NextResponse.json({ error: "Failed to generate" }, { status: 500 });
+    return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
