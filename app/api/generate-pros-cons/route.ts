@@ -13,33 +13,41 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 512,
+        max_tokens: 1024,
         messages: [
           {
             role: "user",
-            content: `You are a laptop reviewer. Based on the specs below, generate exactly 4 pros and 3 cons for this laptop. Be specific and honest based on the specs.
+            content: `You are a laptop reviewer. Give exactly 4 pros and 3 cons for this laptop based on its specs. Be specific.
 
 Laptop: ${brand} ${model}
 Price: $${price} CAD
 Store: ${store}
 Specs: ${specs}
 
-Respond ONLY with valid JSON in this exact format, no extra text:
-{
-  "pros": ["pro 1", "pro 2", "pro 3", "pro 4"],
-  "cons": ["con 1", "con 2", "con 3"]
-}`,
+Reply with ONLY this JSON, nothing else before or after:
+{"pros":["pro1","pro2","pro3","pro4"],"cons":["con1","con2","con3"]}`,
           },
         ],
       }),
     });
 
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("Anthropic API error:", err);
+      return NextResponse.json({ error: "API error" }, { status: 500 });
+    }
+
     const data = await response.json();
-    const text = data.content?.[0]?.text ?? "";
+    const text = (data.content?.[0]?.text ?? "").trim();
 
-    const clean = text.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean);
+    // Extract JSON from response
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) {
+      console.error("No JSON found in response:", text);
+      return NextResponse.json({ error: "Invalid response" }, { status: 500 });
+    }
 
+    const parsed = JSON.parse(match[0]);
     return NextResponse.json(parsed);
   } catch (err) {
     console.error("AI generation error:", err);
