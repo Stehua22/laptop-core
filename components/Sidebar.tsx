@@ -139,4 +139,3 @@ export default function Sidebar({ activeKey = "home", onSettingsClick }: Sidebar
     </aside>
   );
 }
-]
