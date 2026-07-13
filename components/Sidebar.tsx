@@ -1,7 +1,14 @@
-import { useState } from "react";
+import { useState, ReactNode } from "react";
 import styles from "./Sidebar.module.css";
 
-const NAV_ITEMS = [
+type NavItem = {
+  key: string;
+  label: string;
+  href: string;
+  icon: ReactNode;
+};
+
+const NAV_ITEMS: NavItem[] = [
   {
     key: "home",
     label: "Home",
@@ -34,6 +41,11 @@ const NAV_ITEMS = [
   },
 ];
 
+type SidebarProps = {
+  activeKey?: string;
+  onSettingsClick?: () => void;
+};
+
 /**
  * Collapsible sidebar for LaptopCore.
  *
@@ -49,8 +61,8 @@ const NAV_ITEMS = [
  *
  * Collapsed state persists across page loads via localStorage.
  */
-export default function Sidebar({ activeKey = "home", onSettingsClick }) {
-  const [collapsed, setCollapsed] = useState(() => {
+export default function Sidebar({ activeKey = "home", onSettingsClick }: SidebarProps) {
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("lc-sidebar-collapsed") === "true";
   });
@@ -127,3 +139,4 @@ export default function Sidebar({ activeKey = "home", onSettingsClick }) {
     </aside>
   );
 }
+]
