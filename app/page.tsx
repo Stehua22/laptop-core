@@ -16,7 +16,7 @@ const FEATURES = [
 const BRANDS = ["Apple", "Lenovo", "Dell", "HP", "ASUS", "Acer", "Microsoft", "Samsung"];
 
 const STATS = [
-  { value: "30+", label: "Laptops Tracked" },
+  { value: "40+", label: "Laptops Tracked" },
   { value: "8", label: "Brands" },
   { value: "Live", label: "Price Updates" },
   { value: "Free", label: "Always" },
@@ -50,8 +50,8 @@ export default function LandingPage() {
   const accent3 = isDark ? "#6af7b8" : "#1fb874";
 
   const samplePrices = [
-    { model: "MacBook Air M3", cad: 1499, store: "Apple", change: -100 },
-    { model: "ThinkPad X1 Carbon", cad: 2499, store: "Lenovo", change: -200 },
+    { model: "MacBook Air M5", cad: 1499, store: "Apple", change: -100 },
+    { model: "ThinkPad X1 Carbon Gen 13", cad: 2499, store: "Lenovo", change: -200 },
     { model: "ASUS Zenbook A14", cad: 1399, store: "ASUS", change: -50 },
   ];
 
