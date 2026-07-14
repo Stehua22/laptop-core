@@ -1,21 +1,27 @@
 .sidebar {
-  --blue: #2f7de0;
-  --blue-light: #eaf2fd;
-  --text: #1c2b45;
-  --text-soft: #6b7686;
-  --border: #e7eaf0;
-
   width: 220px;
-  background: #ffffff;
+  background: var(--surface);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   padding: 20px 14px;
-  transition: width 0.2s ease, padding 0.2s ease;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
   height: 100vh;
   position: sticky;
   top: 0;
+  animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .sidebar.collapsed {
@@ -30,14 +36,23 @@
   padding: 6px 8px 22px 8px;
   font-size: 19px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text, #e8ebf1);
   letter-spacing: 0.2px;
   overflow: hidden;
   white-space: nowrap;
 }
 
+.brand svg path {
+  stroke: var(--accent);
+  transition: stroke 0.2s ease;
+}
+
 .accent {
-  color: var(--blue);
+  color: var(--accent);
+}
+
+.brandText {
+  transition: opacity 0.15s ease;
 }
 
 .sidebar.collapsed .brandText {
@@ -52,6 +67,7 @@
 }
 
 .navItem {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -59,23 +75,59 @@
   border-radius: 10px;
   font-size: 15px;
   font-weight: 600;
-  color: var(--text-soft);
+  color: var(--text-muted);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.15s ease;
   user-select: none;
   white-space: nowrap;
   overflow: hidden;
   text-decoration: none;
+  opacity: 0;
+  animation: fadeUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.nav .navItem:nth-child(1) { animation-delay: 0.04s; }
+.nav .navItem:nth-child(2) { animation-delay: 0.08s; }
+.nav .navItem:nth-child(3) { animation-delay: 0.12s; }
+.nav .navItem:nth-child(4) { animation-delay: 0.16s; }
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.navItem::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 18px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .navItem:hover {
-  background: var(--blue-light);
-  color: var(--blue);
+  background: var(--surface-2);
+  color: var(--accent);
+  transform: translateX(2px);
 }
 
 .navItem.active {
-  background: var(--blue-light);
-  color: var(--blue);
+  background: var(--surface-2);
+  color: var(--accent);
+}
+
+.navItem.active::before {
+  transform: translateY(-50%) scaleY(1);
 }
 
 .icon {
@@ -85,10 +137,16 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: transform 0.18s ease;
+}
+
+.navItem:hover .icon {
+  transform: scale(1.08);
 }
 
 .label {
   flex: 1;
+  transition: opacity 0.15s ease;
 }
 
 .sidebar.collapsed .navItem {
@@ -108,7 +166,7 @@
   margin-top: auto;
   margin-bottom: 8px;
   border-radius: 10px;
-  color: var(--text-soft);
+  color: var(--text-muted);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -119,15 +177,16 @@
   width: 100%;
   text-align: left;
   font-family: inherit;
+  transition: background 0.18s ease, color 0.18s ease;
 }
 
 .collapseRow:hover {
-  background: var(--blue-light);
-  color: var(--blue);
+  background: var(--surface-2);
+  color: var(--accent);
 }
 
 .chev {
-  transition: transform 0.2s ease;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
 }
 
@@ -157,15 +216,27 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-soft);
+  color: var(--text-muted);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.15s ease;
   flex-shrink: 0;
   background: none;
   border: none;
 }
 
 .iconBtn:hover {
-  background: var(--blue-light);
-  color: var(--blue);
+  background: var(--surface-2);
+  color: var(--accent);
+  transform: rotate(20deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .navItem,
+  .icon,
+  .chev,
+  .iconBtn {
+    animation: none !important;
+    transition: none !important;
+  }
 }
