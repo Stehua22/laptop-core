@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 
@@ -9,6 +9,7 @@ type Article = {
   content: string;
   category: string;
   author: string;
+  coverImage?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -42,6 +43,40 @@ const CATEGORY_COLORS: Record<string, string> = {
   Opinion: "#ec6f9b",
 };
 
+function renderArticleContent(content: string) {
+  const regex = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(
+        <span key={key++} style={{ whiteSpace: "pre-wrap" }}>
+          {content.slice(lastIndex, match.index)}
+        </span>
+      );
+    }
+    nodes.push(
+      <img
+        key={key++}
+        src={match[2]}
+        alt={match[1] || "article image"}
+        style={{ maxWidth: "100%", borderRadius: 12, margin: "14px 0", display: "block" }}
+      />
+    );
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < content.length) {
+    nodes.push(
+      <span key={key++} style={{ whiteSpace: "pre-wrap" }}>
+        {content.slice(lastIndex)}
+      </span>
+    );
+  }
+  return nodes;
+}
+
 export default function ArticlesPage() {
   const ADMIN_PASSWORD = "admin2026.123";
 
@@ -52,15 +87,13 @@ export default function ArticlesPage() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Admin auth state
   const [unlocked, setUnlocked] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [authInput, setAuthInput] = useState("");
   const [authError, setAuthError] = useState("");
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
-  // Form state
-  const [form, setForm] = useState({ title: "", summary: "", content: "", category: "Guide", author: "" });
+  const [form, setForm] = useState({ title: "", summary: "", content: "", category: "Guide", author: "", coverImage: "" });
 
   useEffect(() => {
     setArticles(loadArticles());
@@ -80,16 +113,9 @@ export default function ArticlesPage() {
     const now = new Date().toISOString();
     let updated: Article[];
     if (editingId) {
-      updated = articles.map((a) =>
-        a.id === editingId ? { ...a, ...form, updatedAt: now } : a
-      );
+      updated = articles.map((a) => (a.id === editingId ? { ...a, ...form, updatedAt: now } : a));
     } else {
-      const newArticle: Article = {
-        id: crypto.randomUUID(),
-        ...form,
-        createdAt: now,
-        updatedAt: now,
-      };
+      const newArticle: Article = { id: crypto.randomUUID(), ...form, createdAt: now, updatedAt: now };
       updated = [newArticle, ...articles];
     }
     setArticles(updated);
@@ -120,6 +146,7 @@ export default function ArticlesPage() {
       content: article.content,
       category: article.category,
       author: article.author,
+      coverImage: article.coverImage || "",
     });
     setEditingId(article.id);
     setShowEditor(true);
@@ -134,9 +161,16 @@ export default function ArticlesPage() {
   };
 
   const resetForm = () => {
-    setForm({ title: "", summary: "", content: "", category: "Guide", author: "" });
+    setForm({ title: "", summary: "", content: "", category: "Guide", author: "", coverImage: "" });
     setEditingId(null);
     setShowEditor(false);
+  };
+
+  const insertInlineImage = () => {
+    const url = window.prompt("Image URL:");
+    if (!url) return;
+    const alt = window.prompt("Alt text (optional):") || "image";
+    setForm((f) => ({ ...f, content: f.content + (f.content.endsWith("\n") || !f.content ? "" : "\n") + `![${alt}](${url})\n` }));
   };
 
   const inputStyle: React.CSSProperties = {
@@ -158,7 +192,6 @@ export default function ArticlesPage() {
       <Sidebar activeKey="articles" />
       <div style={{ flex: 1, maxWidth: 1000, margin: "0 auto", padding: "32px 20px" }}>
 
-        {/* Header */}
         <div className="animate-fade-up" style={{ marginBottom: 40 }}>
           <div style={{ fontSize: 10, color: "var(--accent)", letterSpacing: "0.25em", textTransform: "uppercase", marginBottom: 10, fontWeight: 600, opacity: 0.8 }}>
             // knowledge base
@@ -187,7 +220,6 @@ export default function ArticlesPage() {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="animate-fade-up" style={{ animationDelay: "0.05s", display: "flex", gap: 10, marginBottom: 28, flexWrap: "wrap" }}>
           <input
             type="text"
@@ -223,7 +255,6 @@ export default function ArticlesPage() {
           </div>
         </div>
 
-        {/* Editor modal */}
         {showEditor && (
           <div
             style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)" }}
@@ -266,17 +297,43 @@ export default function ArticlesPage() {
                   </select>
                 </div>
                 <input
+                  placeholder="Cover image URL (optional)"
+                  value={form.coverImage}
+                  onChange={(e) => setForm((f) => ({ ...f, coverImage: e.target.value }))}
+                  style={inputStyle}
+                />
+                {form.coverImage && (
+                  <img
+                    src={form.coverImage}
+                    alt="Cover preview"
+                    style={{ width: "100%", maxHeight: 160, objectFit: "cover", borderRadius: 10, border: "1px solid var(--border)" }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                )}
+                <input
                   placeholder="Short summary..."
                   value={form.summary}
                   onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
                   style={inputStyle}
                 />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 11, color: "var(--text-dim)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Content</span>
+                  <button
+                    type="button"
+                    onClick={insertInlineImage}
+                    style={{
+                      fontSize: 11, padding: "5px 12px", borderRadius: "var(--btn-radius, 8px)",
+                      border: "1px solid var(--border)", background: "var(--surface-2)",
+                      color: "var(--text-muted)", cursor: "pointer", fontWeight: 600, fontFamily: "inherit",
+                    }}
+                  >Insert Image</button>
+                </div>
                 <textarea
-                  placeholder="Write your article content here... (supports plain text)"
+                  placeholder="Write your article content here... Use the Insert Image button to add pictures inline."
                   value={form.content}
                   onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
                   rows={12}
-                  style={{ ...inputStyle, resize: "vertical", lineHeight: 1.7 }}
+                  style={{ ...inputStyle, resize: "vertical", lineHeight: 1.7, marginTop: -6 }}
                 />
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
                   <button
@@ -300,7 +357,6 @@ export default function ArticlesPage() {
           </div>
         )}
 
-        {/* Admin auth modal */}
         {showAuth && (
           <div
             style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)" }}
@@ -317,9 +373,7 @@ export default function ArticlesPage() {
                 onKeyDown={(e) => { if (e.key === "Enter") submitAuth(); }}
                 style={inputStyle}
               />
-              {authError && (
-                <p style={{ color: "#f76a6a", fontSize: 12, marginTop: 8 }}>{authError}</p>
-              )}
+              {authError && <p style={{ color: "#f76a6a", fontSize: 12, marginTop: 8 }}>{authError}</p>}
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
                 <button
                   onClick={() => setShowAuth(false)}
@@ -334,7 +388,6 @@ export default function ArticlesPage() {
           </div>
         )}
 
-        {/* Articles list */}
         {filtered.length === 0 ? (
           <div className="animate-fade-up" style={{ textAlign: "center", padding: "5rem 1rem" }}>
             <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>📝</div>
@@ -364,15 +417,30 @@ export default function ArticlesPage() {
                     transition: "all 0.25s cubic-bezier(0.22,1,0.36,1)",
                   }}
                 >
-                  {/* Accent bar */}
                   <div style={{ height: 3, background: `linear-gradient(90deg, ${catColor}, ${catColor}60)`, opacity: isExpanded ? 1 : 0.5, transition: "opacity 0.2s" }} />
 
-                  {/* Card header */}
+                  {isExpanded && article.coverImage && (
+                    <img
+                      src={article.coverImage}
+                      alt={article.title}
+                      style={{ width: "100%", maxHeight: 320, objectFit: "cover", display: "block" }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    />
+                  )}
+
                   <div
                     style={{ padding: "18px 22px", cursor: "pointer" }}
                     onClick={() => setExpandedId(isExpanded ? null : article.id)}
                   >
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                      {!isExpanded && article.coverImage && (
+                        <img
+                          src={article.coverImage}
+                          alt={article.title}
+                          style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 10, flexShrink: 0 }}
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      )}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                           <span style={{
@@ -411,7 +479,6 @@ export default function ArticlesPage() {
                     </div>
                   </div>
 
-                  {/* Expanded content */}
                   {isExpanded && (
                     <div style={{ padding: "0 22px 20px", animation: "fadeUp 0.3s ease both" }}>
                       {article.summary && (
@@ -419,11 +486,8 @@ export default function ArticlesPage() {
                           {article.summary}
                         </p>
                       )}
-                      <div style={{
-                        fontSize: 14, color: "var(--text)", lineHeight: 1.8,
-                        whiteSpace: "pre-wrap", wordBreak: "break-word",
-                      }}>
-                        {article.content}
+                      <div style={{ fontSize: 14, color: "var(--text)", lineHeight: 1.8, wordBreak: "break-word" }}>
+                        {renderArticleContent(article.content)}
                       </div>
 
                       {article.updatedAt !== article.createdAt && (
@@ -441,7 +505,7 @@ export default function ArticlesPage() {
                             color: "var(--text-muted)", cursor: "pointer", fontWeight: 600, fontFamily: "inherit",
                             transition: "all 0.15s",
                           }}
-                        >✏️ Edit</button>
+                        >Edit</button>
                         <button
                           onClick={(e) => { e.stopPropagation(); requireAuth(() => handleDelete(article.id)); }}
                           style={{
@@ -450,7 +514,7 @@ export default function ArticlesPage() {
                             color: "#f76a6a", cursor: "pointer", fontWeight: 600, fontFamily: "inherit",
                             transition: "all 0.15s",
                           }}
-                        >🗑 Delete</button>
+                        >Delete</button>
                       </div>
                     </div>
                   )}
