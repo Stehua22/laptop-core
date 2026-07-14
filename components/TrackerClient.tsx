@@ -291,9 +291,26 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
   const handleAddClick    = () => requireAuth(() => setShowAddModal(true));
   const handleDeleteClick = (id: number) => requireAuth(() => handleDeleteLaptop(id));
 
+  const handleResetSettings = () => {
+    setIsDark(true);
+    setAccent("default");
+    setFontScale(1);
+    setUiTheme("default");
+    setCardLayout("row");
+    setBgEffect("grid");
+    // Clear localStorage so defaults take effect on next load
+    window.localStorage.removeItem("lc-dark");
+    window.localStorage.removeItem("lc-accent");
+    window.localStorage.removeItem("lc-font-scale");
+    window.localStorage.removeItem("lc-ui-theme");
+    window.localStorage.removeItem("lc-card-layout");
+    window.localStorage.removeItem("lc-bg-effect");
+    showToast("↺ Settings reset to defaults");
+  };
+
   return (
     <div style={{ position: "relative", zIndex: 1, display: "flex" }}>
-      <Sidebar activeKey="home" onSettingsClick={() => setShowSettings(true)} />
+      <Sidebar activeKey="home" onSettingsClick={() => setShowSettings(true)} onResetSettings={handleResetSettings} />
       <div style={{ flex: 1, maxWidth: 1300, margin: "0 auto", padding: "32px 20px" }}>
         {dbError && (
           <div style={{ background: "rgba(247,106,106,0.1)", border: "1px solid rgba(247,106,106,0.3)", borderRadius: 12, padding: "14px 20px", marginBottom: 24, color: "#f76a6a", fontSize: 13 }}>

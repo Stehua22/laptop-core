@@ -1,17 +1,11 @@
 .sidebar {
-  --blue: #2f7de0;
-  --blue-light: #eaf2fd;
-  --text: #1c2b45;
-  --text-soft: #6b7686;
-  --border: #e7eaf0;
-
   width: 220px;
-  background: #ffffff;
+  background: var(--surface);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   padding: 20px 14px;
-  transition: width 0.2s ease, padding 0.2s ease;
+  transition: width 0.2s ease, padding 0.2s ease, background 0.35s ease, border-color 0.35s ease;
   flex-shrink: 0;
   height: 100vh;
   position: sticky;
@@ -37,7 +31,7 @@
 }
 
 .accent {
-  color: var(--blue);
+  color: var(--accent);
 }
 
 .sidebar.collapsed .brandText {
@@ -59,7 +53,7 @@
   border-radius: 10px;
   font-size: 15px;
   font-weight: 600;
-  color: var(--text-soft);
+  color: var(--text-muted);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
   user-select: none;
@@ -69,13 +63,13 @@
 }
 
 .navItem:hover {
-  background: var(--blue-light);
-  color: var(--blue);
+  background: var(--glow);
+  color: var(--accent);
 }
 
 .navItem.active {
-  background: var(--blue-light);
-  color: var(--blue);
+  background: var(--glow);
+  color: var(--accent);
 }
 
 .icon {
@@ -108,7 +102,7 @@
   margin-top: auto;
   margin-bottom: 8px;
   border-radius: 10px;
-  color: var(--text-soft);
+  color: var(--text-muted);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -122,8 +116,8 @@
 }
 
 .collapseRow:hover {
-  background: var(--blue-light);
-  color: var(--blue);
+  background: var(--glow);
+  color: var(--accent);
 }
 
 .chev {
@@ -145,9 +139,11 @@
 
 .bottom {
   display: flex;
+  gap: 6px;
   justify-content: space-around;
   padding-top: 14px;
   border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .iconBtn {
@@ -157,7 +153,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-soft);
+  color: var(--text-muted);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
   flex-shrink: 0;
@@ -166,6 +162,26 @@
 }
 
 .iconBtn:hover {
-  background: var(--blue-light);
-  color: var(--blue);
+  background: var(--glow);
+  color: var(--accent);
+}
+
+.resetBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+}
+
+.resetBtn:hover {
+  background: rgba(247, 106, 106, 0.15);
+  color: var(--accent-red, #f76a6a);
 }
