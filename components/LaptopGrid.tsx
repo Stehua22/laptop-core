@@ -13,9 +13,10 @@ type Props = {
   onDelete?: (id: number) => void;
   currency?: "CAD" | "USD";
   cadToUsd?: number;
+  cardLayout?: "row" | "grid" | "compact";
 };
 
-export default function LaptopGrid({ laptops, onSelect, onHistory, isAdmin, onMoveToDeals, onDelete, currency = "CAD", cadToUsd = 0.73 }: Props) {
+export default function LaptopGrid({ laptops, onSelect, onHistory, isAdmin, onMoveToDeals, onDelete, currency = "CAD", cadToUsd = 0.73, cardLayout = "row" }: Props) {
   const [compareIds, setCompareIds] = useState<number[]>([]);
   const [showCompare, setShowCompare] = useState(false);
 
@@ -56,7 +57,7 @@ export default function LaptopGrid({ laptops, onSelect, onHistory, isAdmin, onMo
           <div style={{ fontSize: 12, opacity: 0.7 }}>Try adjusting your search or filters</div>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: compareIds.length > 0 ? 100 : 0 }}>
+        <div style={cardLayout === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14, paddingBottom: compareIds.length > 0 ? 100 : 0 } : { display: "flex", flexDirection: "column" as const, gap: cardLayout === "compact" ? 6 : 10, paddingBottom: compareIds.length > 0 ? 100 : 0 }}>
           {laptops.map((l) => (
             <LaptopCard
               key={l.id} laptop={l} onSelect={onSelect} onHistory={onHistory}
@@ -65,6 +66,7 @@ export default function LaptopGrid({ laptops, onSelect, onHistory, isAdmin, onMo
               compareSelected={compareIds.includes(l.id)}
               onCompareToggle={toggleCompare}
               compareDisabled={compareIds.length >= 3 && !compareIds.includes(l.id)}
+              cardLayout={cardLayout}
             />
           ))}
         </div>

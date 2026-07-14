@@ -55,6 +55,9 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
   const [accent, setAccent] = useState("default");
   const [fontScale, setFontScale] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
+  const [uiTheme, setUiTheme] = useState("default");
+  const [cardLayout, setCardLayout] = useState<"row" | "grid" | "compact">("row");
+  const [bgEffect, setBgEffect] = useState("grid");
   const [currency, setCurrency] = useState<"CAD" | "USD">("CAD");
   const [cadToUsd, setCadToUsd] = useState(0.73);
   const toggleCurrency = () => setCurrency((c) => (c === "CAD" ? "USD" : "CAD"));
@@ -78,6 +81,12 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     if (savedAccent) setAccent(savedAccent);
     const savedFontScale = window.localStorage.getItem("lc-font-scale");
     if (savedFontScale) setFontScale(parseFloat(savedFontScale));
+    const savedUiTheme = window.localStorage.getItem("lc-ui-theme");
+    if (savedUiTheme) setUiTheme(savedUiTheme);
+    const savedCardLayout = window.localStorage.getItem("lc-card-layout") as "row" | "grid" | "compact" | null;
+    if (savedCardLayout) setCardLayout(savedCardLayout);
+    const savedBgEffect = window.localStorage.getItem("lc-bg-effect");
+    if (savedBgEffect) setBgEffect(savedBgEffect);
   }, []);
 
   useEffect(() => {
@@ -95,6 +104,22 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     document.documentElement.style.setProperty("--app-zoom", String(fontScale));
     window.localStorage.setItem("lc-font-scale", String(fontScale));
   }, [fontScale]);
+
+  useEffect(() => {
+    if (uiTheme === "default") document.documentElement.removeAttribute("data-ui-theme");
+    else document.documentElement.setAttribute("data-ui-theme", uiTheme);
+    window.localStorage.setItem("lc-ui-theme", uiTheme);
+  }, [uiTheme]);
+
+  useEffect(() => {
+    window.localStorage.setItem("lc-card-layout", cardLayout);
+  }, [cardLayout]);
+
+  useEffect(() => {
+    if (bgEffect === "grid") document.documentElement.removeAttribute("data-bg-effect");
+    else document.documentElement.setAttribute("data-bg-effect", bgEffect);
+    window.localStorage.setItem("lc-bg-effect", bgEffect);
+  }, [bgEffect]);
 
   useEffect(() => {
     async function loadRecs() {
@@ -297,6 +322,7 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
           isAdmin={unlocked} onMoveToDeals={(l) => requireAuth(() => handleMoveToDeals(l))}
           onDelete={(id) => requireAuth(() => handleDeleteLaptop(id))}
           currency={currency} cadToUsd={cadToUsd}
+          cardLayout={cardLayout}
         />
       </div>
 
@@ -312,6 +338,12 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
           onAccentChange={setAccent}
           fontScale={fontScale}
           onFontScaleChange={setFontScale}
+          uiTheme={uiTheme}
+          onUiThemeChange={setUiTheme}
+          cardLayout={cardLayout}
+          onCardLayoutChange={setCardLayout}
+          bgEffect={bgEffect}
+          onBgEffectChange={setBgEffect}
         />
       )}
 
