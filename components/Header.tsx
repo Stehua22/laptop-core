@@ -1,10 +1,10 @@
 "use client";
 
 export default function Header({
-  onAdd, isDark, onThemeToggle, onDeals, onAdmin, currency, onCurrencyToggle, cadToUsd = 0.73,
+  onAdd, isDark, onThemeToggle, onDeals, currency, onCurrencyToggle, cadToUsd = 0.73,
 }: {
   onAdd: () => void; isDark: boolean; onThemeToggle: () => void;
-  onDeals: () => void; onAdmin: () => void;
+  onDeals: () => void;
   currency: "CAD" | "USD"; onCurrencyToggle: () => void; cadToUsd?: number;
 }) {
   return (
@@ -31,9 +31,6 @@ export default function Header({
           <span style={{ opacity: 0.35, fontSize: 11 }}>/</span>
           <span style={{ opacity: currency === "USD" ? 1 : 0.45 }}>USD</span>
         </button>
-        <button onClick={onAdmin} title="Admin panel"
-          style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 14px", cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center" }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}>⚙️</button>
         <button onClick={onDeals}
           style={{ background: "rgba(247,194,106,0.12)", color: "var(--accent-2)", border: "1px solid rgba(247,194,106,0.4)", borderRadius: 10, padding: "11px 22px", fontWeight: 600, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}
           onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(247,194,106,0.22)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(247,194,106,0.12)"; }}>🔥 Crazy Deals</button>

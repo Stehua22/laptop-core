@@ -13,7 +13,6 @@ import PriceHistoryModal from "./PriceHistoryModal";
 import AddLaptopModal from "./AddLaptopModal";
 import Recommendations from "./Recommendations";
 import Toast from "./Toast";
-import AdminPanel from "./AdminPanel";
 import Sidebar from "./Sidebar";
 
 type ToastMsg = { id: number; message: string; type: "success" | "error" };
@@ -48,7 +47,6 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
   const [selectedLaptop, setSelectedLaptop] = useState<Laptop | null>(null);
   const [historyLaptop, setHistoryLaptop] = useState<Laptop | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -240,12 +238,7 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     } catch { showToast("❌ Failed to move to deals", "error"); }
   };
 
-  const handleLaptopUpdatedFromAdmin = (updated: Laptop) => {
-    setLaptops((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
-  };
-
   const handleAddClick    = () => requireAuth(() => setShowAddModal(true));
-  const handleAdminClick  = () => requireAuth(() => setShowAdminPanel(true));
   const handleDeleteClick = (id: number) => requireAuth(() => handleDeleteLaptop(id));
 
   return (
@@ -259,7 +252,7 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
         )}
         <Header
           onAdd={handleAddClick} isDark={isDark} onThemeToggle={() => setIsDark(!isDark)}
-          onDeals={() => router.push("/deals")} onAdmin={handleAdminClick}
+          onDeals={() => router.push("/deals")}
           currency={currency} onCurrencyToggle={toggleCurrency} cadToUsd={cadToUsd}
         />
 
@@ -285,7 +278,6 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
       {selectedLaptop && <LaptopModal laptop={selectedLaptop} onClose={() => setSelectedLaptop(null)} onUpdatePrice={handleUpdatePrice} onDelete={handleDeleteClick} onHistory={(l) => { setSelectedLaptop(null); setHistoryLaptop(l); }} currency={currency} cadToUsd={cadToUsd} />}
       {historyLaptop && <PriceHistoryModal laptop={historyLaptop} onClose={() => setHistoryLaptop(null)} currency={currency} cadToUsd={cadToUsd} />}
       {showAddModal && <AddLaptopModal onClose={() => setShowAddModal(false)} onSubmit={handleAddLaptop} loading={loading} />}
-      {showAdminPanel && <AdminPanel laptops={laptops} currency={currency} cadToUsd={cadToUsd} onClose={() => setShowAdminPanel(false)} onLaptopUpdated={handleLaptopUpdatedFromAdmin} />}
 
       {showAuthModal && (
         <div
