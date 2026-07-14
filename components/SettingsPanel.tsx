@@ -6,6 +6,11 @@ const ACCENTS: { key: string; label: string; swatch: string }[] = [
   { key: "forest", label: "Forest", swatch: "#4caf7d" },
   { key: "grape", label: "Grape", swatch: "#a374e0" },
   { key: "mono", label: "Mono", swatch: "#9aa3b2" },
+  { key: "rose", label: "Rose", swatch: "#ec6f9b" },
+  { key: "amber", label: "Amber", swatch: "#e0a530" },
+  { key: "teal", label: "Teal", swatch: "#35b8b0" },
+  { key: "indigo", label: "Indigo", swatch: "#6c7ae0" },
+  { key: "crimson", label: "Crimson", swatch: "#e0524f" },
 ];
 
 const FONT_SCALES: { key: number; label: string }[] = [
@@ -78,7 +83,7 @@ export default function SettingsPanel({
           {/* Accent theme */}
           <div>
             <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Theme Color</p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(64px, 1fr))", gap: 8 }}>
               {ACCENTS.map((a) => (
                 <button
                   key={a.key}

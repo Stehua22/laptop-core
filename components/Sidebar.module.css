@@ -8,6 +8,8 @@
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
   height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
   position: sticky;
   top: 0;
   animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
