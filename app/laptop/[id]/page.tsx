@@ -9,7 +9,7 @@ const fmt = (n: number) => "$" + n.toLocaleString("en-US", { minimumFractionDigi
 const ADMIN_PASSWORD = "admin2026.123";
 
 export default function LaptopPage() {
-  const router = useRouter();a
+  const router = useRouter();
   const params = useParams();
   const [laptop, setLaptop] = useState<Laptop | null>(null);
   const [allLaptops, setAllLaptops] = useState<Laptop[]>([]);
