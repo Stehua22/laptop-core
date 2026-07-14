@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 const ACCENTS: { key: string; label: string; swatch: string }[] = [
   { key: "default", label: "Default", swatch: "#5e8fe8" },
@@ -11,6 +11,12 @@ const ACCENTS: { key: string; label: string; swatch: string }[] = [
   { key: "teal", label: "Teal", swatch: "#35b8b0" },
   { key: "indigo", label: "Indigo", swatch: "#6c7ae0" },
   { key: "crimson", label: "Crimson", swatch: "#e0524f" },
+  { key: "lime", label: "Lime", swatch: "#9ad63a" },
+  { key: "cyan", label: "Cyan", swatch: "#3ac5e0" },
+  { key: "gold", label: "Gold", swatch: "#d4af37" },
+  { key: "slate", label: "Slate", swatch: "#64748b" },
+  { key: "coral", label: "Coral", swatch: "#f27059" },
+  { key: "mint", label: "Mint", swatch: "#4ade80" },
 ];
 
 const FONT_SCALES: { key: number; label: string }[] = [
@@ -29,6 +35,10 @@ const UI_THEMES: { key: string; label: string; icon: string; desc: string }[] = 
   { key: "neumorphic", label: "Neumorphic", icon: "◎", desc: "Soft depth" },
   { key: "retro", label: "Retro", icon: "▶", desc: "Terminal vibes" },
   { key: "aurora", label: "Aurora", icon: "✧", desc: "Dreamy glow" },
+  { key: "paper", label: "Paper", icon: "▤", desc: "Print-inspired" },
+  { key: "cyberpunk", label: "Cyberpunk", icon: "◈", desc: "High contrast" },
+  { key: "sketch", label: "Sketch", icon: "✎", desc: "Hand-drawn feel" },
+  { key: "gradient", label: "Gradient", icon: "◒", desc: "Soft color wash" },
 ];
 
 const CARD_LAYOUTS: { key: "row" | "grid" | "compact"; label: string; icon: string }[] = [
@@ -78,7 +88,6 @@ export default function SettingsPanel({
   animSpeed, onAnimSpeedChange,
 }: Props) {
 
-  /* Shared style helpers */
   const pillBtn = (isActive: boolean) => ({
     flex: 1 as const,
     display: "flex" as const,
@@ -124,7 +133,6 @@ export default function SettingsPanel({
 
         <div style={{ padding: "22px 24px 26px", display: "flex", flexDirection: "column", gap: 24, overflowY: "auto", flex: 1 }}>
 
-          {/* Appearance mode */}
           <div>
             <p style={sectionTitle}>Appearance</p>
             <div style={{ display: "flex", gap: 8 }}>
@@ -153,7 +161,6 @@ export default function SettingsPanel({
             </div>
           </div>
 
-          {/* Accent theme */}
           <div>
             <p style={sectionTitle}>Theme Color</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(64px, 1fr))", gap: 8 }}>
@@ -177,7 +184,6 @@ export default function SettingsPanel({
             </div>
           </div>
 
-          {/* UI Theme */}
           <div>
             <p style={sectionTitle}>UI Theme</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))", gap: 8 }}>
@@ -200,7 +206,6 @@ export default function SettingsPanel({
             </div>
           </div>
 
-          {/* Card Layout */}
           <div>
             <p style={sectionTitle}>Card Layout</p>
             <div style={{ display: "flex", gap: 8 }}>
@@ -217,7 +222,6 @@ export default function SettingsPanel({
             </div>
           </div>
 
-          {/* Background Effect */}
           <div>
             <p style={sectionTitle}>Background</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))", gap: 8 }}>
@@ -234,7 +238,6 @@ export default function SettingsPanel({
             </div>
           </div>
 
-          {/* Animation Speed */}
           <div>
             <p style={sectionTitle}>Animation Speed</p>
             <div style={{ display: "flex", gap: 8 }}>
@@ -252,7 +255,6 @@ export default function SettingsPanel({
             <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 8 }}>Controls page transitions and hover effects.</p>
           </div>
 
-          {/* Font size */}
           <div>
             <p style={sectionTitle}>Font Size</p>
             <div style={{ display: "flex", gap: 8 }}>
