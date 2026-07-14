@@ -14,6 +14,7 @@ import AddLaptopModal from "./AddLaptopModal";
 import Recommendations from "./Recommendations";
 import Toast from "./Toast";
 import Sidebar from "./Sidebar";
+import SettingsPanel from "./SettingsPanel";
 
 type ToastMsg = { id: number; message: string; type: "success" | "error" };
 
@@ -51,6 +52,9 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const [isDark, setIsDark] = useState(true);
+  const [accent, setAccent] = useState("default");
+  const [fontScale, setFontScale] = useState(1);
+  const [showSettings, setShowSettings] = useState(false);
   const [currency, setCurrency] = useState<"CAD" | "USD">("CAD");
   const [cadToUsd, setCadToUsd] = useState(0.73);
   const toggleCurrency = () => setCurrency((c) => (c === "CAD" ? "USD" : "CAD"));
@@ -68,8 +72,29 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
   }, []);
 
   useEffect(() => {
+    const savedTheme = window.localStorage.getItem("lc-dark");
+    if (savedTheme !== null) setIsDark(savedTheme === "true");
+    const savedAccent = window.localStorage.getItem("lc-accent");
+    if (savedAccent) setAccent(savedAccent);
+    const savedFontScale = window.localStorage.getItem("lc-font-scale");
+    if (savedFontScale) setFontScale(parseFloat(savedFontScale));
+  }, []);
+
+  useEffect(() => {
     document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+    window.localStorage.setItem("lc-dark", String(isDark));
   }, [isDark]);
+
+  useEffect(() => {
+    if (accent === "default") document.documentElement.removeAttribute("data-accent");
+    else document.documentElement.setAttribute("data-accent", accent);
+    window.localStorage.setItem("lc-accent", accent);
+  }, [accent]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--app-zoom", String(fontScale));
+    window.localStorage.setItem("lc-font-scale", String(fontScale));
+  }, [fontScale]);
 
   useEffect(() => {
     async function loadRecs() {
@@ -243,7 +268,7 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
 
   return (
     <div style={{ position: "relative", zIndex: 1, display: "flex" }}>
-      <Sidebar activeKey="home" />
+      <Sidebar activeKey="home" onSettingsClick={() => setShowSettings(true)} />
       <div style={{ flex: 1, maxWidth: 1300, margin: "0 auto", padding: "32px 20px" }}>
         {dbError && (
           <div style={{ background: "rgba(247,106,106,0.1)", border: "1px solid rgba(247,106,106,0.3)", borderRadius: 12, padding: "14px 20px", marginBottom: 24, color: "#f76a6a", fontSize: 13 }}>
@@ -278,6 +303,17 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
       {selectedLaptop && <LaptopModal laptop={selectedLaptop} onClose={() => setSelectedLaptop(null)} onUpdatePrice={handleUpdatePrice} onDelete={handleDeleteClick} onHistory={(l) => { setSelectedLaptop(null); setHistoryLaptop(l); }} currency={currency} cadToUsd={cadToUsd} />}
       {historyLaptop && <PriceHistoryModal laptop={historyLaptop} onClose={() => setHistoryLaptop(null)} currency={currency} cadToUsd={cadToUsd} />}
       {showAddModal && <AddLaptopModal onClose={() => setShowAddModal(false)} onSubmit={handleAddLaptop} loading={loading} />}
+      {showSettings && (
+        <SettingsPanel
+          onClose={() => setShowSettings(false)}
+          isDark={isDark}
+          onThemeToggle={() => setIsDark((d) => !d)}
+          accent={accent}
+          onAccentChange={setAccent}
+          fontScale={fontScale}
+          onFontScaleChange={setFontScale}
+        />
+      )}
 
       {showAuthModal && (
         <div
