@@ -9,9 +9,10 @@ const fmt = (n: number) => "$" + n.toLocaleString("en-US", { minimumFractionDigi
 const ADMIN_PASSWORD = "admin2026.123";
 
 export default function LaptopPage() {
-  const router = useRouter();
+  const router = useRouter();a
   const params = useParams();
   const [laptop, setLaptop] = useState<Laptop | null>(null);
+  const [allLaptops, setAllLaptops] = useState<Laptop[]>([]);
   const [loading, setLoading] = useState(true);
   const [imgError, setImgError] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
@@ -35,6 +36,7 @@ export default function LaptopPage() {
     fetchLaptops().then((laptops) => {
       const found = laptops.find((l) => l.id === Number(params.id));
       setLaptop(found ?? null);
+      setAllLaptops(laptops);
       setLoading(false);
     });
   }, [params.id]);
@@ -110,6 +112,31 @@ export default function LaptopPage() {
   const savings = hasDiscount ? retail - price : 0;
   const specLines = laptop.specs?.split(/[,·\n]/).map(s => s.trim()).filter(Boolean) ?? [];
   const goodForTags = laptop.good_for ? laptop.good_for.split(",").map(s => s.trim()).filter(Boolean) : [];
+
+  const similarLaptops = allLaptops
+    .filter((l) => l.id !== laptop.id)
+    .map((l) => {
+      let score = 0;
+      if (l.brand === laptop.brand) score += 3;
+
+      const lPrice = l.current_price ?? l.retail_price ?? 0;
+      if (price > 0 && lPrice > 0) {
+        const priceDiff = Math.abs(lPrice - price) / price;
+        if (priceDiff <= 0.15) score += 3;
+        else if (priceDiff <= 0.3) score += 2;
+        else if (priceDiff <= 0.5) score += 1;
+      }
+
+      const lTags = l.good_for ? l.good_for.split(",").map(s => s.trim().toLowerCase()).filter(Boolean) : [];
+      const overlap = goodForTags.filter(t => lTags.includes(t.toLowerCase())).length;
+      score += overlap * 2;
+
+      return { laptop: l, score };
+    })
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4)
+    .map((s) => s.laptop);
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "8px 12px", fontSize: 13,
@@ -386,6 +413,41 @@ export default function LaptopPage() {
               ))}
             </div>
           </div>
+
+          {/* Similar Laptops */}
+          {similarLaptops.length > 0 && (
+            <div style={{ marginBottom: 40 }}>
+              <h2 style={{ fontSize: "1.1rem", fontWeight: 800, marginBottom: 16, letterSpacing: "-0.02em" }}>Similar Laptops</h2>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
+                {similarLaptops.map((l) => {
+                  const lPrice = l.current_price ?? l.retail_price ?? 0;
+                  const lRetail = l.retail_price ?? lPrice;
+                  const lHasDiscount = lRetail > lPrice && lPrice > 0;
+                  return (
+                    <div key={l.id} onClick={() => router.push(`/laptop/${l.id}`)}
+                      style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: 16, cursor: "pointer", transition: "border-color 0.15s, transform 0.15s", display: "flex", flexDirection: "column" }}
+                      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(139,179,245,0.4)"; el.style.transform = "translateY(-2px)"; }}
+                      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border)"; el.style.transform = "translateY(0)"; }}
+                    >
+                      <div style={{ height: 100, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, background: "var(--surface-2)", borderRadius: 10 }}>
+                        {l.image_url ? (
+                          <img src={l.image_url} alt={l.model} style={{ maxWidth: "80%", maxHeight: "80%", objectFit: "contain" }} />
+                        ) : (
+                          <span style={{ fontSize: 32, opacity: 0.25 }}>💻</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 10, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.14em", fontWeight: 700, marginBottom: 4 }}>{l.brand}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, lineHeight: 1.3, flex: 1 }}>{l.model}</div>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: "var(--accent-3)" }}>{fmt(lPrice)}</span>
+                        {lHasDiscount && <span style={{ fontSize: 11, color: "var(--text-dim)", textDecoration: "line-through" }}>{fmt(lRetail)}</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Auth modal */}
