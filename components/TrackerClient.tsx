@@ -14,6 +14,7 @@ import AddLaptopModal from "./AddLaptopModal";
 import Recommendations from "./Recommendations";
 import Toast from "./Toast";
 import AdminPanel from "./AdminPanel";
+import Sidebar from "./Sidebar";
 
 type ToastMsg = { id: number; message: string; type: "success" | "error" };
 
@@ -248,8 +249,9 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
   const handleDeleteClick = (id: number) => requireAuth(() => handleDeleteLaptop(id));
 
   return (
-    <div style={{ position: "relative", zIndex: 1 }}>
-      <div style={{ maxWidth: 1300, margin: "0 auto", padding: "32px 20px" }}>
+    <div style={{ position: "relative", zIndex: 1, display: "flex" }}>
+      <Sidebar activeKey="home" />
+      <div style={{ flex: 1, maxWidth: 1300, margin: "0 auto", padding: "32px 20px" }}>
         {dbError && (
           <div style={{ background: "rgba(247,106,106,0.1)", border: "1px solid rgba(247,106,106,0.3)", borderRadius: 12, padding: "14px 20px", marginBottom: 24, color: "#f76a6a", fontSize: 13 }}>
             ⚠ {dbError}
