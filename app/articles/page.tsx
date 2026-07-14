@@ -42,7 +42,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   Opinion: "#ec6f9b",
 };
 
-// forced update`nexport default function ArticlesPage() {
+export default function ArticlesPage() {
   const ADMIN_PASSWORD = "admin2026.123";
 
   const [articles, setArticles] = useState<Article[]>([]);
