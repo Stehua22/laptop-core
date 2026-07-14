@@ -58,6 +58,7 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
   const [uiTheme, setUiTheme] = useState("default");
   const [cardLayout, setCardLayout] = useState<"row" | "grid" | "compact">("row");
   const [bgEffect, setBgEffect] = useState("grid");
+  const [animSpeed, setAnimSpeed] = useState("normal");
   const [currency, setCurrency] = useState<"CAD" | "USD">("CAD");
   const [cadToUsd, setCadToUsd] = useState(0.73);
   const toggleCurrency = () => setCurrency((c) => (c === "CAD" ? "USD" : "CAD"));
@@ -87,6 +88,8 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     if (savedCardLayout) setCardLayout(savedCardLayout);
     const savedBgEffect = window.localStorage.getItem("lc-bg-effect");
     if (savedBgEffect) setBgEffect(savedBgEffect);
+    const savedAnimSpeed = window.localStorage.getItem("lc-anim-speed");
+    if (savedAnimSpeed) setAnimSpeed(savedAnimSpeed);
   }, []);
 
   useEffect(() => {
@@ -120,6 +123,12 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     else document.documentElement.setAttribute("data-bg-effect", bgEffect);
     window.localStorage.setItem("lc-bg-effect", bgEffect);
   }, [bgEffect]);
+
+  useEffect(() => {
+    if (animSpeed === "normal") document.documentElement.removeAttribute("data-anim-speed");
+    else document.documentElement.setAttribute("data-anim-speed", animSpeed);
+    window.localStorage.setItem("lc-anim-speed", animSpeed);
+  }, [animSpeed]);
 
   useEffect(() => {
     async function loadRecs() {
@@ -298,6 +307,7 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     setUiTheme("default");
     setCardLayout("row");
     setBgEffect("grid");
+    setAnimSpeed("normal");
     // Clear localStorage so defaults take effect on next load
     window.localStorage.removeItem("lc-dark");
     window.localStorage.removeItem("lc-accent");
@@ -305,6 +315,7 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     window.localStorage.removeItem("lc-ui-theme");
     window.localStorage.removeItem("lc-card-layout");
     window.localStorage.removeItem("lc-bg-effect");
+    window.localStorage.removeItem("lc-anim-speed");
     showToast("↺ Settings reset to defaults");
   };
 
@@ -361,6 +372,8 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
           onCardLayoutChange={setCardLayout}
           bgEffect={bgEffect}
           onBgEffectChange={setBgEffect}
+          animSpeed={animSpeed}
+          onAnimSpeedChange={setAnimSpeed}
         />
       )}
 

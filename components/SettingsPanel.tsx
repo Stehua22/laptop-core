@@ -26,6 +26,9 @@ const UI_THEMES: { key: string; label: string; icon: string; desc: string }[] = 
   { key: "neon", label: "Neon", icon: "⚡", desc: "Glowing edges" },
   { key: "minimal", label: "Minimal", icon: "○", desc: "Clean & flat" },
   { key: "brutalist", label: "Brutalist", icon: "■", desc: "Bold & raw" },
+  { key: "neumorphic", label: "Neumorphic", icon: "◎", desc: "Soft depth" },
+  { key: "retro", label: "Retro", icon: "▶", desc: "Terminal vibes" },
+  { key: "aurora", label: "Aurora", icon: "✧", desc: "Dreamy glow" },
 ];
 
 const CARD_LAYOUTS: { key: "row" | "grid" | "compact"; label: string; icon: string }[] = [
@@ -38,7 +41,17 @@ const BG_EFFECTS: { key: string; label: string; icon: string }[] = [
   { key: "grid", label: "Grid", icon: "▦" },
   { key: "gradient", label: "Gradient", icon: "◐" },
   { key: "particles", label: "Particles", icon: "✦" },
+  { key: "stars", label: "Stars", icon: "★" },
+  { key: "waves", label: "Waves", icon: "〰" },
+  { key: "bokeh", label: "Bokeh", icon: "●" },
   { key: "none", label: "None", icon: "∅" },
+];
+
+const ANIM_SPEEDS: { key: string; label: string; desc: string }[] = [
+  { key: "off", label: "Off", desc: "No motion" },
+  { key: "slow", label: "Slow", desc: "Relaxed" },
+  { key: "normal", label: "Normal", desc: "Default" },
+  { key: "fast", label: "Fast", desc: "Snappy" },
 ];
 
 type Props = {
@@ -55,11 +68,14 @@ type Props = {
   onCardLayoutChange: (layout: "row" | "grid" | "compact") => void;
   bgEffect: string;
   onBgEffectChange: (effect: string) => void;
+  animSpeed: string;
+  onAnimSpeedChange: (speed: string) => void;
 };
 
 export default function SettingsPanel({
   onClose, isDark, onThemeToggle, accent, onAccentChange, fontScale, onFontScaleChange,
   uiTheme, onUiThemeChange, cardLayout, onCardLayoutChange, bgEffect, onBgEffectChange,
+  animSpeed, onAnimSpeedChange,
 }: Props) {
 
   /* Shared style helpers */
@@ -204,7 +220,7 @@ export default function SettingsPanel({
           {/* Background Effect */}
           <div>
             <p style={sectionTitle}>Background</p>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))", gap: 8 }}>
               {BG_EFFECTS.map((bg) => (
                 <button
                   key={bg.key}
@@ -216,6 +232,24 @@ export default function SettingsPanel({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Animation Speed */}
+          <div>
+            <p style={sectionTitle}>Animation Speed</p>
+            <div style={{ display: "flex", gap: 8 }}>
+              {ANIM_SPEEDS.map((a) => (
+                <button
+                  key={a.key}
+                  onClick={() => onAnimSpeedChange(a.key)}
+                  style={pillBtn(animSpeed === a.key)}
+                >
+                  <span style={{ fontSize: 10, fontWeight: 700 }}>{a.label}</span>
+                  <span style={{ fontSize: 9, opacity: 0.6 }}>{a.desc}</span>
+                </button>
+              ))}
+            </div>
+            <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 8 }}>Controls page transitions and hover effects.</p>
           </div>
 
           {/* Font size */}

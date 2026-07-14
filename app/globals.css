@@ -237,6 +237,114 @@ html {
   --border-hover: var(--accent);
 }
 
+/* — Neumorphic (Soft depth) — */
+[data-ui-theme="neumorphic"] {
+  --card-radius: 20px;
+  --card-blur: 0px;
+  --btn-radius: 14px;
+  --modal-radius: 24px;
+  --card-hover-y: -3px;
+}
+[data-ui-theme="neumorphic"][data-theme="dark"] {
+  --card-bg: #151928;
+  --card-border: transparent;
+  --card-shadow: 6px 6px 16px rgba(0,0,0,0.5), -6px -6px 16px rgba(40,48,80,0.2);
+  --card-hover-shadow: 8px 8px 24px rgba(0,0,0,0.6), -8px -8px 24px rgba(40,48,80,0.25), 0 0 0 1px rgba(139,179,245,0.08);
+  --surface: #12162a;
+  --surface-2: #181d32;
+  --border: transparent;
+}
+[data-ui-theme="neumorphic"][data-theme="light"] {
+  --card-bg: #e8ecf4;
+  --card-border: transparent;
+  --card-shadow: 6px 6px 14px rgba(166,180,200,0.5), -6px -6px 14px rgba(255,255,255,0.8);
+  --card-hover-shadow: 8px 8px 20px rgba(166,180,200,0.6), -8px -8px 20px rgba(255,255,255,0.9), 0 0 0 1px rgba(94,143,232,0.1);
+  --surface: #e4e8f0;
+  --surface-2: #dfe3ec;
+  --border: transparent;
+  --bg: #e4e8f0;
+}
+
+/* — Retro (Terminal) — */
+[data-ui-theme="retro"] {
+  --card-radius: 2px;
+  --card-blur: 0px;
+  --btn-radius: 2px;
+  --modal-radius: 4px;
+  --card-hover-y: 0px;
+}
+[data-ui-theme="retro"][data-theme="dark"] {
+  --bg: #0a0a0a;
+  --card-bg: #111111;
+  --card-border: #33ff33;
+  --card-shadow: 0 0 8px rgba(51,255,51,0.15), inset 0 0 40px rgba(51,255,51,0.02);
+  --card-hover-shadow: 0 0 20px rgba(51,255,51,0.3);
+  --surface: #111111;
+  --surface-2: #1a1a1a;
+  --border: rgba(51,255,51,0.25);
+  --border-hover: rgba(51,255,51,0.5);
+  --accent: #33ff33;
+  --accent-2: #ffcc00;
+  --accent-3: #00ccff;
+  --text: #33ff33;
+  --text-muted: #22aa22;
+  --text-dim: #116611;
+  --glow: rgba(51,255,51,0.2);
+}
+[data-ui-theme="retro"][data-theme="light"] {
+  --bg: #f5f0e0;
+  --card-bg: #fffef5;
+  --card-border: #6b4c1e;
+  --card-shadow: 3px 3px 0 #c8b88a;
+  --card-hover-shadow: 4px 4px 0 #8b6914;
+  --surface: #faf5e4;
+  --surface-2: #f0ead0;
+  --border: #c8b88a;
+  --border-hover: #8b6914;
+  --text: #3d2b10;
+  --text-muted: #7a6240;
+  --text-dim: #b0a080;
+}
+
+/* — Aurora (Dreamy glow) — */
+[data-ui-theme="aurora"] {
+  --card-radius: 24px;
+  --card-blur: 12px;
+  --btn-radius: 16px;
+  --modal-radius: 28px;
+  --card-hover-y: -5px;
+}
+[data-ui-theme="aurora"][data-theme="dark"] {
+  --bg: #060818;
+  --card-bg: rgba(12, 16, 40, 0.6);
+  --card-border: rgba(120, 80, 255, 0.15);
+  --card-shadow: 0 4px 32px rgba(120,80,255,0.1), 0 0 80px rgba(0,220,180,0.04);
+  --card-hover-shadow: 0 8px 48px rgba(120,80,255,0.2), 0 0 100px rgba(0,220,180,0.08), 0 0 0 1px rgba(120,80,255,0.2);
+  --surface: rgba(10, 14, 36, 0.7);
+  --surface-2: rgba(18, 22, 52, 0.6);
+  --border: rgba(120, 80, 255, 0.12);
+  --border-hover: rgba(120, 80, 255, 0.3);
+  --accent: #7850ff;
+  --accent-2: #00dcb4;
+  --accent-3: #ff6eb4;
+  --glow: rgba(120, 80, 255, 0.18);
+}
+[data-ui-theme="aurora"][data-theme="light"] {
+  --bg: #f0eeff;
+  --card-bg: rgba(255, 255, 255, 0.65);
+  --card-border: rgba(120, 80, 255, 0.12);
+  --card-shadow: 0 4px 24px rgba(120,80,255,0.08);
+  --card-hover-shadow: 0 8px 40px rgba(120,80,255,0.14), 0 0 0 1px rgba(120,80,255,0.12);
+  --surface: rgba(255, 255, 255, 0.7);
+  --surface-2: rgba(240, 238, 255, 0.6);
+  --border: rgba(120, 80, 255, 0.1);
+  --border-hover: rgba(120, 80, 255, 0.25);
+  --accent: #6040d8;
+  --accent-2: #00b894;
+  --accent-3: #e84393;
+  --glow: rgba(120, 80, 255, 0.15);
+}
+
 /* ═══════════════════════════════════════════════════════════════
    BACKGROUND EFFECTS — override body::before and body::after
    ═══════════════════════════════════════════════════════════════ */
@@ -275,6 +383,64 @@ html {
   opacity: 0.3;
 }
 
+/* — Stars (twinkling night sky) — */
+[data-bg-effect="stars"] body::before {
+  background-image:
+    radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.5) 50%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 25% 45%, rgba(139,179,245,0.6) 50%, transparent 50%),
+    radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.4) 50%, transparent 50%),
+    radial-gradient(2px 2px at 55% 25%, rgba(247,194,106,0.5) 50%, transparent 50%),
+    radial-gradient(1px 1px at 70% 60%, rgba(255,255,255,0.45) 50%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 85% 35%, rgba(163,116,224,0.5) 50%, transparent 50%),
+    radial-gradient(1px 1px at 15% 70%, rgba(106,247,184,0.4) 50%, transparent 50%),
+    radial-gradient(1px 1px at 60% 90%, rgba(255,255,255,0.35) 50%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 92% 75%, rgba(139,179,245,0.45) 50%, transparent 50%),
+    radial-gradient(1px 1px at 48% 50%, rgba(236,111,155,0.4) 50%, transparent 50%);
+  background-size: 300px 300px, 400px 350px, 250px 400px, 350px 250px, 280px 380px, 320px 300px, 380px 280px, 260px 350px, 340px 320px, 300px 360px;
+  animation: starTwinkle 4s ease-in-out infinite alternate;
+}
+[data-bg-effect="stars"] body::after {
+  opacity: 0.4;
+  animation: orbPulse 12s ease-in-out infinite;
+}
+
+/* — Waves (undulating lines) — */
+[data-bg-effect="waves"] body::before {
+  background-image: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 60px,
+    rgba(139,179,245,0.03) 60px,
+    rgba(139,179,245,0.03) 61px
+  );
+  animation: waveDrift 8s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+[data-bg-effect="waves"] body::after {
+  background: radial-gradient(ellipse at 30% 50%, rgba(106,247,184,0.05) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 50%, rgba(139,179,245,0.05) 0%, transparent 60%);
+  animation: wavePulse 10s ease-in-out infinite;
+}
+
+/* — Bokeh (soft blurred circles) — */
+[data-bg-effect="bokeh"] body::before {
+  background-image:
+    radial-gradient(80px 80px at 20% 30%, rgba(139,179,245,0.06) 0%, transparent 70%),
+    radial-gradient(120px 120px at 60% 20%, rgba(247,194,106,0.05) 0%, transparent 70%),
+    radial-gradient(90px 90px at 80% 70%, rgba(163,116,224,0.05) 0%, transparent 70%),
+    radial-gradient(100px 100px at 35% 75%, rgba(106,247,184,0.05) 0%, transparent 70%),
+    radial-gradient(140px 140px at 50% 50%, rgba(236,111,155,0.04) 0%, transparent 70%),
+    radial-gradient(70px 70px at 10% 80%, rgba(139,179,245,0.05) 0%, transparent 70%),
+    radial-gradient(110px 110px at 90% 40%, rgba(106,247,184,0.04) 0%, transparent 70%);
+  background-size: 100% 100%;
+  animation: bokehFloat 20s ease-in-out infinite alternate;
+}
+[data-bg-effect="bokeh"] body::after {
+  opacity: 0.5;
+  animation: orbPulse 14s ease-in-out infinite;
+}
+
 /* — None — */
 [data-bg-effect="none"] body::before,
 [data-bg-effect="none"] body::after {
@@ -296,6 +462,30 @@ html {
 @keyframes particleFloat {
   0%   { background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0; }
   100% { background-position: 200px 300px, -150px 250px, 180px -200px, -200px 180px, 150px 280px, -180px -150px, 200px 160px, -160px 220px; }
+}
+
+@keyframes starTwinkle {
+  0%   { opacity: 0.6; }
+  50%  { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+@keyframes waveDrift {
+  0%   { transform: skewY(0deg) scaleY(1); }
+  100% { transform: skewY(0.5deg) scaleY(1.02); }
+}
+
+@keyframes wavePulse {
+  0%, 100% { opacity: 0.5; transform: translateX(-50%) scale(1); }
+  50%      { opacity: 0.8; transform: translateX(-50%) scale(1.05); }
+}
+
+@keyframes bokehFloat {
+  0%   { transform: translate(0, 0) scale(1); }
+  25%  { transform: translate(20px, -15px) scale(1.05); }
+  50%  { transform: translate(-10px, 20px) scale(0.98); }
+  75%  { transform: translate(15px, 10px) scale(1.03); }
+  100% { transform: translate(-5px, -10px) scale(1); }
 }
 
 /* ═══════════════════════════════════════════════════════════════ */
@@ -459,3 +649,62 @@ button:active { transform: scale(0.95) !important; transition: transform 0.07s e
 input:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
 
 ::selection { background: rgba(139, 179, 245, 0.25); color: var(--text); }
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATION SPEED — scale all durations globally
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Off — kill all animations and transitions */
+[data-anim-speed="off"] *,
+[data-anim-speed="off"] *::before,
+[data-anim-speed="off"] *::after {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}
+[data-anim-speed="off"] body::before,
+[data-anim-speed="off"] body::after {
+  animation: none !important;
+}
+
+/* Slow — relaxed, 2× duration */
+[data-anim-speed="slow"] * {
+  animation-duration: calc(var(--base-anim-dur, 1) * 2) !important;
+  transition-duration: 0.4s !important;
+}
+[data-anim-speed="slow"] body::before {
+  animation-duration: 120s !important;
+}
+[data-anim-speed="slow"] body::after {
+  animation-duration: 20s !important;
+}
+[data-anim-speed="slow"] .laptop-card {
+  transition-duration: 0.5s !important;
+}
+[data-anim-speed="slow"] .modal-content {
+  animation-duration: 0.6s !important;
+}
+
+/* Fast — snappy, 0.5× duration */
+[data-anim-speed="fast"] * {
+  transition-duration: 0.08s !important;
+}
+[data-anim-speed="fast"] body::before {
+  animation-duration: 30s !important;
+}
+[data-anim-speed="fast"] body::after {
+  animation-duration: 4s !important;
+}
+[data-anim-speed="fast"] .laptop-card {
+  transition-duration: 0.12s !important;
+}
+[data-anim-speed="fast"] .animate-fade-up {
+  animation-duration: 0.25s !important;
+}
+[data-anim-speed="fast"] .animate-scale-in {
+  animation-duration: 0.18s !important;
+}
+[data-anim-speed="fast"] .modal-content {
+  animation-duration: 0.15s !important;
+}
