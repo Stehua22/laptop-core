@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 
 type Article = {
@@ -46,7 +45,6 @@ const CATEGORY_COLORS: Record<string, string> = {
 export default function ArticlesPage() {
   const ADMIN_PASSWORD = "admin2026.123";
 
-  const router = useRouter();
   const [articles, setArticles] = useState<Article[]>([]);
   const [showEditor, setShowEditor] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -302,6 +300,40 @@ export default function ArticlesPage() {
           </div>
         )}
 
+        {/* Admin auth modal */}
+        {showAuth && (
+          <div
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)" }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowAuth(false); }}
+          >
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--modal-radius, 18px)", width: "100%", maxWidth: 360, margin: "1rem", boxShadow: "var(--shadow-lg)", padding: "24px" }}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 14px" }}>Admin access required</h2>
+              <input
+                type="password"
+                autoFocus
+                placeholder="Password"
+                value={authInput}
+                onChange={(e) => { setAuthInput(e.target.value); setAuthError(""); }}
+                onKeyDown={(e) => { if (e.key === "Enter") submitAuth(); }}
+                style={inputStyle}
+              />
+              {authError && (
+                <p style={{ color: "#f76a6a", fontSize: 12, marginTop: 8 }}>{authError}</p>
+              )}
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
+                <button
+                  onClick={() => setShowAuth(false)}
+                  style={{ fontSize: 13, padding: "9px 20px", borderRadius: "var(--btn-radius, 10px)", border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" }}
+                >Cancel</button>
+                <button
+                  onClick={submitAuth}
+                  style={{ fontSize: 13, padding: "9px 20px", borderRadius: "var(--btn-radius, 10px)", border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 700, fontFamily: "inherit" }}
+                >Unlock</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Articles list */}
         {filtered.length === 0 ? (
           <div className="animate-fade-up" style={{ textAlign: "center", padding: "5rem 1rem" }}>
@@ -402,7 +434,7 @@ export default function ArticlesPage() {
 
                       <div style={{ display: "flex", gap: 8, marginTop: 18, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleEdit(article); }}
+                          onClick={(e) => { e.stopPropagation(); requireAuth(() => handleEdit(article)); }}
                           style={{
                             fontSize: 12, padding: "7px 16px", borderRadius: "var(--btn-radius, 10px)",
                             border: "1px solid var(--border)", background: "var(--surface-2)",
@@ -411,7 +443,7 @@ export default function ArticlesPage() {
                           }}
                         >✏️ Edit</button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleDelete(article.id); }}
+                          onClick={(e) => { e.stopPropagation(); requireAuth(() => handleDelete(article.id)); }}
                           style={{
                             fontSize: 12, padding: "7px 16px", borderRadius: "var(--btn-radius, 10px)",
                             border: "1px solid rgba(247,106,106,0.2)", background: "rgba(247,106,106,0.06)",
