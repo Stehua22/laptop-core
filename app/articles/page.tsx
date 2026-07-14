@@ -44,6 +44,8 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function ArticlesPage() {
+  const ADMIN_PASSWORD = "admin2026.123";
+
   const router = useRouter();
   const [articles, setArticles] = useState<Article[]>([]);
   const [showEditor, setShowEditor] = useState(false);
@@ -51,6 +53,13 @@ export default function ArticlesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Admin auth state
+  const [unlocked, setUnlocked] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [authInput, setAuthInput] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   // Form state
   const [form, setForm] = useState({ title: "", summary: "", content: "", category: "Guide", author: "" });
@@ -88,6 +97,22 @@ export default function ArticlesPage() {
     setArticles(updated);
     saveArticles(updated);
     resetForm();
+  };
+
+  const requireAuth = (action: () => void) => {
+    if (unlocked) { action(); return; }
+    setPendingAction(() => action);
+    setAuthInput(""); setAuthError("");
+    setShowAuth(true);
+  };
+
+  const submitAuth = () => {
+    if (authInput === ADMIN_PASSWORD) {
+      setUnlocked(true); setShowAuth(false);
+      if (pendingAction) { pendingAction(); setPendingAction(null); }
+    } else {
+      setAuthError("Incorrect password.");
+    }
   };
 
   const handleEdit = (article: Article) => {
@@ -150,7 +175,7 @@ export default function ArticlesPage() {
               </p>
             </div>
             <button
-              onClick={() => { resetForm(); setShowEditor(true); }}
+              onClick={() => requireAuth(() => { resetForm(); setShowEditor(true); })}
               style={{
                 background: "var(--accent)", color: "#fff", border: "none",
                 borderRadius: "var(--btn-radius, 10px)", padding: "11px 22px",
@@ -159,7 +184,7 @@ export default function ArticlesPage() {
                 boxShadow: "0 4px 16px var(--glow)",
               }}
             >
-              + New Article
+              {unlocked ? "+ New Article" : "🔒 New Article"}
             </button>
           </div>
         </div>
