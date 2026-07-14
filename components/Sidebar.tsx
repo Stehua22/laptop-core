@@ -124,18 +124,17 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
         <span className={styles.label}>Collapse</span>
       </button>
 
-      <div className={styles.bottom}>
-        <button
-          className={styles.resetBtn}
-          title="Reset settings to defaults"
-          type="button"
-          onClick={onResetSettings}
-        >
+      <button className={styles.resetRow} onClick={onResetSettings} type="button" title="Reset settings to defaults">
+        <span className={styles.resetIcon}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 12a9 9 0 1 1 3.2-6.8" />
             <polyline points="3 2 3 7 8 7" />
           </svg>
-        </button>
+        </span>
+        <span className={styles.label}>Reset</span>
+      </button>
+
+      <div className={styles.bottom}>
         <button
           className={styles.iconBtn}
           title="Settings"

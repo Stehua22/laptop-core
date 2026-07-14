@@ -166,22 +166,40 @@
   color: var(--accent);
 }
 
-.resetBtn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+.resetRow {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  padding: 11px 12px;
+  margin-bottom: 4px;
+  border-radius: 10px;
   color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
   background: none;
   border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
 }
 
-.resetBtn:hover {
-  background: rgba(247, 106, 106, 0.15);
+.resetRow:hover {
+  background: rgba(247, 106, 106, 0.12);
   color: var(--accent-red, #f76a6a);
+}
+
+.resetIcon {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.sidebar.collapsed .resetRow .label {
+  display: none;
+}
+
+.sidebar.collapsed .resetRow {
+  justify-content: center;
 }
