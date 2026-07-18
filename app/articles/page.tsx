@@ -1,34 +1,15 @@
 ﻿"use client";
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
-
-type Article = {
-  id: string;
-  title: string;
-  summary: string;
-  content: string;
-  category: string;
-  author: string;
-  coverImage?: string;
-  createdAt: string;
-  updatedAt: string;
-};
+import {
+  fetchArticles,
+  addArticle,
+  updateArticle,
+  deleteArticle,
+  type Article,
+} from "@/lib/supabase";
 
 const CATEGORIES = ["Guide", "Review", "News", "Comparison", "Tips", "Opinion"];
-
-const STORAGE_KEY = "lc-articles";
-
-function loadArticles(): Article[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-}
-
-function saveArticles(articles: Article[]) {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(articles));
-}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
@@ -81,6 +62,10 @@ export default function ArticlesPage() {
   const ADMIN_PASSWORD = "admin2026.123";
 
   const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [saving, setSaving] = useState(false);
+
   const [showEditor, setShowEditor] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -93,10 +78,24 @@ export default function ArticlesPage() {
   const [authError, setAuthError] = useState("");
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
-  const [form, setForm] = useState({ title: "", summary: "", content: "", category: "Guide", author: "", coverImage: "" });
+  const [form, setForm] = useState({ title: "", summary: "", content: "", category: "Guide", author: "", cover_image: "" });
+
+  const loadArticles = async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const data = await fetchArticles();
+      setArticles(data);
+    } catch (err) {
+      setLoadError("Couldn't load articles. Check your connection and try again.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setArticles(loadArticles());
+    loadArticles();
   }, []);
 
   const filtered = articles
@@ -104,23 +103,26 @@ export default function ArticlesPage() {
     .filter((a) => {
       if (!searchQuery) return true;
       const q = searchQuery.toLowerCase();
-      return a.title.toLowerCase().includes(q) || a.summary.toLowerCase().includes(q) || a.content.toLowerCase().includes(q);
-    })
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return a.title.toLowerCase().includes(q) || (a.summary || "").toLowerCase().includes(q) || a.content.toLowerCase().includes(q);
+    });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.title.trim() || !form.content.trim()) return;
-    const now = new Date().toISOString();
-    let updated: Article[];
-    if (editingId) {
-      updated = articles.map((a) => (a.id === editingId ? { ...a, ...form, updatedAt: now } : a));
-    } else {
-      const newArticle: Article = { id: crypto.randomUUID(), ...form, createdAt: now, updatedAt: now };
-      updated = [newArticle, ...articles];
+    setSaving(true);
+    try {
+      if (editingId) {
+        await updateArticle(editingId, form);
+      } else {
+        await addArticle(form);
+      }
+      await loadArticles();
+      resetForm();
+    } catch (err) {
+      alert("Failed to save article. Please try again.");
+      console.error(err);
+    } finally {
+      setSaving(false);
     }
-    setArticles(updated);
-    saveArticles(updated);
-    resetForm();
   };
 
   const requireAuth = (action: () => void) => {
@@ -142,26 +144,30 @@ export default function ArticlesPage() {
   const handleEdit = (article: Article) => {
     setForm({
       title: article.title,
-      summary: article.summary,
+      summary: article.summary || "",
       content: article.content,
       category: article.category,
-      author: article.author,
-      coverImage: article.coverImage || "",
+      author: article.author || "",
+      cover_image: article.cover_image || "",
     });
     setEditingId(article.id);
     setShowEditor(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm("Delete this article?")) return;
-    const updated = articles.filter((a) => a.id !== id);
-    setArticles(updated);
-    saveArticles(updated);
-    if (expandedId === id) setExpandedId(null);
+    try {
+      await deleteArticle(id);
+      setArticles((prev) => prev.filter((a) => a.id !== id));
+      if (expandedId === id) setExpandedId(null);
+    } catch (err) {
+      alert("Failed to delete article. Please try again.");
+      console.error(err);
+    }
   };
 
   const resetForm = () => {
-    setForm({ title: "", summary: "", content: "", category: "Guide", author: "", coverImage: "" });
+    setForm({ title: "", summary: "", content: "", category: "Guide", author: "", cover_image: "" });
     setEditingId(null);
     setShowEditor(false);
   };
@@ -298,13 +304,13 @@ export default function ArticlesPage() {
                 </div>
                 <input
                   placeholder="Cover image URL (optional)"
-                  value={form.coverImage}
-                  onChange={(e) => setForm((f) => ({ ...f, coverImage: e.target.value }))}
+                  value={form.cover_image}
+                  onChange={(e) => setForm((f) => ({ ...f, cover_image: e.target.value }))}
                   style={inputStyle}
                 />
-                {form.coverImage && (
+                {form.cover_image && (
                   <img
-                    src={form.coverImage}
+                    src={form.cover_image}
                     alt="Cover preview"
                     style={{ width: "100%", maxHeight: 160, objectFit: "cover", borderRadius: 10, border: "1px solid var(--border)" }}
                     onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -342,15 +348,15 @@ export default function ArticlesPage() {
                   >Cancel</button>
                   <button
                     onClick={handleSave}
-                    disabled={!form.title.trim() || !form.content.trim()}
+                    disabled={!form.title.trim() || !form.content.trim() || saving}
                     style={{
                       fontSize: 13, padding: "9px 20px", borderRadius: "var(--btn-radius, 10px)",
                       border: "none", background: "var(--accent)", color: "#fff",
-                      cursor: form.title.trim() && form.content.trim() ? "pointer" : "not-allowed",
+                      cursor: form.title.trim() && form.content.trim() && !saving ? "pointer" : "not-allowed",
                       fontWeight: 700, fontFamily: "inherit",
-                      opacity: form.title.trim() && form.content.trim() ? 1 : 0.5,
+                      opacity: form.title.trim() && form.content.trim() && !saving ? 1 : 0.5,
                     }}
-                  >{editingId ? "Update" : "Publish"}</button>
+                  >{saving ? "Saving..." : editingId ? "Update" : "Publish"}</button>
                 </div>
               </div>
             </div>
@@ -388,7 +394,19 @@ export default function ArticlesPage() {
           </div>
         )}
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="animate-fade-up" style={{ textAlign: "center", padding: "5rem 1rem", color: "var(--text-muted)", fontSize: 14 }}>
+            Loading articles...
+          </div>
+        ) : loadError ? (
+          <div className="animate-fade-up" style={{ textAlign: "center", padding: "5rem 1rem" }}>
+            <p style={{ color: "var(--accent-red, #f76a6a)", fontSize: 14, fontWeight: 600, marginBottom: 12 }}>{loadError}</p>
+            <button
+              onClick={loadArticles}
+              style={{ fontSize: 13, padding: "8px 18px", borderRadius: "var(--btn-radius, 10px)", border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--text)", cursor: "pointer", fontFamily: "inherit" }}
+            >Retry</button>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="animate-fade-up" style={{ textAlign: "center", padding: "5rem 1rem" }}>
             <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>📝</div>
             <p style={{ color: "var(--text-muted)", fontSize: 15, fontWeight: 600, marginBottom: 6 }}>
@@ -419,9 +437,9 @@ export default function ArticlesPage() {
                 >
                   <div style={{ height: 3, background: `linear-gradient(90deg, ${catColor}, ${catColor}60)`, opacity: isExpanded ? 1 : 0.5, transition: "opacity 0.2s" }} />
 
-                  {isExpanded && article.coverImage && (
+                  {isExpanded && article.cover_image && (
                     <img
-                      src={article.coverImage}
+                      src={article.cover_image}
                       alt={article.title}
                       style={{ width: "100%", maxHeight: 320, objectFit: "cover", display: "block" }}
                       onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -433,9 +451,9 @@ export default function ArticlesPage() {
                     onClick={() => setExpandedId(isExpanded ? null : article.id)}
                   >
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-                      {!isExpanded && article.coverImage && (
+                      {!isExpanded && article.cover_image && (
                         <img
-                          src={article.coverImage}
+                          src={article.cover_image}
                           alt={article.title}
                           style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 10, flexShrink: 0 }}
                           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -451,7 +469,7 @@ export default function ArticlesPage() {
                             {article.category}
                           </span>
                           <span style={{ fontSize: 11, color: "var(--text-dim)" }}>
-                            {formatDate(article.createdAt)}
+                            {formatDate(article.created_at)}
                           </span>
                           {article.author && (
                             <span style={{ fontSize: 11, color: "var(--text-dim)" }}>
@@ -490,9 +508,9 @@ export default function ArticlesPage() {
                         {renderArticleContent(article.content)}
                       </div>
 
-                      {article.updatedAt !== article.createdAt && (
+                      {article.updated_at !== article.created_at && (
                         <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 16 }}>
-                          Updated {formatDate(article.updatedAt)}
+                          Updated {formatDate(article.updated_at)}
                         </p>
                       )}
 

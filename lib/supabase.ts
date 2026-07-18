@@ -81,3 +81,107 @@ export async function deleteLaptop(id: number) {
   const { error } = await supabase.from("laptops").delete().eq("id", id);
   if (error) throw error;
 }
+
+export type Article = {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  author: string;
+  cover_image?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function fetchArticles(): Promise<Article[]> {
+  const { data, error } = await supabase
+    .from("articles")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function addArticle(
+  article: Omit<Article, "id" | "created_at" | "updated_at">
+) {
+  const { data, error } = await supabase
+    .from("articles")
+    .insert(article)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateArticle(
+  id: string,
+  article: Partial<Omit<Article, "id" | "created_at">>
+) {
+  const { data, error } = await supabase
+    .from("articles")
+    .update({ ...article, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteArticle(id: string) {
+  const { error } = await supabase.from("articles").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export type Article = {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  category: string;
+  author: string;
+  cover_image?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function fetchArticles(): Promise<Article[]> {
+  const { data, error } = await supabase
+    .from("articles")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function addArticle(
+  article: Omit<Article, "id" | "created_at" | "updated_at">
+) {
+  const { data, error } = await supabase
+    .from("articles")
+    .insert(article)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateArticle(
+  id: string,
+  article: Partial<Omit<Article, "id" | "created_at">>
+) {
+  const { data, error } = await supabase
+    .from("articles")
+    .update({ ...article, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteArticle(id: string) {
+  const { error } = await supabase.from("articles").delete().eq("id", id);
+  if (error) throw error;
+}
