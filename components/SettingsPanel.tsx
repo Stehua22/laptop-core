@@ -43,6 +43,11 @@ const UI_THEMES: { key: string; label: string; icon: string; desc: string }[] = 
   { key: "sunset-noir", label: "Noir", icon: "◑", desc: "Moody contrast" },
   { key: "candy", label: "Candy", icon: "◕", desc: "Playful pastel" },
   { key: "industrial", label: "Industrial", icon: "▧", desc: "Metal & grid" },
+  { key: "vaporwave", label: "Vaporwave", icon: "◭", desc: "80s retro-future" },
+  { key: "terracotta", label: "Terracotta", icon: "◔", desc: "Warm earthy clay" },
+  { key: "midnight", label: "Midnight", icon: "☾", desc: "Deep ocean calm" },
+  { key: "copper", label: "Copper", icon: "◈", desc: "Warm metallic" },
+  { key: "zen", label: "Zen", icon: "○", desc: "Soft & muted" },
 ];
 
 const CARD_LAYOUTS: { key: "row" | "grid" | "compact"; label: string; icon: string }[] = [
@@ -283,4 +288,5 @@ export default function SettingsPanel({
     </div>
   );
 }
+
 
