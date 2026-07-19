@@ -39,6 +39,10 @@ const UI_THEMES: { key: string; label: string; icon: string; desc: string }[] = 
   { key: "cyberpunk", label: "Cyberpunk", icon: "◈", desc: "High contrast" },
   { key: "sketch", label: "Sketch", icon: "✎", desc: "Hand-drawn feel" },
   { key: "gradient", label: "Gradient", icon: "◒", desc: "Soft color wash" },
+  { key: "frost", label: "Frost", icon: "❄", desc: "Icy & crisp" },
+  { key: "sunset-noir", label: "Noir", icon: "◑", desc: "Moody contrast" },
+  { key: "candy", label: "Candy", icon: "◕", desc: "Playful pastel" },
+  { key: "industrial", label: "Industrial", icon: "▧", desc: "Metal & grid" },
 ];
 
 const CARD_LAYOUTS: { key: "row" | "grid" | "compact"; label: string; icon: string }[] = [
@@ -279,3 +283,4 @@ export default function SettingsPanel({
     </div>
   );
 }
+

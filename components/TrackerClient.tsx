@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { useState, useMemo, useCallback, useEffect } from "react";
@@ -25,6 +25,8 @@ const DEFAULT_RECOMMENDATION_IDS: Record<string, number[]> = {
   home:     [42, 52, 60, 64],
   business: [61, 57, 63, 60],
 };
+
+const PER_PAGE_OPTIONS = [12, 24, 48, 96] as const;
 
 export let CAD_TO_USD = 0.73;
 
@@ -63,6 +65,10 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
   const [cadToUsd, setCadToUsd] = useState(0.73);
   const toggleCurrency = () => setCurrency((c) => (c === "CAD" ? "USD" : "CAD"));
 
+  // Pagination
+  const [perPage, setPerPage] = useState<number | "all">(24);
+  const [currentPage, setCurrentPage] = useState(1);
+
   useEffect(() => {
     async function fetchRate() {
       try {
@@ -90,6 +96,8 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     if (savedBgEffect) setBgEffect(savedBgEffect);
     const savedAnimSpeed = window.localStorage.getItem("lc-anim-speed");
     if (savedAnimSpeed) setAnimSpeed(savedAnimSpeed);
+    const savedPerPage = window.localStorage.getItem("lc-per-page");
+    if (savedPerPage) setPerPage(savedPerPage === "all" ? "all" : parseInt(savedPerPage, 10));
   }, []);
 
   useEffect(() => {
@@ -129,6 +137,15 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     else document.documentElement.setAttribute("data-anim-speed", animSpeed);
     window.localStorage.setItem("lc-anim-speed", animSpeed);
   }, [animSpeed]);
+
+  useEffect(() => {
+    window.localStorage.setItem("lc-per-page", String(perPage));
+  }, [perPage]);
+
+  // Reset to page 1 whenever filters, search, sort, or per-page setting change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, brandFilter, sortBy, goodForFilter, screenFilter, weightFilter, priceMin, priceMax, perPage]);
 
   useEffect(() => {
     async function loadRecs() {
@@ -230,6 +247,14 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     return list;
   }, [laptops, search, brandFilter, sortBy, goodForFilter, screenFilter, weightFilter, priceMin, priceMax]);
 
+  const totalPages = perPage === "all" ? 1 : Math.max(1, Math.ceil(filtered.length / perPage));
+
+  const paginated = useMemo(() => {
+    if (perPage === "all") return filtered;
+    const start = (currentPage - 1) * perPage;
+    return filtered.slice(start, start + perPage);
+  }, [filtered, perPage, currentPage]);
+
   const recommendations = useMemo(() => {
     const ids = recommendationIds[recCategory] ?? [];
     return ids.map((id) => laptops.find((l) => l.id === id)).filter(Boolean) as Laptop[];
@@ -308,6 +333,7 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     setCardLayout("row");
     setBgEffect("grid");
     setAnimSpeed("normal");
+    setPerPage(24);
     // Clear localStorage so defaults take effect on next load
     window.localStorage.removeItem("lc-dark");
     window.localStorage.removeItem("lc-accent");
@@ -316,8 +342,19 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     window.localStorage.removeItem("lc-card-layout");
     window.localStorage.removeItem("lc-bg-effect");
     window.localStorage.removeItem("lc-anim-speed");
+    window.localStorage.removeItem("lc-per-page");
     showToast("↺ Settings reset to defaults");
   };
+
+  const pageBtnStyle = (disabled: boolean): React.CSSProperties => ({
+    fontSize: 12, padding: "7px 14px", borderRadius: 8,
+    border: "1px solid var(--border)",
+    background: "var(--surface-2)",
+    color: disabled ? "var(--text-dim)" : "var(--text)",
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.5 : 1,
+    fontWeight: 600,
+  });
 
   return (
     <div style={{ position: "relative", zIndex: 1, display: "flex" }}>
@@ -345,13 +382,44 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
           onPriceMin={setPriceMin} onPriceMax={setPriceMax}
         />
 
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
+          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Show</span>
+          <select
+            value={perPage}
+            onChange={(e) => setPerPage(e.target.value === "all" ? "all" : parseInt(e.target.value, 10))}
+            style={{ padding: "6px 10px", fontSize: 12, borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--text)", cursor: "pointer", fontFamily: "inherit" }}
+          >
+            {PER_PAGE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+            <option value="all">All</option>
+          </select>
+          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>per page</span>
+        </div>
+
         <LaptopGrid
-          laptops={filtered} onSelect={setSelectedLaptop} onHistory={setHistoryLaptop}
+          laptops={paginated} onSelect={setSelectedLaptop} onHistory={setHistoryLaptop}
           isAdmin={unlocked} onMoveToDeals={(l) => requireAuth(() => handleMoveToDeals(l))}
           onDelete={(id) => requireAuth(() => handleDeleteLaptop(id))}
           currency={currency} cadToUsd={cadToUsd}
           cardLayout={cardLayout}
         />
+
+        {perPage !== "all" && totalPages > 1 && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 28 }}>
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              style={pageBtnStyle(currentPage === 1)}
+            >‹ Prev</button>
+            <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              style={pageBtnStyle(currentPage === totalPages)}
+            >Next ›</button>
+          </div>
+        )}
       </div>
 
       {selectedLaptop && <LaptopModal laptop={selectedLaptop} onClose={() => setSelectedLaptop(null)} onUpdatePrice={handleUpdatePrice} onDelete={handleDeleteClick} onHistory={(l) => { setSelectedLaptop(null); setHistoryLaptop(l); }} currency={currency} cadToUsd={cadToUsd} />}
