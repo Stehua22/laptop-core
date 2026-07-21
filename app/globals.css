@@ -437,37 +437,102 @@ html {
   animation: orbPulse 14s ease-in-out infinite;
 }
 
-/* — Mist (cloudy atmosphere) — */
+/* — Mist (moving fog & clouds) — */
+
+/* Layer 1: slow-moving deep fog banks */
 [data-bg-effect="mist"] body::before {
   background-image: none;
   background:
-    radial-gradient(ellipse 600px 400px at 15% 20%, rgba(180, 200, 230, 0.08) 0%, transparent 70%),
-    radial-gradient(ellipse 500px 350px at 75% 30%, rgba(160, 190, 220, 0.07) 0%, transparent 70%),
-    radial-gradient(ellipse 700px 500px at 40% 70%, rgba(170, 195, 225, 0.06) 0%, transparent 65%),
-    radial-gradient(ellipse 550px 400px at 85% 75%, rgba(190, 210, 235, 0.07) 0%, transparent 70%),
-    radial-gradient(ellipse 450px 300px at 25% 85%, rgba(175, 200, 230, 0.05) 0%, transparent 65%),
-    radial-gradient(ellipse 800px 600px at 50% 40%, rgba(200, 215, 240, 0.04) 0%, transparent 60%);
-  animation: mistDrift 25s ease-in-out infinite alternate;
+    /* Large cloud mass — top-left, drifts right */
+    radial-gradient(ellipse 90vw 45vh at 10% 15%,  rgba(180,200,230,0.10) 0%, transparent 65%),
+    /* Mid cloud — center-right, drifts left */
+    radial-gradient(ellipse 70vw 40vh at 80% 35%,  rgba(160,190,220,0.09) 0%, transparent 60%),
+    /* Low fog bank — bottom, drifts right slowly */
+    radial-gradient(ellipse 100vw 35vh at 50% 85%, rgba(170,195,225,0.08) 0%, transparent 55%),
+    /* Wispy tendril — upper-right */
+    radial-gradient(ellipse 50vw 25vh at 75% 10%,  rgba(190,210,235,0.07) 0%, transparent 60%),
+    /* Ground haze — bottom-left */
+    radial-gradient(ellipse 60vw 30vh at 20% 90%,  rgba(175,200,230,0.06) 0%, transparent 55%),
+    /* Ambient atmosphere */
+    radial-gradient(ellipse 80vw 60vh at 45% 50%,  rgba(200,215,240,0.05) 0%, transparent 50%);
+  animation: mistDrift1 35s ease-in-out infinite alternate;
 }
+
+/* Layer 2: faster upper mist + atmospheric glow */
 [data-bg-effect="mist"] body::after {
   background:
-    radial-gradient(ellipse 70vw 50vh at 30% 50%, rgba(180, 200, 230, 0.06) 0%, transparent 60%),
-    radial-gradient(ellipse 60vw 40vh at 70% 40%, rgba(160, 185, 215, 0.05) 0%, transparent 60%);
-  animation: mistPulse 18s ease-in-out infinite;
+    radial-gradient(ellipse 75vw 50vh at 25% 30%, rgba(180,200,230,0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 65vw 45vh at 70% 60%, rgba(160,185,215,0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 55vw 35vh at 50% 15%, rgba(190,210,240,0.06) 0%, transparent 50%);
+  animation: mistDrift2 28s ease-in-out infinite alternate-reverse;
 }
 
-@keyframes mistDrift {
-  0%   { transform: translate(0, 0) scale(1); opacity: 0.7; }
-  25%  { transform: translate(30px, -20px) scale(1.04); opacity: 0.9; }
-  50%  { transform: translate(-15px, 25px) scale(1.02); opacity: 0.8; }
-  75%  { transform: translate(20px, 10px) scale(1.06); opacity: 1; }
-  100% { transform: translate(-10px, -15px) scale(1); opacity: 0.75; }
+/* Extra fog overlay layers using box-shadows on a fixed element */
+[data-bg-effect="mist"] body {
+  position: relative;
 }
 
-@keyframes mistPulse {
-  0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(1); }
-  33%      { opacity: 0.7; transform: translateX(-50%) scale(1.08); }
-  66%      { opacity: 0.5; transform: translateX(-50%) scale(1.04); }
+/* Fog Layer 3 — mid-ground rolling clouds */
+[data-bg-effect="mist"] .mist-fog-layer-1 {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 85vw 50vh at 60% 25%, rgba(185,205,235,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 70vw 40vh at 15% 65%, rgba(170,200,228,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 55vw 30vh at 90% 80%, rgba(195,215,240,0.05) 0%, transparent 55%);
+  animation: mistDrift3 42s ease-in-out infinite alternate;
+}
+
+/* Fog Layer 4 — foreground wisps */
+[data-bg-effect="mist"] .mist-fog-layer-2 {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 60vw 35vh at 30% 45%, rgba(200,220,245,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 50vw 28vh at 75% 20%, rgba(180,205,235,0.05) 0%, transparent 50%),
+    radial-gradient(ellipse 45vw 25vh at 55% 75%, rgba(190,210,238,0.05) 0%, transparent 50%);
+  animation: mistDrift4 22s ease-in-out infinite alternate-reverse;
+}
+
+/* ── Mist keyframes: each layer moves independently for depth ── */
+
+@keyframes mistDrift1 {
+  0%   { transform: translate(0, 0) scale(1);        opacity: 0.65; }
+  20%  { transform: translate(40px, -15px) scale(1.03);  opacity: 0.80; }
+  40%  { transform: translate(-20px, 30px) scale(1.06);  opacity: 0.90; }
+  60%  { transform: translate(25px, -10px) scale(1.02);  opacity: 0.75; }
+  80%  { transform: translate(-30px, 20px) scale(1.05);  opacity: 0.95; }
+  100% { transform: translate(10px, -25px) scale(1);     opacity: 0.70; }
+}
+
+@keyframes mistDrift2 {
+  0%   { transform: translateX(-50%) translate(0, 0) scale(1);       opacity: 0.40; }
+  25%  { transform: translateX(-50%) translate(-35px, 20px) scale(1.08); opacity: 0.65; }
+  50%  { transform: translateX(-50%) translate(20px, -15px) scale(1.04); opacity: 0.50; }
+  75%  { transform: translateX(-50%) translate(-15px, -25px) scale(1.10); opacity: 0.70; }
+  100% { transform: translateX(-50%) translate(25px, 10px) scale(1.02);  opacity: 0.45; }
+}
+
+@keyframes mistDrift3 {
+  0%   { transform: translate(0, 0) scale(1);        opacity: 0.50; }
+  15%  { transform: translate(-50px, 10px) scale(1.04);  opacity: 0.70; }
+  35%  { transform: translate(30px, -25px) scale(1.07);  opacity: 0.85; }
+  55%  { transform: translate(-20px, 35px) scale(1.02);  opacity: 0.60; }
+  75%  { transform: translate(45px, -5px) scale(1.06);   opacity: 0.80; }
+  100% { transform: translate(-10px, 15px) scale(1);     opacity: 0.55; }
+}
+
+@keyframes mistDrift4 {
+  0%   { transform: translate(0, 0) scale(1);        opacity: 0.35; }
+  20%  { transform: translate(25px, 15px) scale(1.05);   opacity: 0.55; }
+  40%  { transform: translate(-40px, -20px) scale(1.08); opacity: 0.70; }
+  60%  { transform: translate(15px, 30px) scale(1.03);   opacity: 0.45; }
+  80%  { transform: translate(-30px, -10px) scale(1.07); opacity: 0.65; }
+  100% { transform: translate(20px, -15px) scale(1);     opacity: 0.40; }
 }
 
 /* — None — */

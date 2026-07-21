@@ -130,6 +130,24 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     if (bgEffect === "grid") document.documentElement.removeAttribute("data-bg-effect");
     else document.documentElement.setAttribute("data-bg-effect", bgEffect);
     window.localStorage.setItem("lc-bg-effect", bgEffect);
+
+    // Inject or remove extra mist fog layers
+    const existingLayers = document.querySelectorAll(".mist-fog-layer-1, .mist-fog-layer-2");
+    existingLayers.forEach((el) => el.remove());
+
+    if (bgEffect === "mist") {
+      const layer1 = document.createElement("div");
+      layer1.className = "mist-fog-layer-1";
+      const layer2 = document.createElement("div");
+      layer2.className = "mist-fog-layer-2";
+      document.body.appendChild(layer1);
+      document.body.appendChild(layer2);
+    }
+
+    return () => {
+      const layers = document.querySelectorAll(".mist-fog-layer-1, .mist-fog-layer-2");
+      layers.forEach((el) => el.remove());
+    };
   }, [bgEffect]);
 
   useEffect(() => {
