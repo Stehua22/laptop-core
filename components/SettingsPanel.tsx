@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 const ACCENTS: { key: string; label: string; swatch: string }[] = [
   { key: "default", label: "Default", swatch: "#5e8fe8" },
@@ -63,6 +63,7 @@ const BG_EFFECTS: { key: string; label: string; icon: string }[] = [
   { key: "stars", label: "Stars", icon: "★" },
   { key: "waves", label: "Waves", icon: "〰" },
   { key: "bokeh", label: "Bokeh", icon: "●" },
+  { key: "mist", label: "Mist", icon: "☁" },
   { key: "none", label: "None", icon: "∅" },
 ];
 

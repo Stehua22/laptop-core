@@ -1,4 +1,4 @@
-﻿@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -435,6 +435,39 @@ html {
 [data-bg-effect="bokeh"] body::after {
   opacity: 0.5;
   animation: orbPulse 14s ease-in-out infinite;
+}
+
+/* — Mist (cloudy atmosphere) — */
+[data-bg-effect="mist"] body::before {
+  background-image: none;
+  background:
+    radial-gradient(ellipse 600px 400px at 15% 20%, rgba(180, 200, 230, 0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 500px 350px at 75% 30%, rgba(160, 190, 220, 0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 700px 500px at 40% 70%, rgba(170, 195, 225, 0.06) 0%, transparent 65%),
+    radial-gradient(ellipse 550px 400px at 85% 75%, rgba(190, 210, 235, 0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 450px 300px at 25% 85%, rgba(175, 200, 230, 0.05) 0%, transparent 65%),
+    radial-gradient(ellipse 800px 600px at 50% 40%, rgba(200, 215, 240, 0.04) 0%, transparent 60%);
+  animation: mistDrift 25s ease-in-out infinite alternate;
+}
+[data-bg-effect="mist"] body::after {
+  background:
+    radial-gradient(ellipse 70vw 50vh at 30% 50%, rgba(180, 200, 230, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60vw 40vh at 70% 40%, rgba(160, 185, 215, 0.05) 0%, transparent 60%);
+  animation: mistPulse 18s ease-in-out infinite;
+}
+
+@keyframes mistDrift {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0.7; }
+  25%  { transform: translate(30px, -20px) scale(1.04); opacity: 0.9; }
+  50%  { transform: translate(-15px, 25px) scale(1.02); opacity: 0.8; }
+  75%  { transform: translate(20px, 10px) scale(1.06); opacity: 1; }
+  100% { transform: translate(-10px, -15px) scale(1); opacity: 0.75; }
+}
+
+@keyframes mistPulse {
+  0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(1); }
+  33%      { opacity: 0.7; transform: translateX(-50%) scale(1.08); }
+  66%      { opacity: 0.5; transform: translateX(-50%) scale(1.04); }
 }
 
 /* — None — */

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRouter } from "next/navigation";
 import { useState, useMemo, useCallback, useEffect } from "react";
@@ -381,6 +381,77 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
           priceMin={priceMin} priceMax={priceMax}
           onPriceMin={setPriceMin} onPriceMax={setPriceMax}
         />
+
+        {/* Browse by Brand */}
+        {brands.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 14 }}>🏷️</span>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, color: "var(--text-muted)",
+                  textTransform: "uppercase" as const, letterSpacing: "0.1em",
+                }}>Browse by Brand</span>
+              </div>
+            </div>
+            <div style={{
+              display: "flex", gap: 8, overflowX: "auto",
+              paddingBottom: 6,
+              scrollbarWidth: "thin" as const,
+            }}>
+              {brands.map((b) => {
+                const count = laptops.filter((l) => l.brand === b).length;
+                const icons: Record<string, string> = {
+                  Apple: "🍎", Lenovo: "💻", Dell: "🖥️", HP: "🖨️",
+                  ASUS: "⚡", Acer: "🎯", Microsoft: "🪟", Samsung: "📱",
+                };
+                return (
+                  <button
+                    key={b}
+                    onClick={() => router.push(`/brand/${encodeURIComponent(b.toLowerCase())}`)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      padding: "10px 18px",
+                      borderRadius: "var(--btn-radius, 10px)",
+                      border: "1px solid var(--border)",
+                      background: "var(--card-bg, var(--surface))",
+                      color: "var(--text)",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      flexShrink: 0,
+                      fontSize: 13, fontWeight: 600,
+                      boxShadow: "var(--card-shadow, 0 2px 8px rgba(0,0,0,0.15))",
+                      backdropFilter: "blur(var(--card-blur, 0px))",
+                      whiteSpace: "nowrap" as const,
+                    }}
+                    onMouseEnter={(e) => {
+                      const el = e.currentTarget as HTMLElement;
+                      el.style.borderColor = "var(--accent)";
+                      el.style.transform = "translateY(-2px)";
+                      el.style.boxShadow = "0 8px 24px rgba(0,0,0,0.15), 0 0 0 1px rgba(139,179,245,0.1)";
+                    }}
+                    onMouseLeave={(e) => {
+                      const el = e.currentTarget as HTMLElement;
+                      el.style.borderColor = "var(--border)";
+                      el.style.transform = "translateY(0)";
+                      el.style.boxShadow = "var(--card-shadow, 0 2px 8px rgba(0,0,0,0.15))";
+                    }}
+                  >
+                    <span style={{ fontSize: 16 }}>{icons[b] ?? "💻"}</span>
+                    {b}
+                    <span style={{
+                      fontSize: 10, fontWeight: 700,
+                      background: "rgba(139,179,245,0.1)",
+                      border: "1px solid rgba(139,179,245,0.2)",
+                      color: "var(--accent)",
+                      borderRadius: 6, padding: "2px 7px",
+                    }}>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
           <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Show</span>
