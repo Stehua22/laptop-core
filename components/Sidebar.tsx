@@ -8,6 +8,11 @@ type NavItem = {
   icon: ReactNode;
 };
 
+const BRAND_ICONS: Record<string, string> = {
+  Apple: "🍎", Lenovo: "💻", Dell: "🖥️", HP: "🖨️",
+  ASUS: "⚡", Acer: "🎯", Microsoft: "🪟", Samsung: "📱",
+};
+
 const NAV_ITEMS: NavItem[] = [
   {
     key: "home",
@@ -55,6 +60,7 @@ type SidebarProps = {
   activeKey?: string;
   onSettingsClick?: () => void;
   onResetSettings?: () => void;
+  brands?: string[];
 };
 
 /**
@@ -72,11 +78,12 @@ type SidebarProps = {
  *
  * Collapsed state persists across page loads via localStorage.
  */
-export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSettings }: SidebarProps) {
+export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSettings, brands = [] }: SidebarProps) {
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("lc-sidebar-collapsed") === "true";
   });
+  const [brandsOpen, setBrandsOpen] = useState(false);
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -123,6 +130,44 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
             <span className={styles.label}>{item.label}</span>
           </a>
         ))}
+
+        {/* Brands section */}
+        {brands.length > 0 && (
+          <div className={styles.brandsSection}>
+            <button
+              className={styles.brandsSectionToggle}
+              onClick={() => setBrandsOpen((p) => !p)}
+              type="button"
+              title={collapsed ? "Brands" : undefined}
+            >
+              <span className={styles.icon}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16z" />
+                </svg>
+              </span>
+              <span className={styles.label}>Brands</span>
+              <span className={`${styles.brandChev} ${brandsOpen ? styles.brandChevOpen : ""}`}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M9 6l6 6-6 6" />
+                </svg>
+              </span>
+            </button>
+            {brandsOpen && !collapsed && (
+              <div className={styles.brandsList}>
+                {brands.map((b) => (
+                  <a
+                    key={b}
+                    href={`/brand/${encodeURIComponent(b.toLowerCase())}`}
+                    className={styles.brandLink}
+                  >
+                    <span style={{ fontSize: 14 }}>{BRAND_ICONS[b] ?? "💻"}</span>
+                    <span>{b}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </nav>
 
       <button className={styles.collapseRow} onClick={toggleCollapsed} type="button">
