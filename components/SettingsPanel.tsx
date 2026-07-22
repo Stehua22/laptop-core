@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 const ACCENTS: { key: string; label: string; swatch: string }[] = [
   { key: "default", label: "Default", swatch: "#5e8fe8" },
@@ -27,44 +27,44 @@ const FONT_SCALES: { key: number; label: string }[] = [
 ];
 
 const UI_THEMES: { key: string; label: string; icon: string; desc: string }[] = [
-  { key: "default", label: "Default", icon: "â—‰", desc: "Balanced" },
-  { key: "glass", label: "Glass", icon: "â—‡", desc: "Frosted blur" },
-  { key: "neon", label: "Neon", icon: "âš¡", desc: "Glowing edges" },
-  { key: "minimal", label: "Minimal", icon: "â—‹", desc: "Clean & flat" },
-  { key: "brutalist", label: "Brutalist", icon: "â– ", desc: "Bold & raw" },
-  { key: "neumorphic", label: "Neumorphic", icon: "â—Ž", desc: "Soft depth" },
-  { key: "retro", label: "Retro", icon: "â–¶", desc: "Terminal vibes" },
-  { key: "aurora", label: "Aurora", icon: "âœ§", desc: "Dreamy glow" },
-  { key: "paper", label: "Paper", icon: "â–¤", desc: "Print-inspired" },
-  { key: "cyberpunk", label: "Cyberpunk", icon: "â—ˆ", desc: "High contrast" },
-  { key: "sketch", label: "Sketch", icon: "âœŽ", desc: "Hand-drawn feel" },
-  { key: "gradient", label: "Gradient", icon: "â—’", desc: "Soft color wash" },
-  { key: "frost", label: "Frost", icon: "â„", desc: "Icy & crisp" },
-  { key: "sunset-noir", label: "Noir", icon: "â—‘", desc: "Moody contrast" },
-  { key: "candy", label: "Candy", icon: "â—•", desc: "Playful pastel" },
-  { key: "industrial", label: "Industrial", icon: "â–§", desc: "Metal & grid" },
-  { key: "vaporwave", label: "Vaporwave", icon: "â—­", desc: "80s retro-future" },
-  { key: "terracotta", label: "Terracotta", icon: "â—”", desc: "Warm earthy clay" },
-  { key: "midnight", label: "Midnight", icon: "â˜¾", desc: "Deep ocean calm" },
-  { key: "copper", label: "Copper", icon: "â—ˆ", desc: "Warm metallic" },
-  { key: "zen", label: "Zen", icon: "â—‹", desc: "Soft & muted" },
+  { key: "default", label: "Default", icon: "◉", desc: "Balanced" },
+  { key: "glass", label: "Glass", icon: "◇", desc: "Frosted blur" },
+  { key: "neon", label: "Neon", icon: "⚡", desc: "Glowing edges" },
+  { key: "minimal", label: "Minimal", icon: "○", desc: "Clean & flat" },
+  { key: "brutalist", label: "Brutalist", icon: "■", desc: "Bold & raw" },
+  { key: "neumorphic", label: "Neumorphic", icon: "◎", desc: "Soft depth" },
+  { key: "retro", label: "Retro", icon: "▶", desc: "Terminal vibes" },
+  { key: "aurora", label: "Aurora", icon: "✧", desc: "Dreamy glow" },
+  { key: "paper", label: "Paper", icon: "▤", desc: "Print-inspired" },
+  { key: "cyberpunk", label: "Cyberpunk", icon: "◈", desc: "High contrast" },
+  { key: "sketch", label: "Sketch", icon: "✎", desc: "Hand-drawn feel" },
+  { key: "gradient", label: "Gradient", icon: "◒", desc: "Soft color wash" },
+  { key: "frost", label: "Frost", icon: "❄", desc: "Icy & crisp" },
+  { key: "sunset-noir", label: "Noir", icon: "◑", desc: "Moody contrast" },
+  { key: "candy", label: "Candy", icon: "◕", desc: "Playful pastel" },
+  { key: "industrial", label: "Industrial", icon: "▧", desc: "Metal & grid" },
+  { key: "vaporwave", label: "Vaporwave", icon: "◭", desc: "80s retro-future" },
+  { key: "terracotta", label: "Terracotta", icon: "◔", desc: "Warm earthy clay" },
+  { key: "midnight", label: "Midnight", icon: "☾", desc: "Deep ocean calm" },
+  { key: "copper", label: "Copper", icon: "◈", desc: "Warm metallic" },
+  { key: "zen", label: "Zen", icon: "○", desc: "Soft & muted" },
 ];
 
 const CARD_LAYOUTS: { key: "row" | "grid" | "compact"; label: string; icon: string }[] = [
-  { key: "row", label: "Row", icon: "â˜°" },
-  { key: "grid", label: "Grid", icon: "âŠž" },
-  { key: "compact", label: "Compact", icon: "â‰¡" },
+  { key: "row", label: "Row", icon: "☰" },
+  { key: "grid", label: "Grid", icon: "⊞" },
+  { key: "compact", label: "Compact", icon: "≡" },
 ];
 
 const BG_EFFECTS: { key: string; label: string; icon: string }[] = [
-  { key: "grid", label: "Grid", icon: "â–¦" },
-  { key: "gradient", label: "Gradient", icon: "â—" },
-  { key: "particles", label: "Particles", icon: "âœ¦" },
-  { key: "stars", label: "Stars", icon: "â˜…" },
-  { key: "waves", label: "Waves", icon: "ã€°" },
-  { key: "bokeh", label: "Bokeh", icon: "â—" },
-  { key: "mist", label: "Mist", icon: "â˜" },
-  { key: "none", label: "None", icon: "âˆ…" },
+  { key: "grid", label: "Grid", icon: "▦" },
+  { key: "gradient", label: "Gradient", icon: "◐" },
+  { key: "particles", label: "Particles", icon: "✦" },
+  { key: "stars", label: "Stars", icon: "★" },
+  { key: "waves", label: "Waves", icon: "〰" },
+  { key: "bokeh", label: "Bokeh", icon: "●" },
+  { key: "mist", label: "Mist", icon: "☁" },
+  { key: "none", label: "None", icon: "∅" },
 ];
 
 const ANIM_SPEEDS: { key: string; label: string; desc: string }[] = [
@@ -138,7 +138,7 @@ export default function SettingsPanel({
             <p style={{ fontSize: 10, color: "var(--accent)", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 4 }}>Preferences</p>
             <h2 style={{ fontSize: 19, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Settings</h2>
           </div>
-          <button onClick={onClose} style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 18, color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>Ã—</button>
+          <button onClick={onClose} style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 18, color: "var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
         </div>
 
         <div style={{ padding: "22px 24px 26px", display: "flex", flexDirection: "column", gap: 24, overflowY: "auto", flex: 1 }}>
@@ -156,7 +156,7 @@ export default function SettingsPanel({
                   color: !isDark ? "var(--accent)" : "var(--text-muted)",
                   transition: "all 0.15s",
                 }}
-              >â˜€ï¸ Light</button>
+              >☀️ Light</button>
               <button
                 onClick={() => { if (!isDark) onThemeToggle(); }}
                 style={{
@@ -167,7 +167,7 @@ export default function SettingsPanel({
                   color: isDark ? "var(--accent)" : "var(--text-muted)",
                   transition: "all 0.15s",
                 }}
-              >ðŸŒ™ Dark</button>
+              >🌙 Dark</button>
             </div>
           </div>
 
