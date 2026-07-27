@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import styles from "./Laptop3dviewer.module.css";
 
 // ---- Config ----
@@ -16,53 +17,100 @@ const BASE_COLORS = [
 ];
 
 const FINISHES = [
-  { name: "Matte", roughness: 0.75, metalness: 0.35 },
-  { name: "Glossy", roughness: 0.15, metalness: 0.7 },
+  { name: "Matte", roughness: 0.55, clearcoat: 0.15 },
+  { name: "Aluminum", roughness: 0.32, clearcoat: 0.35 },
+  { name: "Glossy", roughness: 0.08, clearcoat: 0.7 },
 ];
+
+const BACKLIGHTS = [
+  { name: "Off", color: null },
+  { name: "White", color: "#eef3ff" },
+  { name: "Blue", color: "#4d9dff" },
+  { name: "Green", color: "#5df29a" },
+];
+
+const BACKGROUNDS = [
+  { name: "Studio", color: "#f4f5f7", ground: "#e9eaed" },
+  { name: "Dark", color: "#1b1c1f", ground: "#2a2b2f" },
+];
+
+const VIEWS: Record<string, { pos: [number, number, number]; target: [number, number, number] }> = {
+  iso: { pos: [3.0, 2.2, 4.0], target: [0, 0.35, 0] },
+  front: { pos: [0, 0.9, 3.6], target: [0, 0.65, 0] },
+  side: { pos: [3.8, 0.6, 0], target: [0, 0.4, 0] },
+  top: { pos: [0.01, 4.2, 0.01], target: [0, 0, 0] },
+};
 
 // Overall proportions, in scene units (roughly a 14" laptop)
 const DIMS = {
   width: 2.2,
   depth: 1.5,
-  baseThickness: 0.075,
-  lidThickness: 0.045,
-  cornerRadius: 0.035,
+  baseThickness: 0.07,
+  lidThickness: 0.04,
+  cornerRadius: 0.04,
 };
+
+function makeBrushedMetalNormalMap(): THREE.CanvasTexture {
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#8080ff"; // neutral normal
+  ctx.fillRect(0, 0, size, size);
+  for (let i = 0; i < 900; i++) {
+    const y = Math.random() * size;
+    const shade = 118 + Math.floor(Math.random() * 20);
+    ctx.strokeStyle = `rgba(${shade},${shade},255,${0.06 + Math.random() * 0.08})`;
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(size, y + (Math.random() - 0.5) * 2);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(4, 3);
+  return tex;
+}
 
 type LaptopMeshRefs = {
-  bodyMeshes: THREE.Mesh[]; // meshes that take baseColor + finish
+  bodyMeshes: THREE.Mesh[];
   screenPivot: THREE.Group;
   display: THREE.Mesh;
-  bezel: THREE.Mesh;
+  backlightPlane: THREE.Mesh;
+  logo: THREE.Mesh;
 };
 
-function buildLaptop(bodyMat: THREE.MeshStandardMaterial): {
-  group: THREE.Group;
-  refs: LaptopMeshRefs;
-} {
+function buildLaptop(
+  bodyMat: THREE.MeshPhysicalMaterial
+): { group: THREE.Group; refs: LaptopMeshRefs } {
   const group = new THREE.Group();
   const bodyMeshes: THREE.Mesh[] = [];
   const { width, depth, baseThickness, lidThickness, cornerRadius } = DIMS;
 
   const darkMat = new THREE.MeshStandardMaterial({
-    color: "#26282c",
-    roughness: 0.8,
-    metalness: 0.1,
-  });
-  const keyMat = new THREE.MeshStandardMaterial({
-    color: "#1a1b1e",
-    roughness: 0.6,
+    color: "#212226",
+    roughness: 0.75,
     metalness: 0.15,
   });
-  const glassMat = new THREE.MeshStandardMaterial({
+  const keyMat = new THREE.MeshStandardMaterial({
+    color: "#17181b",
+    roughness: 0.55,
+    metalness: 0.2,
+  });
+  const glassMat = new THREE.MeshPhysicalMaterial({
     color: "#3a3d42",
-    roughness: 0.25,
-    metalness: 0.3,
+    roughness: 0.15,
+    metalness: 0.2,
+    clearcoat: 0.6,
+    clearcoatRoughness: 0.1,
   });
 
   // ---- Base ----
   const base = new THREE.Mesh(
-    new RoundedBoxGeometry(width, baseThickness, depth, 4, cornerRadius),
+    new RoundedBoxGeometry(width, baseThickness, depth, 7, cornerRadius),
     bodyMat
   );
   base.position.y = baseThickness / 2;
@@ -73,10 +121,7 @@ function buildLaptop(bodyMat: THREE.MeshStandardMaterial): {
 
   // Rubber feet
   const footGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.008, 14);
-  const footMat = new THREE.MeshStandardMaterial({
-    color: "#111214",
-    roughness: 0.9,
-  });
+  const footMat = new THREE.MeshStandardMaterial({ color: "#0d0e0f", roughness: 0.9 });
   const footOffsets: [number, number][] = [
     [-width / 2 + 0.12, -depth / 2 + 0.12],
     [width / 2 - 0.12, -depth / 2 + 0.12],
@@ -89,6 +134,14 @@ function buildLaptop(bodyMat: THREE.MeshStandardMaterial): {
     group.add(foot);
   });
 
+  // Vents on the back edge (thin dark slits)
+  const ventGeo = new THREE.BoxGeometry(0.09, 0.006, 0.012);
+  for (let i = 0; i < 10; i++) {
+    const vent = new THREE.Mesh(ventGeo, darkMat);
+    vent.position.set(-width / 2 + 0.25 + i * 0.1, baseThickness - 0.002, -depth / 2 + 0.01);
+    group.add(vent);
+  }
+
   // Keyboard deck (recessed inset plate)
   const deckWidth = width - 0.28;
   const deckDepth = depth - 0.42;
@@ -99,14 +152,28 @@ function buildLaptop(bodyMat: THREE.MeshStandardMaterial): {
   deck.position.set(0, baseThickness + 0.003, -depth * 0.06);
   group.add(deck);
 
-  // Keys (chiclet grid, instanced for performance)
+  // Backlight plane just under key height, glows through gaps
+  const backlightPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(deckWidth - 0.05, deckDepth - 0.32),
+    new THREE.MeshStandardMaterial({
+      color: "#000000",
+      emissive: new THREE.Color("#4d9dff"),
+      emissiveIntensity: 0,
+      roughness: 1,
+    })
+  );
+  backlightPlane.rotation.x = -Math.PI / 2;
+  backlightPlane.position.set(0, baseThickness + 0.009, deck.position.z + 0.02);
+  group.add(backlightPlane);
+
+  // Keys (chiclet grid, instanced)
   const cols = 14;
   const rows = 5;
   const keySize = 0.1;
   const keyGap = 0.018;
   const keyStepX = keySize + keyGap;
   const keyStepZ = keySize + keyGap;
-  const keyGeo = new RoundedBoxGeometry(keySize, 0.014, keySize, 2, 0.02);
+  const keyGeo = new RoundedBoxGeometry(keySize, 0.016, keySize, 2, 0.02);
   const keysMesh = new THREE.InstancedMesh(keyGeo, keyMat, cols * rows);
   const gridWidth = (cols - 1) * keyStepX;
   const gridDepth = (rows - 1) * keyStepZ;
@@ -116,7 +183,7 @@ function buildLaptop(bodyMat: THREE.MeshStandardMaterial): {
     for (let c = 0; c < cols; c++) {
       const x = -gridWidth / 2 + c * keyStepX;
       const z = deck.position.z - gridDepth / 2 + r * keyStepZ + 0.06;
-      dummy.position.set(x, baseThickness + 0.013, z);
+      dummy.position.set(x, baseThickness + 0.014, z);
       dummy.updateMatrix();
       keysMesh.setMatrixAt(idx, dummy.matrix);
       idx++;
@@ -127,18 +194,15 @@ function buildLaptop(bodyMat: THREE.MeshStandardMaterial): {
 
   // Trackpad
   const trackpad = new THREE.Mesh(
-    new RoundedBoxGeometry(0.62, 0.006, 0.4, 3, 0.025),
+    new RoundedBoxGeometry(0.62, 0.006, 0.4, 4, 0.025),
     glassMat
   );
   trackpad.position.set(0, baseThickness + 0.004, depth * 0.34);
   group.add(trackpad);
 
-  // Speaker grille dots (either side, above keyboard, near hinge)
+  // Speaker grille dots
   const dotGeo = new THREE.CircleGeometry(0.008, 8);
-  const dotMat = new THREE.MeshStandardMaterial({
-    color: "#111214",
-    roughness: 0.9,
-  });
+  const dotMat = new THREE.MeshStandardMaterial({ color: "#0d0e0f", roughness: 0.9 });
   const speakerClusters: [number, number][] = [
     [-deckWidth / 2 + 0.1, -depth / 2 + 0.12],
     [deckWidth / 2 - 0.1, -depth / 2 + 0.12],
@@ -154,31 +218,37 @@ function buildLaptop(bodyMat: THREE.MeshStandardMaterial): {
     }
   });
 
-  // Port notches on the right edge (simple recessed dark rectangles)
-  const portGeo = new THREE.BoxGeometry(0.01, 0.02, 0.06);
-  const portZs = [-0.35, -0.1, 0.15];
-  portZs.forEach((z) => {
-    const port = new THREE.Mesh(portGeo, darkMat);
-    port.position.set(width / 2 - 0.002, baseThickness / 2 + 0.01, z);
-    group.add(port);
+  // Port cutouts, right edge, with a thin metallic lining
+  const portOuterGeo = new THREE.BoxGeometry(0.012, 0.024, 0.07);
+  const portInnerGeo = new THREE.BoxGeometry(0.006, 0.018, 0.05);
+  const portMetalMat = new THREE.MeshStandardMaterial({
+    color: "#9a9ea3",
+    roughness: 0.3,
+    metalness: 0.8,
+  });
+  [-0.35, -0.1, 0.15].forEach((z) => {
+    const outer = new THREE.Mesh(portOuterGeo, darkMat);
+    outer.position.set(width / 2 - 0.003, baseThickness / 2 + 0.01, z);
+    group.add(outer);
+    const inner = new THREE.Mesh(portInnerGeo, portMetalMat);
+    inner.position.set(width / 2 - 0.001, baseThickness / 2 + 0.01, z);
+    group.add(inner);
   });
 
-  // ---- Screen (pivoting group at the hinge line) ----
+  // ---- Screen (pivoting group at hinge line) ----
   const screenPivot = new THREE.Group();
   screenPivot.position.set(0, baseThickness, -depth / 2);
   group.add(screenPivot);
 
-  // Hinge cylinder
   const hinge = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.03, 0.03, width - 0.3, 16),
+    new THREE.CylinderGeometry(0.028, 0.028, width - 0.3, 20),
     darkMat
   );
   hinge.rotation.z = Math.PI / 2;
-  hinge.position.set(0, 0, 0);
   screenPivot.add(hinge);
 
   const lid = new THREE.Mesh(
-    new RoundedBoxGeometry(width, depth, lidThickness, 4, cornerRadius),
+    new RoundedBoxGeometry(width, depth, lidThickness, 7, cornerRadius),
     bodyMat
   );
   lid.position.set(0, depth / 2, -lidThickness / 2);
@@ -186,7 +256,22 @@ function buildLaptop(bodyMat: THREE.MeshStandardMaterial): {
   screenPivot.add(lid);
   bodyMeshes.push(lid);
 
-  // Bezel (dark rim) sits on the front face of the lid
+  // Logo (glowing emblem on the back of the lid)
+  const logo = new THREE.Mesh(
+    new THREE.CircleGeometry(0.11, 32),
+    new THREE.MeshStandardMaterial({
+      color: "#dcdfe3",
+      emissive: new THREE.Color("#ffffff"),
+      emissiveIntensity: 0,
+      roughness: 0.4,
+      metalness: 0.3,
+    })
+  );
+  logo.rotation.y = Math.PI;
+  logo.position.set(0, depth / 2, -lidThickness - 0.001);
+  screenPivot.add(logo);
+
+  // Bezel (dark rim) on the front face of the lid
   const bezel = new THREE.Mesh(
     new THREE.PlaneGeometry(width - 0.09, depth - 0.09),
     darkMat
@@ -199,7 +284,7 @@ function buildLaptop(bodyMat: THREE.MeshStandardMaterial): {
     color: "#0a84ff",
     emissive: new THREE.Color("#3aa0ff"),
     emissiveIntensity: 0.6,
-    roughness: 0.25,
+    roughness: 0.2,
   });
   const display = new THREE.Mesh(
     new THREE.PlaneGeometry(width - 0.16, depth - 0.2),
@@ -218,7 +303,7 @@ function buildLaptop(bodyMat: THREE.MeshStandardMaterial): {
 
   return {
     group,
-    refs: { bodyMeshes, screenPivot, display, bezel },
+    refs: { bodyMeshes, screenPivot, display, backlightPlane, logo },
   };
 }
 
@@ -228,12 +313,17 @@ export default function Laptop3DViewer() {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const groundRef = useRef<THREE.Mesh | null>(null);
 
   const [baseColor, setBaseColor] = useState(BASE_COLORS[0].hex);
-  const [finishIndex, setFinishIndex] = useState(0);
-  const [openAngle, setOpenAngle] = useState(105); // degrees, 0 = closed, ~130 = wide open
+  const [finishIndex, setFinishIndex] = useState(1);
+  const [openAngle, setOpenAngle] = useState(105);
   const [autoRotate, setAutoRotate] = useState(true);
   const [displayOn, setDisplayOn] = useState(true);
+  const [backlightIndex, setBacklightIndex] = useState(0);
+  const [logoGlow, setLogoGlow] = useState(true);
+  const [bgIndex, setBgIndex] = useState(0);
 
   const autoRotateRef = useRef(autoRotate);
   useEffect(() => {
@@ -249,55 +339,67 @@ export default function Laptop3DViewer() {
     const height = mount.clientHeight;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color("#f4f5f7");
+    scene.background = new THREE.Color(BACKGROUNDS[0].color);
+    sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 100);
-    camera.position.set(3.0, 2.2, 4.0);
+    camera.position.set(...VIEWS.iso.pos);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
     renderer.shadowMap.enabled = true;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
     mount.appendChild(renderer.domElement);
     rendererRef.current = renderer;
+
+    // Environment map for realistic reflections on metal/glass
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    controls.minDistance = 2.2;
+    controls.minDistance = 2.0;
     controls.maxDistance = 7;
     controls.maxPolarAngle = Math.PI * 0.49;
-    controls.target.set(0, 0.35, 0);
+    controls.target.set(...VIEWS.iso.target);
     controlsRef.current = controls;
 
-    // Lighting
-    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 
-    const key = new THREE.DirectionalLight(0xffffff, 1.15);
-    key.position.set(4, 6, 3);
-    key.castShadow = true;
-    key.shadow.mapSize.set(1024, 1024);
-    scene.add(key);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    keyLight.position.set(4, 6, 3);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024, 1024);
+    scene.add(keyLight);
 
-    const rim = new THREE.DirectionalLight(0xaecbff, 0.45);
-    rim.position.set(-4, 3, -3);
-    scene.add(rim);
+    const rimLight = new THREE.DirectionalLight(0xaecbff, 0.5);
+    rimLight.position.set(-4, 3, -3);
+    scene.add(rimLight);
 
-    // Ground
     const ground = new THREE.Mesh(
       new THREE.CircleGeometry(6, 48),
-      new THREE.MeshStandardMaterial({ color: "#e9eaed", roughness: 1 })
+      new THREE.MeshStandardMaterial({ color: BACKGROUNDS[0].ground, roughness: 1 })
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.001;
     ground.receiveShadow = true;
     scene.add(ground);
+    groundRef.current = ground;
 
-    const bodyMat = new THREE.MeshStandardMaterial({
+    const normalMap = makeBrushedMetalNormalMap();
+    const bodyMat = new THREE.MeshPhysicalMaterial({
       color: baseColor,
       roughness: FINISHES[finishIndex].roughness,
-      metalness: FINISHES[finishIndex].metalness,
+      metalness: 0.85,
+      clearcoat: FINISHES[finishIndex].clearcoat,
+      clearcoatRoughness: 0.2,
+      normalMap,
+      normalScale: new THREE.Vector2(0.15, 0.15),
+      envMapIntensity: 1,
     });
 
     const { group: laptop, refs } = buildLaptop(bodyMat);
@@ -308,9 +410,7 @@ export default function Laptop3DViewer() {
     let frameId: number;
     const animate = () => {
       frameId = requestAnimationFrame(animate);
-      if (autoRotateRef.current) {
-        laptop.rotation.y += 0.004;
-      }
+      if (autoRotateRef.current) laptop.rotation.y += 0.004;
       controls.update();
       renderer.render(scene, camera);
     };
@@ -336,12 +436,12 @@ export default function Laptop3DViewer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---- Reactive updates (no full re-init) ----
+  // ---- Reactive updates ----
   useEffect(() => {
     const refs = meshesRef.current;
     if (!refs) return;
     refs.bodyMeshes.forEach((m) => {
-      (m.material as THREE.MeshStandardMaterial).color.set(baseColor);
+      (m.material as THREE.MeshPhysicalMaterial).color.set(baseColor);
     });
   }, [baseColor]);
 
@@ -350,9 +450,9 @@ export default function Laptop3DViewer() {
     if (!refs) return;
     const finish = FINISHES[finishIndex];
     refs.bodyMeshes.forEach((m) => {
-      const mat = m.material as THREE.MeshStandardMaterial;
+      const mat = m.material as THREE.MeshPhysicalMaterial;
       mat.roughness = finish.roughness;
-      mat.metalness = finish.metalness;
+      mat.clearcoat = finish.clearcoat;
     });
   }, [finishIndex]);
 
@@ -370,12 +470,42 @@ export default function Laptop3DViewer() {
     mat.color.set(displayOn ? "#0a84ff" : "#111214");
   }, [displayOn]);
 
-  const resetView = () => {
+  useEffect(() => {
+    const refs = meshesRef.current;
+    if (!refs) return;
+    const mat = refs.backlightPlane.material as THREE.MeshStandardMaterial;
+    const bl = BACKLIGHTS[backlightIndex];
+    if (bl.color) {
+      mat.emissive.set(bl.color);
+      mat.emissiveIntensity = 0.9;
+    } else {
+      mat.emissiveIntensity = 0;
+    }
+  }, [backlightIndex]);
+
+  useEffect(() => {
+    const refs = meshesRef.current;
+    if (!refs) return;
+    const mat = refs.logo.material as THREE.MeshStandardMaterial;
+    mat.emissiveIntensity = logoGlow ? 0.8 : 0;
+  }, [logoGlow]);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    const ground = groundRef.current;
+    if (!scene || !ground) return;
+    const bg = BACKGROUNDS[bgIndex];
+    (scene.background as THREE.Color).set(bg.color);
+    (ground.material as THREE.MeshStandardMaterial).color.set(bg.ground);
+  }, [bgIndex]);
+
+  const goToView = (key: keyof typeof VIEWS) => {
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (!camera || !controls) return;
-    camera.position.set(3.0, 2.2, 4.0);
-    controls.target.set(0, 0.35, 0);
+    const v = VIEWS[key];
+    camera.position.set(...v.pos);
+    controls.target.set(...v.target);
     controls.update();
   };
 
@@ -395,8 +525,7 @@ export default function Laptop3DViewer() {
                 className={styles.swatch}
                 style={{
                   backgroundColor: c.hex,
-                  outline:
-                    baseColor === c.hex ? "2px solid var(--accent, #0a84ff)" : "none",
+                  outline: baseColor === c.hex ? "2px solid var(--accent, #0a84ff)" : "none",
                 }}
               />
             ))}
@@ -410,13 +539,51 @@ export default function Laptop3DViewer() {
               <button
                 key={f.name}
                 onClick={() => setFinishIndex(i)}
-                className={`${styles.toggleBtn} ${
-                  finishIndex === i ? styles.toggleBtnActive : ""
-                }`}
+                className={`${styles.toggleBtn} ${finishIndex === i ? styles.toggleBtnActive : ""}`}
               >
                 {f.name}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>Keyboard backlight</span>
+          <div className={styles.toggleRow}>
+            {BACKLIGHTS.map((b, i) => (
+              <button
+                key={b.name}
+                onClick={() => setBacklightIndex(i)}
+                className={`${styles.toggleBtn} ${backlightIndex === i ? styles.toggleBtnActive : ""}`}
+              >
+                {b.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>Background</span>
+          <div className={styles.toggleRow}>
+            {BACKGROUNDS.map((b, i) => (
+              <button
+                key={b.name}
+                onClick={() => setBgIndex(i)}
+                className={`${styles.toggleBtn} ${bgIndex === i ? styles.toggleBtnActive : ""}`}
+              >
+                {b.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>View</span>
+          <div className={styles.toggleRow}>
+            <button className={styles.toggleBtn} onClick={() => goToView("iso")}>Iso</button>
+            <button className={styles.toggleBtn} onClick={() => goToView("front")}>Front</button>
+            <button className={styles.toggleBtn} onClick={() => goToView("side")}>Side</button>
+            <button className={styles.toggleBtn} onClick={() => goToView("top")}>Top</button>
           </div>
         </div>
 
@@ -434,24 +601,20 @@ export default function Laptop3DViewer() {
 
         <div className={styles.filterGroup}>
           <label className={styles.checkboxRow}>
-            <input
-              type="checkbox"
-              checked={displayOn}
-              onChange={(e) => setDisplayOn(e.target.checked)}
-            />
+            <input type="checkbox" checked={displayOn} onChange={(e) => setDisplayOn(e.target.checked)} />
             Display on
           </label>
           <label className={styles.checkboxRow}>
-            <input
-              type="checkbox"
-              checked={autoRotate}
-              onChange={(e) => setAutoRotate(e.target.checked)}
-            />
+            <input type="checkbox" checked={logoGlow} onChange={(e) => setLogoGlow(e.target.checked)} />
+            Logo glow
+          </label>
+          <label className={styles.checkboxRow}>
+            <input type="checkbox" checked={autoRotate} onChange={(e) => setAutoRotate(e.target.checked)} />
             Auto-rotate
           </label>
         </div>
 
-        <button onClick={resetView} className={styles.resetBtn}>
+        <button onClick={() => goToView("iso")} className={styles.resetBtn}>
           Reset view
         </button>
       </aside>
