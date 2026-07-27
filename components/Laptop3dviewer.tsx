@@ -1,13 +1,12 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { fetchLaptops, type Laptop } from "@/lib/supabase";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import styles from "./Laptop3dviewer.module.css";
 
-// ---- Cosmetic config ----
+// ---- Config ----
 const BASE_COLORS = [
   { name: "Space Grey", hex: "#4b4f56" },
   { name: "Silver", hex: "#d6d9dd" },
@@ -17,95 +16,210 @@ const BASE_COLORS = [
 ];
 
 const FINISHES = [
-  { name: "Matte", roughness: 0.85, metalness: 0.1 },
-  { name: "Glossy", roughness: 0.2, metalness: 0.6 },
+  { name: "Matte", roughness: 0.75, metalness: 0.35 },
+  { name: "Glossy", roughness: 0.15, metalness: 0.7 },
 ];
 
-// ---- Spec filter config ----
-const CPU_OPTIONS = [
-  "Any",
-  "Intel i3",
-  "Intel i5",
-  "Intel i7",
-  "Intel i9",
-  "Ryzen 3",
-  "Ryzen 5",
-  "Ryzen 7",
-  "Ryzen 9",
-  "Apple M",
-];
-const RAM_OPTIONS = ["Any", "8GB", "16GB", "32GB", "64GB"];
-const STORAGE_OPTIONS = ["Any", "256GB", "512GB", "1TB", "2TB"];
-const SCREEN_OPTIONS = ["Any", "13\"", "14\"", "15\"", "16\"+"];
-
-type LaptopMeshRefs = {
-  base: THREE.Mesh;
-  screenPivot: THREE.Group;
-  screenPanel: THREE.Mesh;
-  display: THREE.Mesh;
-  hinge: THREE.Mesh;
+// Overall proportions, in scene units (roughly a 14" laptop)
+const DIMS = {
+  width: 2.2,
+  depth: 1.5,
+  baseThickness: 0.075,
+  lidThickness: 0.045,
+  cornerRadius: 0.035,
 };
 
-// Rounded-rectangle shape used to build the base and lid so edges aren't hard boxes
-function roundedRectShape(width: number, height: number, radius: number) {
-  const shape = new THREE.Shape();
-  const w = width / 2;
-  const h = height / 2;
-  shape.moveTo(-w + radius, -h);
-  shape.lineTo(w - radius, -h);
-  shape.quadraticCurveTo(w, -h, w, -h + radius);
-  shape.lineTo(w, h - radius);
-  shape.quadraticCurveTo(w, h, w - radius, h);
-  shape.lineTo(-w + radius, h);
-  shape.quadraticCurveTo(-w, h, -w, h - radius);
-  shape.lineTo(-w, -h + radius);
-  shape.quadraticCurveTo(-w, -h, -w + radius, -h);
-  return shape;
-}
+type LaptopMeshRefs = {
+  bodyMeshes: THREE.Mesh[]; // meshes that take baseColor + finish
+  screenPivot: THREE.Group;
+  display: THREE.Mesh;
+  bezel: THREE.Mesh;
+};
 
-function roundedSlabGeometry(width: number, depth: number, thickness: number, radius: number) {
-  const shape = roundedRectShape(width, depth, radius);
-  const geo = new THREE.ExtrudeGeometry(shape, {
-    depth: thickness,
-    bevelEnabled: true,
-    bevelThickness: thickness * 0.18,
-    bevelSize: thickness * 0.18,
-    bevelSegments: 3,
-    curveSegments: 10,
+function buildLaptop(bodyMat: THREE.MeshStandardMaterial): {
+  group: THREE.Group;
+  refs: LaptopMeshRefs;
+} {
+  const group = new THREE.Group();
+  const bodyMeshes: THREE.Mesh[] = [];
+  const { width, depth, baseThickness, lidThickness, cornerRadius } = DIMS;
+
+  const darkMat = new THREE.MeshStandardMaterial({
+    color: "#26282c",
+    roughness: 0.8,
+    metalness: 0.1,
   });
-  geo.translate(0, 0, -thickness / 2);
-  geo.rotateX(Math.PI / 2);
-  return geo;
-}
+  const keyMat = new THREE.MeshStandardMaterial({
+    color: "#1a1b1e",
+    roughness: 0.6,
+    metalness: 0.15,
+  });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: "#3a3d42",
+    roughness: 0.25,
+    metalness: 0.3,
+  });
 
-function matchesCpu(specs: string, cpu: string) {
-  if (cpu === "Any") return true;
-  return specs.toLowerCase().includes(cpu.toLowerCase());
-}
+  // ---- Base ----
+  const base = new THREE.Mesh(
+    new RoundedBoxGeometry(width, baseThickness, depth, 4, cornerRadius),
+    bodyMat
+  );
+  base.position.y = baseThickness / 2;
+  base.castShadow = true;
+  base.receiveShadow = true;
+  group.add(base);
+  bodyMeshes.push(base);
 
-function matchesRam(specs: string, ram: string) {
-  if (ram === "Any") return true;
-  const wanted = parseInt(ram, 10);
-  const m = specs.match(/(\d+)\s?GB\s?RAM/i);
-  if (!m) return false;
-  return parseInt(m[1], 10) === wanted;
-}
+  // Rubber feet
+  const footGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.008, 14);
+  const footMat = new THREE.MeshStandardMaterial({
+    color: "#111214",
+    roughness: 0.9,
+  });
+  const footOffsets: [number, number][] = [
+    [-width / 2 + 0.12, -depth / 2 + 0.12],
+    [width / 2 - 0.12, -depth / 2 + 0.12],
+    [-width / 2 + 0.12, depth / 2 - 0.12],
+    [width / 2 - 0.12, depth / 2 - 0.12],
+  ];
+  footOffsets.forEach(([x, z]) => {
+    const foot = new THREE.Mesh(footGeo, footMat);
+    foot.position.set(x, -0.004, z);
+    group.add(foot);
+  });
 
-function matchesStorage(specs: string, storage: string) {
-  if (storage === "Any") return true;
-  const wantedGB = storage.includes("TB") ? parseInt(storage, 10) * 1024 : parseInt(storage, 10);
-  const m = specs.match(/(\d+)\s?(GB|TB)\s?(SSD|storage|HDD)/i);
-  if (!m) return false;
-  const foundGB = m[2].toUpperCase() === "TB" ? parseInt(m[1], 10) * 1024 : parseInt(m[1], 10);
-  return foundGB === wantedGB;
-}
+  // Keyboard deck (recessed inset plate)
+  const deckWidth = width - 0.28;
+  const deckDepth = depth - 0.42;
+  const deck = new THREE.Mesh(
+    new RoundedBoxGeometry(deckWidth, 0.006, deckDepth, 3, 0.02),
+    darkMat
+  );
+  deck.position.set(0, baseThickness + 0.003, -depth * 0.06);
+  group.add(deck);
 
-function matchesScreen(screenSize: number | null | undefined, screen: string) {
-  if (screen === "Any") return true;
-  if (screenSize == null) return false;
-  if (screen === "16\"+") return screenSize >= 16;
-  const wanted = parseInt(screen, 10);
-  return Math.round(screenSize) === wanted;
+  // Keys (chiclet grid, instanced for performance)
+  const cols = 14;
+  const rows = 5;
+  const keySize = 0.1;
+  const keyGap = 0.018;
+  const keyStepX = keySize + keyGap;
+  const keyStepZ = keySize + keyGap;
+  const keyGeo = new RoundedBoxGeometry(keySize, 0.014, keySize, 2, 0.02);
+  const keysMesh = new THREE.InstancedMesh(keyGeo, keyMat, cols * rows);
+  const gridWidth = (cols - 1) * keyStepX;
+  const gridDepth = (rows - 1) * keyStepZ;
+  const dummy = new THREE.Object3D();
+  let idx = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = -gridWidth / 2 + c * keyStepX;
+      const z = deck.position.z - gridDepth / 2 + r * keyStepZ + 0.06;
+      dummy.position.set(x, baseThickness + 0.013, z);
+      dummy.updateMatrix();
+      keysMesh.setMatrixAt(idx, dummy.matrix);
+      idx++;
+    }
+  }
+  keysMesh.instanceMatrix.needsUpdate = true;
+  group.add(keysMesh);
+
+  // Trackpad
+  const trackpad = new THREE.Mesh(
+    new RoundedBoxGeometry(0.62, 0.006, 0.4, 3, 0.025),
+    glassMat
+  );
+  trackpad.position.set(0, baseThickness + 0.004, depth * 0.34);
+  group.add(trackpad);
+
+  // Speaker grille dots (either side, above keyboard, near hinge)
+  const dotGeo = new THREE.CircleGeometry(0.008, 8);
+  const dotMat = new THREE.MeshStandardMaterial({
+    color: "#111214",
+    roughness: 0.9,
+  });
+  const speakerClusters: [number, number][] = [
+    [-deckWidth / 2 + 0.1, -depth / 2 + 0.12],
+    [deckWidth / 2 - 0.1, -depth / 2 + 0.12],
+  ];
+  speakerClusters.forEach(([cx, cz]) => {
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 3; c++) {
+        const dot = new THREE.Mesh(dotGeo, dotMat);
+        dot.rotation.x = -Math.PI / 2;
+        dot.position.set(cx + c * 0.02 - 0.02, baseThickness + 0.0035, cz + r * 0.02);
+        group.add(dot);
+      }
+    }
+  });
+
+  // Port notches on the right edge (simple recessed dark rectangles)
+  const portGeo = new THREE.BoxGeometry(0.01, 0.02, 0.06);
+  const portZs = [-0.35, -0.1, 0.15];
+  portZs.forEach((z) => {
+    const port = new THREE.Mesh(portGeo, darkMat);
+    port.position.set(width / 2 - 0.002, baseThickness / 2 + 0.01, z);
+    group.add(port);
+  });
+
+  // ---- Screen (pivoting group at the hinge line) ----
+  const screenPivot = new THREE.Group();
+  screenPivot.position.set(0, baseThickness, -depth / 2);
+  group.add(screenPivot);
+
+  // Hinge cylinder
+  const hinge = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.03, 0.03, width - 0.3, 16),
+    darkMat
+  );
+  hinge.rotation.z = Math.PI / 2;
+  hinge.position.set(0, 0, 0);
+  screenPivot.add(hinge);
+
+  const lid = new THREE.Mesh(
+    new RoundedBoxGeometry(width, depth, lidThickness, 4, cornerRadius),
+    bodyMat
+  );
+  lid.position.set(0, depth / 2, -lidThickness / 2);
+  lid.castShadow = true;
+  screenPivot.add(lid);
+  bodyMeshes.push(lid);
+
+  // Bezel (dark rim) sits on the front face of the lid
+  const bezel = new THREE.Mesh(
+    new THREE.PlaneGeometry(width - 0.09, depth - 0.09),
+    darkMat
+  );
+  bezel.position.set(0, depth / 2, -lidThickness + 0.002);
+  screenPivot.add(bezel);
+
+  // Display sits slightly in front of the bezel
+  const displayMat = new THREE.MeshStandardMaterial({
+    color: "#0a84ff",
+    emissive: new THREE.Color("#3aa0ff"),
+    emissiveIntensity: 0.6,
+    roughness: 0.25,
+  });
+  const display = new THREE.Mesh(
+    new THREE.PlaneGeometry(width - 0.16, depth - 0.2),
+    displayMat
+  );
+  display.position.set(0, depth / 2 + 0.02, -lidThickness + 0.003);
+  screenPivot.add(display);
+
+  // Webcam notch
+  const cam = new THREE.Mesh(
+    new THREE.CircleGeometry(0.012, 12),
+    new THREE.MeshStandardMaterial({ color: "#050506", roughness: 0.4 })
+  );
+  cam.position.set(0, depth - 0.05, -lidThickness + 0.0025);
+  screenPivot.add(cam);
+
+  return {
+    group,
+    refs: { bodyMeshes, screenPivot, display, bezel },
+  };
 }
 
 export default function Laptop3DViewer() {
@@ -114,72 +228,17 @@ export default function Laptop3DViewer() {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const autoRotateRef = useRef(true);
 
-  // Cosmetic state
   const [baseColor, setBaseColor] = useState(BASE_COLORS[0].hex);
   const [finishIndex, setFinishIndex] = useState(0);
-  const [openAngle, setOpenAngle] = useState(105);
+  const [openAngle, setOpenAngle] = useState(105); // degrees, 0 = closed, ~130 = wide open
   const [autoRotate, setAutoRotate] = useState(true);
   const [displayOn, setDisplayOn] = useState(true);
 
-  // Spec filter state
-  const [cpuFilter, setCpuFilter] = useState("Any");
-  const [ramFilter, setRamFilter] = useState("Any");
-  const [storageFilter, setStorageFilter] = useState("Any");
-  const [screenFilter, setScreenFilter] = useState("Any");
-  const [brandFilter, setBrandFilter] = useState("Any");
-  const [maxPrice, setMaxPrice] = useState(3000);
-
-  // Laptop data
-  const [laptops, setLaptops] = useState<Laptop[]>([]);
-  const [loadingLaptops, setLoadingLaptops] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
+  const autoRotateRef = useRef(autoRotate);
   useEffect(() => {
-    let cancelled = false;
-    fetchLaptops()
-      .then((data) => {
-        if (!cancelled) setLaptops(data);
-      })
-      .catch((err) => {
-        if (!cancelled) setLoadError(err?.message ?? "Failed to load laptops");
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingLaptops(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const brandOptions = useMemo(() => {
-    const set = new Set(laptops.map((l) => l.brand).filter(Boolean));
-    return ["Any", ...Array.from(set).sort()];
-  }, [laptops]);
-
-  const matches = useMemo(() => {
-    return laptops
-      .filter((l) => {
-        const specs = l.specs ?? "";
-        if (brandFilter !== "Any" && l.brand !== brandFilter) return false;
-        if (!matchesCpu(specs, cpuFilter)) return false;
-        if (!matchesRam(specs, ramFilter)) return false;
-        if (!matchesStorage(specs, storageFilter)) return false;
-        if (!matchesScreen(l.screen_size, screenFilter)) return false;
-        const price = l.current_price ?? l.retail_price ?? 0;
-        if (price > maxPrice) return false;
-        return true;
-      })
-      .slice(0, 12);
-  }, [laptops, brandFilter, cpuFilter, ramFilter, storageFilter, screenFilter, maxPrice]);
-
-  const anyFilterActive =
-    cpuFilter !== "Any" ||
-    ramFilter !== "Any" ||
-    storageFilter !== "Any" ||
-    screenFilter !== "Any" ||
-    brandFilter !== "Any";
+    autoRotateRef.current = autoRotate;
+  }, [autoRotate]);
 
   // ---- One-time scene setup ----
   useEffect(() => {
@@ -193,45 +252,39 @@ export default function Laptop3DViewer() {
     scene.background = new THREE.Color("#f4f5f7");
 
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 100);
-    camera.position.set(3.2, 2.4, 4.2);
+    camera.position.set(3.0, 2.2, 4.0);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
     mount.appendChild(renderer.domElement);
     rendererRef.current = renderer;
-
-    // Soft image-based lighting so metal/glossy finishes have something to reflect
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    controls.minDistance = 2.5;
-    controls.maxDistance = 8;
+    controls.minDistance = 2.2;
+    controls.maxDistance = 7;
     controls.maxPolarAngle = Math.PI * 0.49;
+    controls.target.set(0, 0.35, 0);
     controlsRef.current = controls;
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-    scene.add(ambient);
+    // Lighting
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
 
-    const key = new THREE.DirectionalLight(0xffffff, 1.2);
+    const key = new THREE.DirectionalLight(0xffffff, 1.15);
     key.position.set(4, 6, 3);
     key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);
     scene.add(key);
 
-    const rim = new THREE.DirectionalLight(0xaecbff, 0.5);
+    const rim = new THREE.DirectionalLight(0xaecbff, 0.45);
     rim.position.set(-4, 3, -3);
     scene.add(rim);
 
+    // Ground
     const ground = new THREE.Mesh(
       new THREE.CircleGeometry(6, 48),
       new THREE.MeshStandardMaterial({ color: "#e9eaed", roughness: 1 })
@@ -241,111 +294,16 @@ export default function Laptop3DViewer() {
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // ---- Laptop group ----
-    const laptop = new THREE.Group();
-
     const bodyMat = new THREE.MeshStandardMaterial({
       color: baseColor,
       roughness: FINISHES[finishIndex].roughness,
       metalness: FINISHES[finishIndex].metalness,
-      envMapIntensity: 1,
     });
 
-    // Base (rounded slab instead of a hard-edged box)
-    const baseGeo = roundedSlabGeometry(2.2, 1.5, 0.09, 0.09);
-    const base = new THREE.Mesh(baseGeo, bodyMat);
-    base.position.y = 0.045;
-    base.castShadow = true;
-    base.receiveShadow = true;
-    laptop.add(base);
-
-    // Keyboard deck (recessed dark plate)
-    const deckMat = new THREE.MeshStandardMaterial({ color: "#2b2d31", roughness: 0.9 });
-    const keyboardDeck = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.008, 1.05), deckMat);
-    keyboardDeck.position.set(0, 0.093, -0.12);
-    laptop.add(keyboardDeck);
-
-    // Individual keys as an instanced grid (much closer to a real keyboard than a flat plate)
-    const keyGeo = new THREE.BoxGeometry(0.1, 0.012, 0.09);
-    const keyMat = new THREE.MeshStandardMaterial({ color: "#3d3f44", roughness: 0.7 });
-    const cols = 15;
-    const rows = 5;
-    const keyGapX = 0.115;
-    const keyGapZ = 0.105;
-    const gridWidth = (cols - 1) * keyGapX;
-    const gridDepth = (rows - 1) * keyGapZ;
-    const keys = new THREE.InstancedMesh(keyGeo, keyMat, cols * rows);
-    keys.castShadow = true;
-    const dummy = new THREE.Object3D();
-    let idx = 0;
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        dummy.position.set(
-          -gridWidth / 2 + c * keyGapX,
-          0.1,
-          -0.12 - gridDepth / 2 + r * keyGapZ
-        );
-        dummy.updateMatrix();
-        keys.setMatrixAt(idx, dummy.matrix);
-        idx++;
-      }
-    }
-    keys.instanceMatrix.needsUpdate = true;
-    laptop.add(keys);
-
-    // Trackpad
-    const trackpadMat = new THREE.MeshStandardMaterial({ color: "#3d3f44", roughness: 0.5, metalness: 0.2 });
-    const trackpad = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.011, 0.45), trackpadMat);
-    trackpad.position.set(0, 0.097, 0.42);
-    laptop.add(trackpad);
-
-    // Hinge cylinder
-    const hingeMat = new THREE.MeshStandardMaterial({ color: "#1a1b1e", roughness: 0.5, metalness: 0.4 });
-    const hinge = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 2.1, 20), hingeMat);
-    hinge.rotation.z = Math.PI / 2;
-    hinge.position.set(0, 0.09, -0.75);
-    hinge.castShadow = true;
-    laptop.add(hinge);
-
-    // Screen pivot (hinge at back edge of base)
-    const screenPivot = new THREE.Group();
-    screenPivot.position.set(0, 0.09, -0.75);
-    laptop.add(screenPivot);
-
-    const screenGeo = roundedSlabGeometry(2.2, 1.4, 0.07, 0.09);
-    const screenPanel = new THREE.Mesh(screenGeo, bodyMat);
-    screenPanel.position.set(0, 0.7, -0.035);
-    screenPanel.castShadow = true;
-    screenPivot.add(screenPanel);
-
-    const displayMat = new THREE.MeshStandardMaterial({
-      color: "#0a84ff",
-      emissive: new THREE.Color("#3aa0ff"),
-      emissiveIntensity: 0.6,
-      roughness: 0.3,
-    });
-    const display = new THREE.Mesh(new THREE.PlaneGeometry(2.02, 1.24), displayMat);
-    display.position.set(0, 0.7, 0.005);
-    screenPivot.add(display);
-
-    // Webcam notch at the top bezel
-    const webcamMat = new THREE.MeshStandardMaterial({ color: "#0d0e10", roughness: 0.4 });
-    const webcam = new THREE.Mesh(new THREE.CircleGeometry(0.02, 16), webcamMat);
-    webcam.position.set(0, 1.36, 0.006);
-    screenPivot.add(webcam);
-
-    // Subtle brand emblem on the lid back
-    const emblemMat = new THREE.MeshStandardMaterial({ color: "#9a9da2", roughness: 0.3, metalness: 0.6 });
-    const emblem = new THREE.Mesh(new THREE.CircleGeometry(0.13, 32), emblemMat);
-    emblem.position.set(0, 0.7, -0.071);
-    emblem.rotation.y = Math.PI;
-    screenPivot.add(emblem);
-
-    screenPivot.rotation.x = THREE.MathUtils.degToRad(-(180 - openAngle));
-
+    const { group: laptop, refs } = buildLaptop(bodyMat);
+    refs.screenPivot.rotation.x = THREE.MathUtils.degToRad(-(180 - openAngle));
     scene.add(laptop);
-
-    meshesRef.current = { base, screenPivot, screenPanel, display, hinge };
+    meshesRef.current = refs;
 
     let frameId: number;
     const animate = () => {
@@ -372,47 +330,42 @@ export default function Laptop3DViewer() {
       cancelAnimationFrame(frameId);
       window.removeEventListener("resize", handleResize);
       controls.dispose();
-      pmrem.dispose();
       renderer.dispose();
       mount.removeChild(renderer.domElement);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ---- Reactive updates (no full re-init) ----
   useEffect(() => {
-    autoRotateRef.current = autoRotate;
-  }, [autoRotate]);
-
-  // ---- Reactive cosmetic updates (no full re-init) ----
-  useEffect(() => {
-    const m = meshesRef.current;
-    if (!m) return;
-    (m.base.material as THREE.MeshStandardMaterial).color.set(baseColor);
-    (m.screenPanel.material as THREE.MeshStandardMaterial).color.set(baseColor);
+    const refs = meshesRef.current;
+    if (!refs) return;
+    refs.bodyMeshes.forEach((m) => {
+      (m.material as THREE.MeshStandardMaterial).color.set(baseColor);
+    });
   }, [baseColor]);
 
   useEffect(() => {
-    const m = meshesRef.current;
-    if (!m) return;
+    const refs = meshesRef.current;
+    if (!refs) return;
     const finish = FINISHES[finishIndex];
-    const mat = m.base.material as THREE.MeshStandardMaterial;
-    mat.roughness = finish.roughness;
-    mat.metalness = finish.metalness;
-    const screenMat = m.screenPanel.material as THREE.MeshStandardMaterial;
-    screenMat.roughness = finish.roughness;
-    screenMat.metalness = finish.metalness;
+    refs.bodyMeshes.forEach((m) => {
+      const mat = m.material as THREE.MeshStandardMaterial;
+      mat.roughness = finish.roughness;
+      mat.metalness = finish.metalness;
+    });
   }, [finishIndex]);
 
   useEffect(() => {
-    const m = meshesRef.current;
-    if (!m) return;
-    m.screenPivot.rotation.x = THREE.MathUtils.degToRad(-(180 - openAngle));
+    const refs = meshesRef.current;
+    if (!refs) return;
+    refs.screenPivot.rotation.x = THREE.MathUtils.degToRad(-(180 - openAngle));
   }, [openAngle]);
 
   useEffect(() => {
-    const m = meshesRef.current;
-    if (!m) return;
-    const mat = m.display.material as THREE.MeshStandardMaterial;
+    const refs = meshesRef.current;
+    if (!refs) return;
+    const mat = refs.display.material as THREE.MeshStandardMaterial;
     mat.emissiveIntensity = displayOn ? 0.6 : 0.02;
     mat.color.set(displayOn ? "#0a84ff" : "#111214");
   }, [displayOn]);
@@ -421,208 +374,87 @@ export default function Laptop3DViewer() {
     const camera = cameraRef.current;
     const controls = controlsRef.current;
     if (!camera || !controls) return;
-    camera.position.set(3.2, 2.4, 4.2);
-    controls.target.set(0, 0.4, 0);
+    camera.position.set(3.0, 2.2, 4.0);
+    controls.target.set(0, 0.35, 0);
     controls.update();
   };
 
   return (
-    <div className={styles.root}>
-      <div className={styles.wrapper}>
-        <div ref={mountRef} className={styles.canvasArea} />
+    <div className={styles.wrapper}>
+      <div ref={mountRef} className={styles.canvasArea} />
 
-        <aside className={styles.filterPanel} aria-label="3D model filters">
-          <div className={styles.panelSection}>
-            <span className={styles.sectionHeading}>Customize model</span>
-
-            <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>Color</span>
-              <div className={styles.swatchRow}>
-                {BASE_COLORS.map((c) => (
-                  <button
-                    key={c.hex}
-                    title={c.name}
-                    onClick={() => setBaseColor(c.hex)}
-                    className={styles.swatch}
-                    style={{
-                      backgroundColor: c.hex,
-                      outline: baseColor === c.hex ? "2px solid var(--accent, #0a84ff)" : "none",
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>Finish</span>
-              <div className={styles.toggleRow}>
-                {FINISHES.map((f, i) => (
-                  <button
-                    key={f.name}
-                    onClick={() => setFinishIndex(i)}
-                    className={`${styles.toggleBtn} ${finishIndex === i ? styles.toggleBtnActive : ""}`}
-                  >
-                    {f.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>Open angle</span>
-              <input
-                type="range"
-                min={20}
-                max={130}
-                value={openAngle}
-                onChange={(e) => setOpenAngle(Number(e.target.value))}
-                className={styles.slider}
+      <aside className={styles.filterPanel} aria-label="3D model filters">
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>Color</span>
+          <div className={styles.swatchRow}>
+            {BASE_COLORS.map((c) => (
+              <button
+                key={c.hex}
+                title={c.name}
+                onClick={() => setBaseColor(c.hex)}
+                className={styles.swatch}
+                style={{
+                  backgroundColor: c.hex,
+                  outline:
+                    baseColor === c.hex ? "2px solid var(--accent, #0a84ff)" : "none",
+                }}
               />
-            </div>
-
-            <div className={styles.filterGroup}>
-              <label className={styles.checkboxRow}>
-                <input type="checkbox" checked={displayOn} onChange={(e) => setDisplayOn(e.target.checked)} />
-                Display on
-              </label>
-              <label className={styles.checkboxRow}>
-                <input type="checkbox" checked={autoRotate} onChange={(e) => setAutoRotate(e.target.checked)} />
-                Auto-rotate
-              </label>
-            </div>
-
-            <button onClick={resetView} className={styles.resetBtn}>
-              Reset view
-            </button>
-          </div>
-
-          <div className={styles.panelDivider} />
-
-          <div className={styles.panelSection}>
-            <span className={styles.sectionHeading}>Find similar laptops</span>
-
-            <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>Brand</span>
-              <select
-                value={brandFilter}
-                onChange={(e) => setBrandFilter(e.target.value)}
-                className={styles.select}
-              >
-                {brandOptions.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>CPU</span>
-              <select value={cpuFilter} onChange={(e) => setCpuFilter(e.target.value)} className={styles.select}>
-                {CPU_OPTIONS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>RAM</span>
-              <div className={styles.toggleRow}>
-                {RAM_OPTIONS.map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => setRamFilter(r)}
-                    className={`${styles.toggleBtnSmall} ${ramFilter === r ? styles.toggleBtnActive : ""}`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>Storage</span>
-              <div className={styles.toggleRow}>
-                {STORAGE_OPTIONS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStorageFilter(s)}
-                    className={`${styles.toggleBtnSmall} ${storageFilter === s ? styles.toggleBtnActive : ""}`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>Screen size</span>
-              <div className={styles.toggleRow}>
-                {SCREEN_OPTIONS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setScreenFilter(s)}
-                    className={`${styles.toggleBtnSmall} ${screenFilter === s ? styles.toggleBtnActive : ""}`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>Max price: ${maxPrice}</span>
-              <input
-                type="range"
-                min={200}
-                max={5000}
-                step={100}
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(Number(e.target.value))}
-                className={styles.slider}
-              />
-            </div>
-          </div>
-        </aside>
-      </div>
-
-      <div className={styles.resultsSection}>
-        <div className={styles.resultsHeader}>
-          <span className={styles.sectionHeading}>
-            {anyFilterActive ? `Matches (${matches.length})` : "All laptops"}
-          </span>
-        </div>
-
-        {loadingLaptops && <p className={styles.mutedText}>Loading laptops...</p>}
-        {loadError && <p className={styles.mutedText}>Couldn't load laptops: {loadError}</p>}
-
-        {!loadingLaptops && !loadError && matches.length === 0 && (
-          <p className={styles.mutedText}>No laptops match those filters yet.</p>
-        )}
-
-        {!loadingLaptops && matches.length > 0 && (
-          <div className={styles.resultsGrid}>
-            {matches.map((l) => (
-              <a key={l.id} href={l.url} target="_blank" rel="noopener noreferrer" className={styles.resultCard}>
-                {l.image_url ? (
-                  <img src={l.image_url} alt={`${l.brand} ${l.model}`} className={styles.resultImage} />
-                ) : (
-                  <div className={styles.resultImagePlaceholder} />
-                )}
-                <div className={styles.resultInfo}>
-                  <span className={styles.resultBrand}>{l.brand}</span>
-                  <span className={styles.resultModel}>{l.model}</span>
-                  <span className={styles.resultPrice}>
-                    ${(l.current_price ?? l.retail_price ?? 0).toLocaleString()}
-                  </span>
-                </div>
-              </a>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>Finish</span>
+          <div className={styles.toggleRow}>
+            {FINISHES.map((f, i) => (
+              <button
+                key={f.name}
+                onClick={() => setFinishIndex(i)}
+                className={`${styles.toggleBtn} ${
+                  finishIndex === i ? styles.toggleBtnActive : ""
+                }`}
+              >
+                {f.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>Open angle</span>
+          <input
+            type="range"
+            min={20}
+            max={130}
+            value={openAngle}
+            onChange={(e) => setOpenAngle(Number(e.target.value))}
+            className={styles.slider}
+          />
+        </div>
+
+        <div className={styles.filterGroup}>
+          <label className={styles.checkboxRow}>
+            <input
+              type="checkbox"
+              checked={displayOn}
+              onChange={(e) => setDisplayOn(e.target.checked)}
+            />
+            Display on
+          </label>
+          <label className={styles.checkboxRow}>
+            <input
+              type="checkbox"
+              checked={autoRotate}
+              onChange={(e) => setAutoRotate(e.target.checked)}
+            />
+            Auto-rotate
+          </label>
+        </div>
+
+        <button onClick={resetView} className={styles.resetBtn}>
+          Reset view
+        </button>
+      </aside>
     </div>
   );
 }
