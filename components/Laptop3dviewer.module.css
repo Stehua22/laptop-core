@@ -1,4 +1,10 @@
-﻿.wrapper {
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.wrapper {
   display: flex;
   width: 100%;
   height: 560px;
@@ -21,15 +27,35 @@
 }
 
 .filterPanel {
-  width: 200px;
+  width: 240px;
   flex-shrink: 0;
   border-left: 1px solid var(--border, #e2e4e8);
   background: var(--surface-alt, #fafafb);
   padding: 16px 14px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
   overflow-y: auto;
+}
+
+.panelSection {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.panelDivider {
+  height: 1px;
+  background: var(--border, #e2e4e8);
+  margin: 2px 0;
+}
+
+.sectionHeading {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text, #1f2328);
 }
 
 .filterGroup {
@@ -41,8 +67,6 @@
 .filterLabel {
   font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
   color: var(--text-muted, #6b7280);
 }
 
@@ -63,6 +87,7 @@
 
 .toggleRow {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -76,10 +101,29 @@
   cursor: pointer;
 }
 
+.toggleBtnSmall {
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #e2e4e8);
+  background: #fff;
+  cursor: pointer;
+}
+
 .toggleBtnActive {
   background: var(--accent, #0a84ff);
   color: #fff;
   border-color: var(--accent, #0a84ff);
+}
+
+.select {
+  width: 100%;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #e2e4e8);
+  background: #fff;
+  cursor: pointer;
 }
 
 .slider {
@@ -97,7 +141,7 @@
 }
 
 .resetBtn {
-  margin-top: auto;
+  margin-top: 4px;
   font-size: 13px;
   padding: 8px 10px;
   border-radius: 6px;
@@ -107,6 +151,89 @@
 }
 
 .resetBtn:hover,
-.toggleBtn:hover {
+.toggleBtn:hover,
+.toggleBtnSmall:hover {
   background: #f0f1f3;
+}
+
+.resultsSection {
+  border: 1px solid var(--border, #e2e4e8);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--surface, #fff);
+}
+
+.resultsHeader {
+  margin-bottom: 12px;
+}
+
+.mutedText {
+  font-size: 13px;
+  color: var(--text-muted, #6b7280);
+}
+
+.resultsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.resultCard {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border, #e2e4e8);
+  border-radius: 10px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  background: var(--surface, #fff);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.resultCard:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.resultImage {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  background: #f0f1f3;
+}
+
+.resultImagePlaceholder {
+  width: 100%;
+  height: 110px;
+  background: #f0f1f3;
+}
+
+.resultInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px 10px;
+}
+
+.resultBrand {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted, #6b7280);
+}
+
+.resultModel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text, #1f2328);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resultPrice {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent, #0a84ff);
+  margin-top: 2px;
 }

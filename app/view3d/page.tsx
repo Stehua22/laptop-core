@@ -1,4 +1,4 @@
-﻿import Laptop3DViewer from "@/components/Laptop3dviewer";
+import Laptop3DViewer from "@/components/Laptop3DViewer";
 
 export default function View3DPage() {
   return (
