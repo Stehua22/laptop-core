@@ -1,4 +1,4 @@
-import { useState, ReactNode } from "react";
+﻿import { useState, ReactNode } from "react";
 import styles from "./Sidebar.module.css";
 
 type NavItem = {
@@ -9,8 +9,8 @@ type NavItem = {
 };
 
 const BRAND_ICONS: Record<string, string> = {
-  Apple: "🍎", Lenovo: "💻", Dell: "🖥️", HP: "🖨️",
-  ASUS: "⚡", Acer: "🎯", Microsoft: "🪟", Samsung: "📱",
+  Apple: "ðŸŽ", Lenovo: "ðŸ’»", Dell: "ðŸ–¥ï¸", HP: "ðŸ–¨ï¸",
+  ASUS: "âš¡", Acer: "ðŸŽ¯", Microsoft: "ðŸªŸ", Samsung: "ðŸ“±",
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -51,6 +51,16 @@ const NAV_ITEMS: NavItem[] = [
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
         <path d="M4 4h16a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1zm1 2v12h14V6H5zm2 2h10v2H7V8zm0 4h6v2H7v-2z" />
+      </svg>
+    ),
+  },
+  {
+    key: "view3d",
+    label: "3D View",
+    href: "/view3d",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2l8 4.5v9L12 20l-8-4.5v-9L12 2zm0 2.3L6 7.6v8l6 3.3 6-3.3v-8l-6-3.3zM12 9l4-2.2v4.4L12 13.4l-4-2.2V6.8L12 9z" />
       </svg>
     ),
   },
@@ -160,7 +170,7 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
                     href={`/brand/${encodeURIComponent(b.toLowerCase())}`}
                     className={styles.brandLink}
                   >
-                    <span style={{ fontSize: 14 }}>{BRAND_ICONS[b] ?? "💻"}</span>
+                    <span style={{ fontSize: 14 }}>{BRAND_ICONS[b] ?? "ðŸ’»"}</span>
                     <span>{b}</span>
                   </a>
                 ))}
@@ -205,3 +215,4 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
     </aside>
   );
 }
+
