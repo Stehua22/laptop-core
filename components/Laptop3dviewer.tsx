@@ -141,9 +141,7 @@ function getDisplayTexture(theme: "windows" | "mac", customUrl?: string): THREE.
     return fallback;
   }
   let url = theme === "windows" ? win11B64 : macB64;
-  if (theme === "windows" && !customUrl) {
-    url = `https://api.allorigins.win/raw?url=${encodeURIComponent("https://images.hdqwalls.com/download/windows-11-2021-light-10k-l2-1920x1080.jpg")}`;
-  } else if (customUrl) {
+  if (customUrl) {
     // Proxy the image URL to bypass CORS and prevent black screens in WebGL
     url = `https://api.allorigins.win/raw?url=${encodeURIComponent(customUrl)}`;
   }
