@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import win11Img from "./windows11.png";
-import macImg from "./mac.png";
+import { win11B64, macB64 } from "./images_b64";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
@@ -125,8 +124,10 @@ function getDisplayTexture(theme: "windows" | "mac"): THREE.Texture {
     const fallback = new THREE.Texture();
     return fallback;
   }
-  const url = theme === "windows" ? win11Img.src : macImg.src;
-  const tex = texLoader.load(url);
+  const url = theme === "windows" ? win11B64 : macB64;
+  const tex = texLoader.load(url, () => {
+    tex.needsUpdate = true;
+  });
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
