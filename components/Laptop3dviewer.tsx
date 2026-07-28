@@ -149,7 +149,7 @@ function getDisplayTexture(theme: "windows" | "mac", customUrl?: string): THREE.
   return tex;
 }
 
-function makeBrandLogoTexture(brand: string): THREE.CanvasTexture {
+function makeBrandLogoTexture(brand: string, model: string): THREE.CanvasTexture {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
   canvas.height = 512;
@@ -161,8 +161,9 @@ function makeBrandLogoTexture(brand: string): THREE.CanvasTexture {
   ctx.textBaseline = "middle";
 
   const b = (brand || "").toLowerCase();
+  const m = (model || "").toLowerCase();
   
-  if (b.includes("apple") || b.includes("macbook")) {
+  if (b.includes("apple") || b.includes("macbook") || m.includes("macbook")) {
     ctx.beginPath();
     ctx.arc(256, 276, 120, 0, Math.PI * 2);
     ctx.fill();
@@ -190,18 +191,29 @@ function makeBrandLogoTexture(brand: string): THREE.CanvasTexture {
     ctx.stroke();
     ctx.font = "italic bold 160px serif";
     ctx.fillText("hp", 256, 270);
-  } else if (b.includes("lenovo") || b.includes("thinkpad")) {
-    ctx.font = "bold 90px sans-serif";
-    ctx.fillText("ThinkPad", 256, 256);
-    ctx.fillStyle = "#ff0000";
-    ctx.beginPath();
-    ctx.arc(425, 200, 18, 0, Math.PI * 2);
-    ctx.fill();
-  } else if (b.includes("asus") || b.includes("rog")) {
-    ctx.font = "bold 120px sans-serif";
-    ctx.fillText("ROG", 256, 256);
-    ctx.fillRect(100, 310, 312, 12);
-  } else if (b.includes("acer")) {
+  } else if (b.includes("lenovo") || b.includes("thinkpad") || m.includes("thinkpad") || m.includes("legion") || m.includes("yoga")) {
+    if (m.includes("thinkpad") || b.includes("thinkpad")) {
+      ctx.font = "bold 90px sans-serif";
+      ctx.fillText("ThinkPad", 256, 256);
+      ctx.fillStyle = "#ff0000";
+      ctx.beginPath();
+      ctx.arc(425, 200, 18, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Draw Lenovo logo
+      ctx.font = "bold 120px sans-serif";
+      ctx.fillText("Lenovo", 256, 256);
+    }
+  } else if (b.includes("asus") || b.includes("rog") || m.includes("rog") || m.includes("expertbook") || m.includes("zenbook") || m.includes("vivobook")) {
+    if (m.includes("rog") || b.includes("rog")) {
+      ctx.font = "bold 120px sans-serif";
+      ctx.fillText("ROG", 256, 256);
+      ctx.fillRect(100, 310, 312, 12);
+    } else {
+      ctx.font = "bold 130px sans-serif";
+      ctx.fillText("ASUS", 256, 256);
+    }
+  } else if (b.includes("acer") || m.includes("acer")) {
     ctx.font = "bold 140px sans-serif";
     ctx.fillText("acer", 256, 256);
   } else {
@@ -492,6 +504,7 @@ export default function Laptop3DViewer() {
   const [modelScale, setModelScale] = useState(1);
   const [osTheme, setOsTheme] = useState<"windows" | "mac">("windows");
   const [brandName, setBrandName] = useState<string>("");
+  const [modelName, setModelName] = useState<string>("");
   const [customDisplayUrl, setCustomDisplayUrl] = useState<string>("");
 
   const autoRotateRef = useRef(autoRotate);
@@ -513,6 +526,7 @@ export default function Laptop3DViewer() {
     setSelectedId(id);
     if (id === "") {
       setBrandName("");
+      setModelName("");
       setCustomDisplayUrl("");
       return;
     }
@@ -524,10 +538,12 @@ export default function Laptop3DViewer() {
     setOsTheme(theme);
     setLogoGlow(theme === "mac");
     setBrandName(laptop.brand);
+    setModelName(laptop.model);
     
     // Set backlight to red/RGB for gaming brands, otherwise white
     const b = (laptop.brand || "").toLowerCase();
-    if (b.includes("msi") || b.includes("rog") || b.includes("asus") || b.includes("razer")) {
+    const m = (laptop.model || "").toLowerCase();
+    if (b.includes("msi") || b.includes("rog") || m.includes("rog") || b.includes("razer")) {
       setBacklightIndex(4); // Index 4 is Red
     } else {
       setBacklightIndex(0); // Index 0 is Off
@@ -702,7 +718,7 @@ export default function Laptop3DViewer() {
     if (!refs) return;
     
     // Update logo texture
-    const logoTex = makeBrandLogoTexture(brandName);
+    const logoTex = makeBrandLogoTexture(brandName, modelName);
     const logoMat = refs.logo.material as THREE.MeshStandardMaterial;
     logoMat.map = logoTex;
     logoMat.alphaMap = logoTex;
@@ -710,10 +726,11 @@ export default function Laptop3DViewer() {
 
     // Toggle trackpoint
     const b = (brandName || "").toLowerCase();
-    refs.trackpoint.visible = b.includes("lenovo") || b.includes("thinkpad");
+    const m = (modelName || "").toLowerCase();
+    refs.trackpoint.visible = b.includes("thinkpad") || m.includes("thinkpad");
     
     // Toggle logo glow (Apple glowing, gaming laptops glowing, others chrome)
-    if (b.includes("apple") || b.includes("macbook") || b.includes("rog") || b.includes("razer") || b.includes("msi")) {
+    if (b.includes("apple") || b.includes("macbook") || m.includes("macbook") || b.includes("rog") || m.includes("rog") || b.includes("razer") || b.includes("msi")) {
       logoMat.emissiveIntensity = 0.8;
       logoMat.metalness = 0.2;
       logoMat.color.set("#ffffff");
