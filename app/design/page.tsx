@@ -5,31 +5,194 @@ import Laptop3DViewer from "@/components/Laptop3dviewer";
 
 const ADMIN_PASSWORD = "admin2026.123";
 
-export default function DesignStudioPage() {
+function AdminLockScreen({ onUnlock }: { onUnlock: () => void }) {
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [showAuth, setShowAuth] = useState(false);
   const [pwInput, setPwInput] = useState("");
   const [pwError, setPwError] = useState("");
+  const [shaking, setShaking] = useState(false);
 
-  useEffect(() => {
-    if (sessionStorage.getItem("admin_3d_unlocked") === "true") {
-      setIsAdmin(true);
-    }
-  }, []);
-
-  const submitPassword = () => {
+  const submit = () => {
     if (pwInput === ADMIN_PASSWORD) {
       sessionStorage.setItem("admin_3d_unlocked", "true");
-      setIsAdmin(true);
-      setShowAuth(false);
-      setPwInput("");
-      setPwError("");
+      onUnlock();
     } else {
       setPwError("Incorrect password.");
       setPwInput("");
+      setShaking(true);
+      setTimeout(() => setShaking(false), 500);
     }
   };
+
+  return (
+    <div style={{
+      position: "fixed",
+      inset: 0,
+      background: "#0c0e14",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      fontFamily: "'Syne', 'Inter', sans-serif",
+    }}>
+      {/* Ambient glow */}
+      <div style={{
+        position: "absolute",
+        top: "30%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        width: 500,
+        height: 500,
+        background: "radial-gradient(circle, rgba(139,179,245,0.06) 0%, transparent 70%)",
+        pointerEvents: "none",
+      }} />
+
+      <button
+        onClick={() => router.push("/view3d")}
+        style={{
+          position: "absolute",
+          top: 24,
+          left: 24,
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: 8,
+          padding: "6px 14px",
+          color: "#8892aa",
+          fontSize: 12,
+          cursor: "pointer",
+          fontFamily: "'DM Mono', monospace",
+        }}
+      >← Back</button>
+
+      <div style={{
+        width: "100%",
+        maxWidth: 400,
+        padding: "0 24px",
+        animation: shaking ? "shake 0.4s ease" : "none",
+      }}>
+        {/* Lock icon */}
+        <div style={{
+          width: 64,
+          height: 64,
+          borderRadius: 18,
+          background: "rgba(139,179,245,0.08)",
+          border: "1px solid rgba(139,179,245,0.2)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 28,
+          marginBottom: 28,
+          boxShadow: "0 0 40px rgba(139,179,245,0.1)",
+        }}>🔒</div>
+
+        <p style={{
+          fontSize: 10,
+          color: "#8bb3f5",
+          fontFamily: "'DM Mono', monospace",
+          textTransform: "uppercase",
+          letterSpacing: "0.22em",
+          marginBottom: 10,
+        }}>// restricted access</p>
+
+        <h1 style={{
+          fontSize: "2rem",
+          fontWeight: 800,
+          color: "#f0f4ff",
+          letterSpacing: "-0.03em",
+          lineHeight: 1.1,
+          marginBottom: 10,
+        }}>
+          Design Studio
+        </h1>
+
+        <p style={{
+          fontSize: 14,
+          color: "#8892aa",
+          fontFamily: "'DM Mono', monospace",
+          marginBottom: 32,
+          lineHeight: 1.6,
+        }}>
+          Admin access only. Enter your password to continue.
+        </p>
+
+        <div style={{ position: "relative", marginBottom: 10 }}>
+          <input
+            type="password"
+            autoFocus
+            placeholder="Admin password"
+            value={pwInput}
+            onChange={(e) => { setPwInput(e.target.value); setPwError(""); }}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+            style={{
+              width: "100%",
+              padding: "14px 16px",
+              fontSize: 14,
+              border: `1px solid ${pwError ? "rgba(247,106,106,0.5)" : "rgba(255,255,255,0.1)"}`,
+              borderRadius: 12,
+              background: "rgba(255,255,255,0.04)",
+              color: "#f0f4ff",
+              fontFamily: "'DM Mono', monospace",
+              outline: "none",
+              boxSizing: "border-box",
+              transition: "border-color 0.2s, box-shadow 0.2s",
+              boxShadow: pwError ? "0 0 0 3px rgba(247,106,106,0.1)" : "none",
+            }}
+          />
+        </div>
+
+        {pwError && (
+          <p style={{ fontSize: 12, color: "#f76a6a", marginBottom: 12, fontFamily: "'DM Mono', monospace" }}>
+            ✕ {pwError}
+          </p>
+        )}
+
+        <button
+          onClick={submit}
+          style={{
+            width: "100%",
+            padding: "14px",
+            fontSize: 14,
+            fontWeight: 700,
+            border: "none",
+            borderRadius: 12,
+            background: "linear-gradient(135deg, #8bb3f5 0%, #5f8de0 100%)",
+            color: "#fff",
+            cursor: "pointer",
+            letterSpacing: "0.02em",
+            boxShadow: "0 8px 32px rgba(139,179,245,0.2)",
+            transition: "opacity 0.2s, transform 0.15s",
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.opacity = "0.9")}
+          onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
+        >
+          Unlock Studio →
+        </button>
+      </div>
+
+      <style>{`
+        @keyframes shake {
+          0%,100% { transform: translateX(0); }
+          20%      { transform: translateX(-8px); }
+          40%      { transform: translateX(8px); }
+          60%      { transform: translateX(-6px); }
+          80%      { transform: translateX(6px); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export default function DesignStudioPage() {
+  const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    setIsAdmin(sessionStorage.getItem("admin_3d_unlocked") === "true");
+    setChecked(true);
+  }, []);
+
+  if (!checked) return null;
+  if (!isAdmin) return <AdminLockScreen onUnlock={() => setIsAdmin(true)} />;
 
   return (
     <div style={{
@@ -130,89 +293,9 @@ export default function DesignStudioPage() {
 
       {/* Main: full-screen viewer */}
       <div style={{ flex: 1, minHeight: 0 }}>
-        <Laptop3DViewer isAdmin={isAdmin} studioMode={true} />
+        <Laptop3DViewer isAdmin={true} studioMode={true} />
       </div>
-
-      {/* Admin Password Modal */}
-      {showAuth && (
-        <div
-          onClick={(e) => e.target === e.currentTarget && setShowAuth(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.7)",
-            backdropFilter: "blur(8px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-        >
-          <div style={{
-            background: "#1a1d27",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 20,
-            padding: "2rem 2.2rem",
-            width: "100%",
-            maxWidth: 380,
-            boxShadow: "0 32px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03)",
-          }}>
-            <p style={{
-              fontSize: 10, color: "#8bb3f5", fontFamily: "'DM Mono', monospace",
-              textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 8,
-            }}>// admin</p>
-            <h2 style={{ fontSize: "1.4rem", fontWeight: 800, marginBottom: 6, color: "#f0f4ff", letterSpacing: "-0.02em" }}>
-              Design Studio
-            </h2>
-            <p style={{ fontSize: 13, color: "#8892aa", fontFamily: "'DM Mono', monospace", marginBottom: 24, lineHeight: 1.5 }}>
-              Enter admin password to unlock saving and model import.
-            </p>
-            <input
-              type="password"
-              autoFocus
-              placeholder="Password"
-              value={pwInput}
-              onChange={(e) => { setPwInput(e.target.value); setPwError(""); }}
-              onKeyDown={(e) => e.key === "Enter" && submitPassword()}
-              style={{
-                width: "100%",
-                padding: "11px 14px",
-                fontSize: 14,
-                border: `1px solid ${pwError ? "#f76a6a" : "rgba(255,255,255,0.1)"}`,
-                borderRadius: 10,
-                background: "rgba(255,255,255,0.04)",
-                color: "#f0f4ff",
-                fontFamily: "'DM Mono', monospace",
-                outline: "none",
-                marginBottom: 8,
-                boxSizing: "border-box",
-                transition: "border-color 0.2s",
-              }}
-            />
-            {pwError && <p style={{ fontSize: 12, color: "#f76a6a", marginBottom: 8 }}>{pwError}</p>}
-            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-              <button
-                onClick={() => { setShowAuth(false); setPwInput(""); setPwError(""); }}
-                style={{
-                  flex: 1, padding: "10px", fontSize: 13, fontWeight: 600,
-                  border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10,
-                  background: "transparent", color: "#8892aa", cursor: "pointer",
-                }}
-              >Cancel</button>
-              <button
-                onClick={submitPassword}
-                style={{
-                  flex: 2, padding: "10px", fontSize: 13, fontWeight: 700,
-                  border: "none", borderRadius: 10,
-                  background: "linear-gradient(135deg, #8bb3f5, #6690e0)",
-                  color: "#fff", cursor: "pointer",
-                  boxShadow: "0 4px 20px rgba(139,179,245,0.25)",
-                }}
-              >Unlock →</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
+
