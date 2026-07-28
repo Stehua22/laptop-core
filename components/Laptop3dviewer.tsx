@@ -238,6 +238,7 @@ function makeDisplayTexture(theme: "windows" | "mac"): THREE.CanvasTexture {
   }
 
   const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
 
@@ -437,7 +438,8 @@ function buildLaptop(
 
   const displayMat = new THREE.MeshBasicMaterial({
     map: displayTexture,
-    color: "#ffffff",
+    color: 0xffffff,
+    toneMapped: false,
   });
   const display = new THREE.Mesh(
     new THREE.PlaneGeometry(width - 0.16, depth - 0.2),
@@ -646,7 +648,7 @@ export default function Laptop3DViewer() {
     const refs = meshesRef.current;
     if (!refs) return;
     const mat = refs.display.material as THREE.MeshBasicMaterial;
-    mat.color.set(displayOn ? "#ffffff" : "#0a0a0c");
+    mat.color.set(displayOn ? 0xffffff : 0x0a0a0c);
   }, [displayOn]);
 
   useEffect(() => {
