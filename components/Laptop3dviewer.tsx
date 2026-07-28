@@ -440,18 +440,18 @@ function buildLaptop(
   const bottomDetails = new THREE.Group();
   bottomDetails.position.set(0, 0, 0);
   
-  const footGeo = new RoundedBoxGeometry(0.12, 0.015, 0.04, 4, 0.005);
-  const footMat = new THREE.MeshStandardMaterial({ color: "#000000", roughness: 0.9 });
+  const tpFootGeo = new RoundedBoxGeometry(0.12, 0.015, 0.04, 4, 0.005);
+  const tpFootMat = new THREE.MeshStandardMaterial({ color: "#000000", roughness: 0.9 });
   
   [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([signX, signZ]) => {
-    const foot = new THREE.Mesh(footGeo, footMat);
+    const foot = new THREE.Mesh(tpFootGeo, tpFootMat);
     foot.position.set(signX * (width / 2 - 0.2), -0.005, signZ * (depth / 2 - 0.15));
     bottomDetails.add(foot);
   });
 
-  const ventGeo = new THREE.BoxGeometry(0.5, 0.005, 0.01);
+  const tpVentGeo = new THREE.BoxGeometry(0.5, 0.005, 0.01);
   for (let i = 0; i < 7; i++) {
-    const vent = new THREE.Mesh(ventGeo, darkMat);
+    const vent = new THREE.Mesh(tpVentGeo, darkMat);
     vent.position.set(-width / 4, -0.002, -0.1 + i * 0.03);
     bottomDetails.add(vent);
   }
