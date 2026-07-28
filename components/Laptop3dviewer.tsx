@@ -196,7 +196,8 @@ function makeBrandLogoTexture(brand: string, model: string): THREE.CanvasTexture
     ctx.font = "italic bold 160px serif";
     ctx.fillText("hp", 256, 270);
   } else if (b.includes("lenovo") || b.includes("thinkpad") || m.includes("thinkpad") || m.includes("legion") || m.includes("yoga")) {
-    if (m.includes("thinkpad") || b.includes("thinkpad")) {
+    const isThinkpad = b.includes("thinkpad") || m.includes("thinkpad") || (b.includes("lenovo") && (m.includes("x1") || m.includes("t14") || m.includes("carbon") || m.includes("p1")));
+    if (isThinkpad) {
       ctx.font = "bold 90px sans-serif";
       ctx.fillText("ThinkPad", 256, 256);
       ctx.fillStyle = "#ff0000";
@@ -767,7 +768,8 @@ export default function Laptop3DViewer() {
     // Toggle trackpoint
     const b = (brandName || "").toLowerCase();
     const m = (modelName || "").toLowerCase();
-    refs.trackpoint.visible = b.includes("thinkpad") || m.includes("thinkpad");
+    const isThinkpad = b.includes("thinkpad") || m.includes("thinkpad") || (b.includes("lenovo") && (m.includes("x1") || m.includes("t14") || m.includes("carbon") || m.includes("p1")));
+    refs.trackpoint.visible = isThinkpad;
     
     // Toggle logo glow (Apple glowing, gaming laptops glowing, others chrome)
     if (b.includes("apple") || b.includes("macbook") || m.includes("macbook") || b.includes("rog") || m.includes("rog") || b.includes("razer") || b.includes("msi")) {
@@ -783,15 +785,15 @@ export default function Laptop3DViewer() {
 
     // Set logo position and rotation
     const { width, depth, lidThickness } = DIMS;
-    if (b.includes("thinkpad") || m.includes("thinkpad")) {
-      // ThinkPad logo on top-left (when looking from back, y=0 is hinge, +x is left)
-      refs.logo.position.set(width / 2 - 0.35, 0.2, -lidThickness - 0.001);
+    if (isThinkpad) {
+      // ThinkPad logo on top-left (when looking from back, y=0 is hinge, -x is left)
+      refs.logo.position.set(-width / 2 + 0.35, 0.2, -lidThickness - 0.001);
       refs.logo.rotation.z = Math.PI / 8; // Slant the ThinkPad logo
       refs.logo.scale.set(0.8, 0.8, 1);
       
       // Show Lenovo badge on bottom-right
       refs.secondaryLogo.visible = true;
-      refs.secondaryLogo.position.set(-width / 2 + 0.3, depth - 0.15, -lidThickness - 0.001);
+      refs.secondaryLogo.position.set(width / 2 - 0.25, depth - 0.15, -lidThickness - 0.001);
       refs.secondaryLogo.rotation.z = Math.PI / 2; // Vertical badge
     } else {
       // All other laptops, including normal Lenovos, get the logo centered
