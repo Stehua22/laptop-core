@@ -1054,7 +1054,7 @@ export default function Laptop3DViewer({ isAdmin = false }: { isAdmin?: boolean 
             </p>
             <button
               onClick={async () => {
-                if (selectedId === "") return;
+                if (!selectedId) return;
                 setSaveMsg("saving");
                 try {
                   await saveLaptopDesign({
