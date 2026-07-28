@@ -142,7 +142,6 @@ function getDisplayTexture(theme: "windows" | "mac", customUrl?: string): THREE.
   }
   let url = theme === "windows" ? win11B64 : macB64;
   if (theme === "windows" && !customUrl) {
-    // Use a high-quality Windows 11 Bloom wallpaper from a reliable source
     url = `https://api.allorigins.win/raw?url=${encodeURIComponent("https://images.hdqwalls.com/download/windows-11-2021-light-10k-l2-1920x1080.jpg")}`;
   } else if (customUrl) {
     // Proxy the image URL to bypass CORS and prevent black screens in WebGL
@@ -627,7 +626,7 @@ export default function Laptop3DViewer() {
       setBacklightIndex(0); // Index 0 is Off
     }
 
-    setCustomDisplayUrl(laptop.image_url || "");
+    setCustomDisplayUrl(""); // Force default OS wallpaper instead of laptop's product image
   };
 
   // ---- One-time scene setup ----
