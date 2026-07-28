@@ -259,6 +259,7 @@ type LaptopMeshRefs = {
   logo: THREE.Mesh;
   secondaryLogo: THREE.Mesh;
   trackpoint: THREE.Mesh;
+  cameraBump: THREE.Mesh;
   bottomDetails: THREE.Group;
   group: THREE.Group;
 };
@@ -473,6 +474,16 @@ function buildLaptop(
   screenPivot.add(lid);
   bodyMeshes.push(lid);
 
+  const cameraBump = new THREE.Mesh(
+    new RoundedBoxGeometry(0.5, 0.04, lidThickness, 8, 0.01),
+    bodyMat
+  );
+  cameraBump.position.set(0, depth + 0.01, -lidThickness / 2);
+  cameraBump.castShadow = true;
+  cameraBump.visible = false;
+  screenPivot.add(cameraBump);
+  bodyMeshes.push(cameraBump);
+
   const logo = new THREE.Mesh(
     new THREE.PlaneGeometry(0.28, 0.28),
     new THREE.MeshStandardMaterial({
@@ -540,7 +551,7 @@ function buildLaptop(
 
   return {
     group,
-    refs: { bodyMeshes, screenPivot, display, backlightPlane, logo, secondaryLogo, trackpoint, bottomDetails, group },
+    refs: { bodyMeshes, screenPivot, display, backlightPlane, logo, secondaryLogo, trackpoint, cameraBump, bottomDetails, group },
   };
 }
 
@@ -794,6 +805,7 @@ export default function Laptop3DViewer() {
     const isThinkpad = b.includes("thinkpad") || m.includes("thinkpad") || (b.includes("lenovo") && (m.includes("x1") || m.includes("t14") || m.includes("carbon") || m.includes("p1")));
     refs.trackpoint.visible = isThinkpad;
     refs.bottomDetails.visible = isThinkpad;
+    refs.cameraBump.visible = isThinkpad;
     
     // Toggle logo glow (Apple glowing, gaming laptops glowing, others chrome)
     if (b.includes("apple") || b.includes("macbook") || m.includes("macbook") || b.includes("rog") || m.includes("rog") || b.includes("razer") || b.includes("msi")) {
