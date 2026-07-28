@@ -117,6 +117,21 @@ function makeBrushedMetalNormalMap(): THREE.CanvasTexture {
   return tex;
 }
 
+function makeContactShadowTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d")!;
+  const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gradient.addColorStop(0, "rgba(0,0,0,0.6)");
+  gradient.addColorStop(0.3, "rgba(0,0,0,0.4)");
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 256, 256);
+  const tex = new THREE.CanvasTexture(canvas);
+  return tex;
+}
+
 const texLoader = typeof window !== "undefined" ? new THREE.TextureLoader() : null;
 
 function getDisplayTexture(theme: "windows" | "mac"): THREE.Texture {
@@ -150,25 +165,39 @@ function buildLaptop(
   const { width, depth, baseThickness, lidThickness, cornerRadius } = DIMS;
 
   const darkMat = new THREE.MeshStandardMaterial({
-    color: "#212226",
-    roughness: 0.75,
-    metalness: 0.15,
+    color: "#181a1e",
+    roughness: 0.8,
+    metalness: 0.1,
+  });
+  const bezelMat = new THREE.MeshStandardMaterial({
+    color: "#050505",
+    roughness: 0.1,
+    metalness: 0.8,
   });
   const keyMat = new THREE.MeshStandardMaterial({
-    color: "#17181b",
-    roughness: 0.55,
-    metalness: 0.2,
+    color: "#1a1b1e",
+    roughness: 0.3,
+    metalness: 0.4,
   });
   const glassMat = new THREE.MeshPhysicalMaterial({
-    color: "#3a3d42",
-    roughness: 0.15,
-    metalness: 0.2,
-    clearcoat: 0.6,
+    color: "#2a2c30",
+    roughness: 0.05,
+    metalness: 0.1,
+    clearcoat: 1.0,
     clearcoatRoughness: 0.1,
+  });
+  const screenGlassMat = new THREE.MeshPhysicalMaterial({
+    color: "#ffffff",
+    metalness: 0.1,
+    roughness: 0,
+    transmission: 1.0,
+    ior: 1.5,
+    transparent: true,
+    opacity: 1,
   });
 
   const base = new THREE.Mesh(
-    new RoundedBoxGeometry(width, baseThickness, depth, 7, cornerRadius),
+    new RoundedBoxGeometry(width, baseThickness, depth, 16, cornerRadius),
     bodyMat
   );
   base.position.y = baseThickness / 2;
@@ -246,7 +275,7 @@ function buildLaptop(
   group.add(keysMesh);
 
   const trackpad = new THREE.Mesh(
-    new RoundedBoxGeometry(0.62, 0.006, 0.4, 4, 0.025),
+    new RoundedBoxGeometry(0.62, 0.004, 0.4, 4, 0.025),
     glassMat
   );
   trackpad.position.set(0, baseThickness + 0.004, depth * 0.34);
@@ -297,7 +326,7 @@ function buildLaptop(
   screenPivot.add(hinge);
 
   const lid = new THREE.Mesh(
-    new RoundedBoxGeometry(width, depth, lidThickness, 7, cornerRadius),
+    new RoundedBoxGeometry(width, depth, lidThickness, 16, cornerRadius),
     bodyMat
   );
   lid.position.set(0, depth / 2, -lidThickness / 2);
@@ -321,7 +350,7 @@ function buildLaptop(
 
   const bezel = new THREE.Mesh(
     new THREE.PlaneGeometry(width - 0.09, depth - 0.09),
-    darkMat
+    bezelMat
   );
   bezel.position.set(0, depth / 2, 0.002);
   screenPivot.add(bezel);
@@ -337,6 +366,13 @@ function buildLaptop(
   );
   display.position.set(0, depth / 2 + 0.02, 0.003);
   screenPivot.add(display);
+
+  const screenGlass = new THREE.Mesh(
+    new THREE.PlaneGeometry(width - 0.09, depth - 0.09),
+    screenGlassMat
+  );
+  screenGlass.position.set(0, depth / 2, 0.0035);
+  screenPivot.add(screenGlass);
 
   const cam = new THREE.Mesh(
     new THREE.CircleGeometry(0.012, 12),
@@ -460,6 +496,19 @@ export default function Laptop3DViewer() {
     ground.receiveShadow = true;
     scene.add(ground);
     groundRef.current = ground;
+
+    const contactShadow = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.5, 3.5),
+      new THREE.MeshBasicMaterial({
+        map: makeContactShadowTexture(),
+        transparent: true,
+        opacity: 0.8,
+        depthWrite: false,
+      })
+    );
+    contactShadow.rotation.x = -Math.PI / 2;
+    contactShadow.position.y = 0.001;
+    scene.add(contactShadow);
 
     const normalMap = makeBrushedMetalNormalMap();
     const bodyMat = new THREE.MeshPhysicalMaterial({
