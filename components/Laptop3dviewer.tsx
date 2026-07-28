@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
@@ -563,7 +563,7 @@ export default function Laptop3DViewer() {
   return (
     <div className={styles.wrapper}>
       <div className={styles.canvasArea}>
-        <div ref={mountRef} className={styles.canvasArea} />
+        <div ref={mountRef} className={styles.canvasInner} />
         {selectedLaptop && (
           <div className={styles.laptopBadge}>
             {selectedLaptop.brand} {selectedLaptop.model}
@@ -699,3 +699,4 @@ export default function Laptop3DViewer() {
     </div>
   );
 }
+
