@@ -587,6 +587,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   const [saveMsg, setSaveMsg] = useState<"" | "saving" | "saved" | "error">("" );
   const [importStatus, setImportStatus] = useState<"" | "loading" | "loaded" | "error">("" );
   const [importedFileName, setImportedFileName] = useState<string>("");
+  const [customModelBase64, setCustomModelBase64] = useState<string>("");
 
   const autoRotateRef = useRef(autoRotate);
   useEffect(() => {
@@ -633,7 +634,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     setCustomDisplayUrl(""); // Force default OS wallpaper instead of laptop's product image
 
     // Load saved 3D design override if present
-    fetchLaptopDesign(typeof id === "number" ? id : Number(id)).then((design) => {
+    fetchLaptopDesign(typeof id === "number" ? id : Number(id)).then(async (design) => {
       if (!design) return;
       setBaseColor(design.color_hex);
       const fi = FINISHES.findIndex((f) => f.name === design.finish);
@@ -642,10 +643,25 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
       if (bi >= 0) setBacklightIndex(bi);
       setOpenAngle(design.open_angle);
       setLogoGlow(design.logo_glow);
+
+      if (design.custom_model_base64) {
+        setCustomModelBase64(design.custom_model_base64);
+        try {
+          // Convert base64 back to Blob to load it
+          const res = await fetch(design.custom_model_base64);
+          const blob = await res.blob();
+          const file = new File([blob], "saved_model.glb", { type: blob.type });
+          loadCustomModel(file, false); // false = don't overwrite the base64 string
+        } catch (err) {
+          console.error("Failed to load custom model from base64:", err);
+        }
+      } else {
+        clearCustomModel();
+      }
     });
   };
 
-  const loadCustomModel = (file: File) => {
+  const loadCustomModel = (file: File | null, updateBase64 = true) => {
     const scene = sceneRef.current;
     const refs = meshesRef.current;
     if (!scene) return;
@@ -662,11 +678,20 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
       if (refs) refs.group.visible = true;
       setImportStatus("");
       setImportedFileName("");
+      if (updateBase64) setCustomModelBase64("");
       return;
     }
 
     setImportStatus("loading");
     setImportedFileName(file.name);
+
+    if (updateBase64) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setCustomModelBase64(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
 
     const blobUrl = URL.createObjectURL(file);
     blobUrlRef.current = blobUrl;
@@ -693,6 +718,18 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
 
         scene.add(model);
         customModelRef.current = model;
+        
+        // Apply current UI color/finish to the custom model
+        model.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const m = child.material as THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
+            if (m && m.color) {
+              m.color.set(baseColor);
+              if (m.roughness !== undefined) m.roughness = FINISHES[finishIndex].roughness;
+            }
+          }
+        });
+
         setImportStatus("loaded");
       },
       undefined,
@@ -717,6 +754,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     if (refs) refs.group.visible = true;
     setImportStatus("");
     setImportedFileName("");
+    setCustomModelBase64("");
   };
 
   // ---- One-time scene setup ----
@@ -841,21 +879,39 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   // ---- Reactive updates ----
   useEffect(() => {
     const refs = meshesRef.current;
-    if (!refs) return;
-    refs.bodyMeshes.forEach((m) => {
-      (m.material as THREE.MeshPhysicalMaterial).color.set(baseColor);
-    });
+    if (refs) {
+      refs.bodyMeshes.forEach((m) => {
+        (m.material as THREE.MeshPhysicalMaterial).color.set(baseColor);
+      });
+    }
+    if (customModelRef.current) {
+      customModelRef.current.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          const m = child.material as THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
+          if (m && m.color) m.color.set(baseColor);
+        }
+      });
+    }
   }, [baseColor]);
 
   useEffect(() => {
-    const refs = meshesRef.current;
-    if (!refs) return;
     const finish = FINISHES[finishIndex];
-    refs.bodyMeshes.forEach((m) => {
-      const mat = m.material as THREE.MeshPhysicalMaterial;
-      mat.roughness = finish.roughness;
-      mat.clearcoat = finish.clearcoat;
-    });
+    const refs = meshesRef.current;
+    if (refs) {
+      refs.bodyMeshes.forEach((m) => {
+        const mat = m.material as THREE.MeshPhysicalMaterial;
+        mat.roughness = finish.roughness;
+        mat.clearcoat = finish.clearcoat;
+      });
+    }
+    if (customModelRef.current) {
+      customModelRef.current.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          const m = child.material as THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
+          if (m && m.roughness !== undefined) m.roughness = finish.roughness;
+        }
+      });
+    }
   }, [finishIndex]);
 
   useEffect(() => {
@@ -1143,6 +1199,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
                     backlight: BACKLIGHTS[backlightIndex].name,
                     open_angle: openAngle,
                     logo_glow: logoGlow,
+                    custom_model_base64: customModelBase64,
                   });
                   setSaveMsg("saved");
                   setTimeout(() => setSaveMsg(""), 3000);

@@ -143,6 +143,7 @@ export type LaptopDesign = {
   backlight: string;    // 'Off' | 'White' | 'Blue' | 'Green' | 'Red'
   open_angle: number;
   logo_glow: boolean;
+  custom_model_base64?: string;
 };
 
 export async function fetchLaptopDesign(laptopId: number): Promise<LaptopDesign | null> {

@@ -259,23 +259,19 @@ export default function DesignStudioPage() {
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 11, color: "#8892aa", fontFamily: "'DM Mono', monospace" }}>
-            {isAdmin ? "Admin mode active" : "Login to save designs"}
+            Admin mode active
           </span>
           <button
             onClick={() => {
-              if (isAdmin) {
-                sessionStorage.removeItem("admin_3d_unlocked");
-                setIsAdmin(false);
-              } else {
-                setShowAuth(true);
-              }
+              sessionStorage.removeItem("admin_3d_unlocked");
+              setIsAdmin(false);
             }}
             style={{
-              background: isAdmin ? "rgba(99,232,140,0.12)" : "rgba(255,255,255,0.06)",
-              border: isAdmin ? "1px solid rgba(99,232,140,0.3)" : "1px solid rgba(255,255,255,0.1)",
+              background: "rgba(99,232,140,0.12)",
+              border: "1px solid rgba(99,232,140,0.3)",
               borderRadius: 8,
               padding: "6px 14px",
-              color: isAdmin ? "#63e88c" : "#8892aa",
+              color: "#63e88c",
               fontSize: 12,
               fontWeight: 600,
               cursor: "pointer",
@@ -286,7 +282,7 @@ export default function DesignStudioPage() {
               fontFamily: "'DM Mono', monospace",
             }}
           >
-            {isAdmin ? "🔓 ADMIN" : "🔒 Admin Login"}
+            🔓 ADMIN
           </button>
         </div>
       </header>
