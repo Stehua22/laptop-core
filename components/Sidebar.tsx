@@ -1,4 +1,4 @@
-﻿import { useState, ReactNode } from "react";
+import { useState, ReactNode } from "react";
 import styles from "./Sidebar.module.css";
 
 type NavItem = {
@@ -61,6 +61,16 @@ const NAV_ITEMS: NavItem[] = [
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
         <path d="M12 2l8 4.5v9L12 20l-8-4.5v-9L12 2zm0 2.3L6 7.6v8l6 3.3 6-3.3v-8l-6-3.3zM12 9l4-2.2v4.4L12 13.4l-4-2.2V6.8L12 9z" />
+      </svg>
+    ),
+  },
+  {
+    key: "design",
+    label: "Design Studio",
+    href: "/design",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9-4-9-9-9zm-1 14H9V7h2v10zm4-4h-2V7h2v6z"/>
       </svg>
     ),
   },

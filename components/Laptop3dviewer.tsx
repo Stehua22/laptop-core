@@ -556,7 +556,7 @@ function buildLaptop(
   };
 }
 
-export default function Laptop3DViewer({ isAdmin = false }: { isAdmin?: boolean }) {
+export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: { isAdmin?: boolean; studioMode?: boolean }) {
   const mountRef = useRef<HTMLDivElement>(null);
   const meshesRef = useRef<LaptopMeshRefs | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -978,7 +978,7 @@ export default function Laptop3DViewer({ isAdmin = false }: { isAdmin?: boolean 
   };
 
   return (
-    <div className={styles.wrapper}>
+    <div className={studioMode ? styles.studioWrapper : styles.wrapper}>
       <div className={styles.canvasArea}>
         <div ref={mountRef} className={styles.canvasInner} />
         {selectedLaptop && (

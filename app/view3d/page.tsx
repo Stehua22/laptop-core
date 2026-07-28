@@ -36,33 +36,51 @@ export default function View3DPage() {
 
   return (
     <main style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 20px", position: "relative" }}>
-      {/* Admin lock button */}
-      <button
-        onClick={() => isAdmin ? logout() : setShowModal(true)}
-        title={isAdmin ? "Exit admin mode" : "Admin login"}
-        style={{
-          position: "absolute",
-          top: 32,
-          right: 20,
-          background: isAdmin ? "rgba(99,232,140,0.12)" : "rgba(255,255,255,0.06)",
-          border: isAdmin ? "1px solid rgba(99,232,140,0.35)" : "1px solid rgba(255,255,255,0.12)",
-          borderRadius: 8,
-          padding: "6px 14px",
-          cursor: "pointer",
-          fontSize: 12,
-          fontWeight: 600,
-          fontFamily: "'DM Mono', monospace",
-          color: isAdmin ? "#63e88c" : "#8892aa",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          transition: "all 0.2s",
-          letterSpacing: "0.05em",
-          zIndex: 10,
-        }}
-      >
-        {isAdmin ? "🔓 ADMIN" : "🔒 Admin"}
-      </button>
+      {/* Buttons top-right */}
+      <div style={{ position: "absolute", top: 32, right: 20, display: "flex", gap: 8, zIndex: 10 }}>
+        <a
+          href="/design"
+          style={{
+            background: "linear-gradient(135deg, rgba(99,232,140,0.15), rgba(61,214,140,0.1))",
+            border: "1px solid rgba(99,232,140,0.3)",
+            borderRadius: 8,
+            padding: "6px 14px",
+            fontSize: 12,
+            fontWeight: 700,
+            fontFamily: "'DM Mono', monospace",
+            color: "#63e88c",
+            textDecoration: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            letterSpacing: "0.04em",
+          }}
+        >
+          ✦ Design Studio
+        </a>
+        <button
+          onClick={() => isAdmin ? logout() : setShowModal(true)}
+          title={isAdmin ? "Exit admin mode" : "Admin login"}
+          style={{
+            background: isAdmin ? "rgba(99,232,140,0.12)" : "rgba(255,255,255,0.06)",
+            border: isAdmin ? "1px solid rgba(99,232,140,0.35)" : "1px solid rgba(255,255,255,0.12)",
+            borderRadius: 8,
+            padding: "6px 14px",
+            cursor: "pointer",
+            fontSize: 12,
+            fontWeight: 600,
+            fontFamily: "'DM Mono', monospace",
+            color: isAdmin ? "#63e88c" : "#8892aa",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            transition: "all 0.2s",
+            letterSpacing: "0.05em",
+          }}
+        >
+          {isAdmin ? "🔓 ADMIN" : "🔒 Admin"}
+        </button>
+      </div>
 
       <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 6 }}>
         3D Model Viewer
