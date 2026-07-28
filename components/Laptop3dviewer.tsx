@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import win11Img from "./windows11.png";
+import macImg from "./mac.png";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
@@ -123,7 +125,7 @@ function getDisplayTexture(theme: "windows" | "mac"): THREE.Texture {
     const fallback = new THREE.Texture();
     return fallback;
   }
-  const url = theme === "windows" ? "/windows11.png" : "/mac.png";
+  const url = theme === "windows" ? win11Img.src : macImg.src;
   const tex = texLoader.load(url);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
@@ -320,7 +322,7 @@ function buildLaptop(
     new THREE.PlaneGeometry(width - 0.09, depth - 0.09),
     darkMat
   );
-  bezel.position.set(0, depth / 2, -lidThickness + 0.002);
+  bezel.position.set(0, depth / 2, 0.002);
   screenPivot.add(bezel);
 
   const displayMat = new THREE.MeshBasicMaterial({
@@ -332,14 +334,14 @@ function buildLaptop(
     new THREE.PlaneGeometry(width - 0.16, depth - 0.2),
     displayMat
   );
-  display.position.set(0, depth / 2 + 0.02, -lidThickness + 0.003);
+  display.position.set(0, depth / 2 + 0.02, 0.003);
   screenPivot.add(display);
 
   const cam = new THREE.Mesh(
     new THREE.CircleGeometry(0.012, 12),
     new THREE.MeshStandardMaterial({ color: "#050506", roughness: 0.4 })
   );
-  cam.position.set(0, depth - 0.05, -lidThickness + 0.0025);
+  cam.position.set(0, depth - 0.05, 0.0025);
   screenPivot.add(cam);
 
   return {
