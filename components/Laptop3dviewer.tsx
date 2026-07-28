@@ -231,12 +231,32 @@ function makeBrandLogoTexture(brand: string, model: string): THREE.CanvasTexture
   return tex;
 }
 
+function makeLenovoBadgeTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 64;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, 256, 64);
+  
+  ctx.fillStyle = "#444444";
+  ctx.font = "bold 44px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("Lenovo", 128, 32);
+  
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.anisotropy = 16;
+  return tex;
+}
+
 type LaptopMeshRefs = {
   bodyMeshes: THREE.Mesh[];
   screenPivot: THREE.Group;
   display: THREE.Mesh;
   backlightPlane: THREE.Mesh;
   logo: THREE.Mesh;
+  secondaryLogo: THREE.Mesh;
   trackpoint: THREE.Mesh;
   group: THREE.Group;
 };
@@ -445,6 +465,22 @@ function buildLaptop(
   logo.position.set(0, depth / 2, -lidThickness - 0.001);
   screenPivot.add(logo);
 
+  const secondaryLogo = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.18, 0.045),
+    new THREE.MeshStandardMaterial({
+      color: "#ffffff",
+      metalness: 1.0,
+      roughness: 0.1,
+      transparent: true,
+      alphaTest: 0.1,
+      map: makeLenovoBadgeTexture()
+    })
+  );
+  secondaryLogo.rotation.y = Math.PI;
+  secondaryLogo.position.set(0, 0, -lidThickness - 0.001);
+  secondaryLogo.visible = false;
+  screenPivot.add(secondaryLogo);
+
   const bezel = new THREE.Mesh(
     new THREE.PlaneGeometry(width - 0.09, depth - 0.09),
     bezelMat
@@ -480,7 +516,7 @@ function buildLaptop(
 
   return {
     group,
-    refs: { bodyMeshes, screenPivot, display, backlightPlane, logo, trackpoint, group },
+    refs: { bodyMeshes, screenPivot, display, backlightPlane, logo, secondaryLogo, trackpoint, group },
   };
 }
 
@@ -745,14 +781,21 @@ export default function Laptop3DViewer() {
       logoMat.color.set("#dddddd");
     }
 
-    // Set logo position (ThinkPads and Lenovo have it on the top right corner)
+    // Set logo position
     const { width, depth, lidThickness } = DIMS;
-    if (b.includes("lenovo") || b.includes("thinkpad") || m.includes("thinkpad")) {
-      refs.logo.position.set(-width / 2 + 0.3, depth - 0.3, -lidThickness - 0.001);
+    if (b.includes("thinkpad") || m.includes("thinkpad")) {
+      // ThinkPad logo on top-left (when looking from back, y=0 is hinge, +x is left)
+      refs.logo.position.set(width / 2 - 0.35, 0.2, -lidThickness - 0.001);
       refs.logo.scale.set(0.8, 0.8, 1);
+      
+      // Show Lenovo badge on bottom-right
+      refs.secondaryLogo.visible = true;
+      refs.secondaryLogo.position.set(-width / 2 + 0.3, depth - 0.15, -lidThickness - 0.001);
     } else {
+      // All other laptops, including normal Lenovos, get the logo centered
       refs.logo.position.set(0, depth / 2, -lidThickness - 0.001);
       refs.logo.scale.set(1, 1, 1);
+      refs.secondaryLogo.visible = false;
     }
   }, [brandName]);
 
