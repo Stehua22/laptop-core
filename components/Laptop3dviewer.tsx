@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
@@ -435,13 +435,9 @@ function buildLaptop(
   bezel.position.set(0, depth / 2, -lidThickness + 0.002);
   screenPivot.add(bezel);
 
-  const displayMat = new THREE.MeshStandardMaterial({
+  const displayMat = new THREE.MeshBasicMaterial({
     map: displayTexture,
     color: "#ffffff",
-    emissive: new THREE.Color("#ffffff"),
-    emissiveMap: displayTexture,
-    emissiveIntensity: 0.9,
-    roughness: 0.35,
   });
   const display = new THREE.Mesh(
     new THREE.PlaneGeometry(width - 0.16, depth - 0.2),
@@ -649,8 +645,7 @@ export default function Laptop3DViewer() {
   useEffect(() => {
     const refs = meshesRef.current;
     if (!refs) return;
-    const mat = refs.display.material as THREE.MeshStandardMaterial;
-    mat.emissiveIntensity = displayOn ? 0.9 : 0.02;
+    const mat = refs.display.material as THREE.MeshBasicMaterial;
     mat.color.set(displayOn ? "#ffffff" : "#0a0a0c");
   }, [displayOn]);
 
@@ -658,9 +653,8 @@ export default function Laptop3DViewer() {
     const refs = meshesRef.current;
     if (!refs) return;
     const tex = makeDisplayTexture(osTheme);
-    const mat = refs.display.material as THREE.MeshStandardMaterial;
+    const mat = refs.display.material as THREE.MeshBasicMaterial;
     mat.map = tex;
-    mat.emissiveMap = tex;
     mat.needsUpdate = true;
   }, [osTheme]);
 
