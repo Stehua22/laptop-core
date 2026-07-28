@@ -135,12 +135,13 @@ function makeContactShadowTexture(): THREE.CanvasTexture {
 
 const texLoader = typeof window !== "undefined" ? new THREE.TextureLoader() : null;
 
-function getDisplayTexture(theme: "windows" | "mac"): THREE.Texture {
+function getDisplayTexture(theme: "windows" | "mac", customUrl?: string): THREE.Texture {
   if (!texLoader) {
     const fallback = new THREE.Texture();
     return fallback;
   }
-  const url = theme === "windows" ? win11B64 : macB64;
+  const url = customUrl ? customUrl : (theme === "windows" ? win11B64 : macB64);
+  texLoader.crossOrigin = "anonymous";
   const tex = texLoader.load(url, () => {
     tex.needsUpdate = true;
   });
@@ -491,6 +492,7 @@ export default function Laptop3DViewer() {
   const [modelScale, setModelScale] = useState(1);
   const [osTheme, setOsTheme] = useState<"windows" | "mac">("windows");
   const [brandName, setBrandName] = useState<string>("");
+  const [customDisplayUrl, setCustomDisplayUrl] = useState<string>("");
 
   const autoRotateRef = useRef(autoRotate);
   useEffect(() => {
@@ -511,6 +513,7 @@ export default function Laptop3DViewer() {
     setSelectedId(id);
     if (id === "") {
       setBrandName("");
+      setCustomDisplayUrl("");
       return;
     }
     const laptop = laptops.find((l) => l.id === id);
@@ -527,8 +530,10 @@ export default function Laptop3DViewer() {
     if (b.includes("msi") || b.includes("rog") || b.includes("asus") || b.includes("razer")) {
       setBacklightIndex(4); // Index 4 is Red
     } else {
-      setBacklightIndex(0); // Index 0 is Off (or White if we want. Wait, 0 is Off. Let's keep it Off).
+      setBacklightIndex(0); // Index 0 is Off
     }
+
+    setCustomDisplayUrl(laptop.image_url || "");
   };
 
   // ---- One-time scene setup ----
@@ -615,7 +620,7 @@ export default function Laptop3DViewer() {
       envMapIntensity: 1,
     });
 
-    const initialDisplayTexture = getDisplayTexture(osTheme);
+    const initialDisplayTexture = getDisplayTexture(osTheme, customDisplayUrl);
     const { group: laptop, refs } = buildLaptop(bodyMat, initialDisplayTexture);
     refs.screenPivot.rotation.x = THREE.MathUtils.degToRad(-(180 - openAngle));
     scene.add(laptop);
@@ -686,11 +691,11 @@ export default function Laptop3DViewer() {
   useEffect(() => {
     const refs = meshesRef.current;
     if (!refs) return;
-    const tex = getDisplayTexture(osTheme);
+    const tex = getDisplayTexture(osTheme, customDisplayUrl);
     const mat = refs.display.material as THREE.MeshBasicMaterial;
     mat.map = tex;
     mat.needsUpdate = true;
-  }, [osTheme]);
+  }, [osTheme, customDisplayUrl]);
 
   useEffect(() => {
     const refs = meshesRef.current;
