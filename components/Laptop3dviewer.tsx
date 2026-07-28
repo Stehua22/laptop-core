@@ -140,7 +140,11 @@ function getDisplayTexture(theme: "windows" | "mac", customUrl?: string): THREE.
     const fallback = new THREE.Texture();
     return fallback;
   }
-  const url = customUrl ? customUrl : (theme === "windows" ? win11B64 : macB64);
+  let url = theme === "windows" ? win11B64 : macB64;
+  if (customUrl) {
+    // Proxy the image URL to bypass CORS and prevent black screens in WebGL
+    url = `https://api.allorigins.win/raw?url=${encodeURIComponent(customUrl)}`;
+  }
   texLoader.crossOrigin = "anonymous";
   const tex = texLoader.load(url, () => {
     tex.needsUpdate = true;
@@ -741,9 +745,9 @@ export default function Laptop3DViewer() {
       logoMat.color.set("#dddddd");
     }
 
-    // Set logo position (ThinkPads have it on the top right corner)
+    // Set logo position (ThinkPads and Lenovo have it on the top right corner)
     const { width, depth, lidThickness } = DIMS;
-    if (b.includes("thinkpad") || m.includes("thinkpad")) {
+    if (b.includes("lenovo") || b.includes("thinkpad") || m.includes("thinkpad")) {
       refs.logo.position.set(-width / 2 + 0.3, depth - 0.3, -lidThickness - 0.001);
       refs.logo.scale.set(0.8, 0.8, 1);
     } else {
