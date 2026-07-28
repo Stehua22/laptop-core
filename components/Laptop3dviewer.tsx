@@ -116,128 +116,15 @@ function makeBrushedMetalNormalMap(): THREE.CanvasTexture {
   return tex;
 }
 
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number
-) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
+const texLoader = typeof window !== "undefined" ? new THREE.TextureLoader() : null;
 
-function makeDisplayTexture(theme: "windows" | "mac"): THREE.CanvasTexture {
-  const w = 1024;
-  const h = 652;
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d")!;
-
-  if (theme === "mac") {
-    const bg = ctx.createLinearGradient(0, 0, w, h);
-    bg.addColorStop(0, "#2b1f3d");
-    bg.addColorStop(0.5, "#5b3a6b");
-    bg.addColorStop(1, "#d97a5f");
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, w, h);
-
-    const blobs = [
-      { x: w * 0.25, y: h * 0.35, r: 260, c: "rgba(255,180,140,0.35)" },
-      { x: w * 0.7, y: h * 0.6, r: 300, c: "rgba(120,90,200,0.35)" },
-      { x: w * 0.5, y: h * 0.2, r: 220, c: "rgba(255,255,255,0.12)" },
-    ];
-    blobs.forEach((b) => {
-      const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
-      g.addColorStop(0, b.c);
-      g.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-    });
-
-    ctx.fillStyle = "rgba(255,255,255,0.18)";
-    ctx.fillRect(0, 0, w, 26);
-
-    const dockW = 420;
-    const dockH = 64;
-    const dockX = (w - dockW) / 2;
-    const dockY = h - dockH - 14;
-    ctx.fillStyle = "rgba(255,255,255,0.15)";
-    roundRect(ctx, dockX, dockY, dockW, dockH, 18);
-    ctx.fill();
-
-    const iconColors = ["#ff5f57", "#febc2e", "#28c840", "#4da3ff", "#a78bfa", "#f472b6"];
-    const iconSize = 40;
-    const gap = (dockW - iconColors.length * iconSize) / (iconColors.length + 1);
-    iconColors.forEach((c, i) => {
-      const ix = dockX + gap + i * (iconSize + gap);
-      const iy = dockY + (dockH - iconSize) / 2;
-      ctx.fillStyle = c;
-      roundRect(ctx, ix, iy, iconSize, iconSize, 10);
-      ctx.fill();
-    });
-  } else {
-    const bg = ctx.createLinearGradient(0, 0, w, h);
-    bg.addColorStop(0, "#0b1642");
-    bg.addColorStop(0.5, "#123a63");
-    bg.addColorStop(1, "#1c6b8a");
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, w, h);
-
-    const blobs = [
-      { x: w * 0.3, y: h * 0.4, r: 320, c: "rgba(90,180,255,0.45)" },
-      { x: w * 0.65, y: h * 0.3, r: 260, c: "rgba(140,220,255,0.35)" },
-      { x: w * 0.55, y: h * 0.65, r: 300, c: "rgba(30,80,160,0.5)" },
-      { x: w * 0.2, y: h * 0.7, r: 200, c: "rgba(255,255,255,0.08)" },
-    ];
-    blobs.forEach((b) => {
-      const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
-      g.addColorStop(0, b.c);
-      g.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-    });
-
-    const tbH = 46;
-    ctx.fillStyle = "rgba(20,24,32,0.55)";
-    ctx.fillRect(0, h - tbH, w, tbH);
-
-    const cx = w / 2;
-    const cy = h - tbH / 2;
-    const s = 8;
-    const gap2 = 3;
-    const offsets: [number, number][] = [
-      [-gap2 / 2 - s, -gap2 / 2 - s],
-      [gap2 / 2, -gap2 / 2 - s],
-      [-gap2 / 2 - s, gap2 / 2],
-      [gap2 / 2, gap2 / 2],
-    ];
-    offsets.forEach(([ox, oy]) => {
-      ctx.fillStyle = "#6cb7ff";
-      ctx.fillRect(cx + ox, cy + oy, s, s);
-    });
-
-    for (let i = 0; i < 4; i++) {
-      ctx.fillStyle = "rgba(255,255,255,0.5)";
-      ctx.beginPath();
-      ctx.arc(cx + 60 + i * 34, cy, 8, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.font = "20px sans-serif";
-    ctx.textAlign = "right";
-    ctx.fillText("10:24 AM", w - 30, cy + 6);
+function getDisplayTexture(theme: "windows" | "mac"): THREE.Texture {
+  if (!texLoader) {
+    const fallback = new THREE.Texture();
+    return fallback;
   }
-
-  const tex = new THREE.CanvasTexture(canvas);
+  const url = theme === "windows" ? "/windows11.png" : "/mac.png";
+  const tex = texLoader.load(url);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
@@ -253,7 +140,7 @@ type LaptopMeshRefs = {
 
 function buildLaptop(
   bodyMat: THREE.MeshPhysicalMaterial,
-  displayTexture: THREE.CanvasTexture
+  displayTexture: THREE.Texture
 ): { group: THREE.Group; refs: LaptopMeshRefs } {
   const group = new THREE.Group();
   const bodyMeshes: THREE.Mesh[] = [];
@@ -583,7 +470,7 @@ export default function Laptop3DViewer() {
       envMapIntensity: 1,
     });
 
-    const initialDisplayTexture = makeDisplayTexture(osTheme);
+    const initialDisplayTexture = getDisplayTexture(osTheme);
     const { group: laptop, refs } = buildLaptop(bodyMat, initialDisplayTexture);
     refs.screenPivot.rotation.x = THREE.MathUtils.degToRad(-(180 - openAngle));
     scene.add(laptop);
@@ -654,7 +541,7 @@ export default function Laptop3DViewer() {
   useEffect(() => {
     const refs = meshesRef.current;
     if (!refs) return;
-    const tex = makeDisplayTexture(osTheme);
+    const tex = getDisplayTexture(osTheme);
     const mat = refs.display.material as THREE.MeshBasicMaterial;
     mat.map = tex;
     mat.needsUpdate = true;
