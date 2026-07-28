@@ -69,6 +69,7 @@ const BACKLIGHTS = [
   { name: "White", color: "#eef3ff" },
   { name: "Blue", color: "#4d9dff" },
   { name: "Green", color: "#5df29a" },
+  { name: "Red", color: "#ff4d4d" },
 ];
 
 const BACKGROUNDS = [
@@ -147,12 +148,79 @@ function getDisplayTexture(theme: "windows" | "mac"): THREE.Texture {
   return tex;
 }
 
+function makeBrandLogoTexture(brand: string): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d")!;
+  ctx.clearRect(0, 0, 512, 512);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  const b = (brand || "").toLowerCase();
+  
+  if (b.includes("apple") || b.includes("macbook")) {
+    ctx.beginPath();
+    ctx.arc(256, 276, 120, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath();
+    ctx.arc(380, 276, 80, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.beginPath();
+    ctx.ellipse(256, 100, 40, 20, -Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (b.includes("dell")) {
+    ctx.beginPath();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 20;
+    ctx.arc(256, 256, 180, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.font = "bold 110px sans-serif";
+    ctx.fillText("DELL", 256, 276);
+  } else if (b.includes("hp")) {
+    ctx.beginPath();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 20;
+    ctx.arc(256, 256, 180, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.font = "italic bold 160px serif";
+    ctx.fillText("hp", 256, 270);
+  } else if (b.includes("lenovo") || b.includes("thinkpad")) {
+    ctx.font = "bold 90px sans-serif";
+    ctx.fillText("ThinkPad", 256, 256);
+    ctx.fillStyle = "#ff0000";
+    ctx.beginPath();
+    ctx.arc(425, 200, 18, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (b.includes("asus") || b.includes("rog")) {
+    ctx.font = "bold 120px sans-serif";
+    ctx.fillText("ROG", 256, 256);
+    ctx.fillRect(100, 310, 312, 12);
+  } else if (b.includes("acer")) {
+    ctx.font = "bold 140px sans-serif";
+    ctx.fillText("acer", 256, 256);
+  } else {
+    ctx.beginPath();
+    ctx.arc(256, 256, 100, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.anisotropy = 16;
+  return tex;
+}
+
 type LaptopMeshRefs = {
   bodyMeshes: THREE.Mesh[];
   screenPivot: THREE.Group;
   display: THREE.Mesh;
   backlightPlane: THREE.Mesh;
   logo: THREE.Mesh;
+  trackpoint: THREE.Mesh;
   group: THREE.Group;
 };
 
@@ -274,6 +342,16 @@ function buildLaptop(
   keysMesh.instanceMatrix.needsUpdate = true;
   group.add(keysMesh);
 
+  // ThinkPad TrackPoint (red dot in the middle of keyboard)
+  const trackpoint = new THREE.Mesh(
+    new THREE.SphereGeometry(0.015, 16, 16),
+    new THREE.MeshStandardMaterial({ color: "#ff0000", roughness: 0.8 })
+  );
+  // Position it in the middle of the keyboard, slightly above the keys
+  trackpoint.position.set(0, baseThickness + 0.02, deck.position.z);
+  trackpoint.visible = false; // Hidden by default
+  group.add(trackpoint);
+
   const trackpad = new THREE.Mesh(
     new RoundedBoxGeometry(0.62, 0.004, 0.4, 4, 0.025),
     glassMat
@@ -335,13 +413,15 @@ function buildLaptop(
   bodyMeshes.push(lid);
 
   const logo = new THREE.Mesh(
-    new THREE.CircleGeometry(0.11, 32),
+    new THREE.PlaneGeometry(0.28, 0.28),
     new THREE.MeshStandardMaterial({
-      color: "#dcdfe3",
+      color: "#ffffff", // Will be set to chrome or glowing depending on brand
       emissive: new THREE.Color("#ffffff"),
       emissiveIntensity: 0,
-      roughness: 0.4,
-      metalness: 0.3,
+      roughness: 0.2,
+      metalness: 0.8,
+      transparent: true,
+      alphaTest: 0.1,
     })
   );
   logo.rotation.y = Math.PI;
@@ -383,7 +463,7 @@ function buildLaptop(
 
   return {
     group,
-    refs: { bodyMeshes, screenPivot, display, backlightPlane, logo, group },
+    refs: { bodyMeshes, screenPivot, display, backlightPlane, logo, trackpoint, group },
   };
 }
 
@@ -410,6 +490,7 @@ export default function Laptop3DViewer() {
   const [bgIndex, setBgIndex] = useState(0);
   const [modelScale, setModelScale] = useState(1);
   const [osTheme, setOsTheme] = useState<"windows" | "mac">("windows");
+  const [brandName, setBrandName] = useState<string>("");
 
   const autoRotateRef = useRef(autoRotate);
   useEffect(() => {
@@ -428,7 +509,10 @@ export default function Laptop3DViewer() {
 
   const handleSelectLaptop = (id: number | "") => {
     setSelectedId(id);
-    if (id === "") return;
+    if (id === "") {
+      setBrandName("");
+      return;
+    }
     const laptop = laptops.find((l) => l.id === id);
     if (!laptop) return;
     setBaseColor(colorForBrand(laptop.brand));
@@ -436,6 +520,15 @@ export default function Laptop3DViewer() {
     const theme = osThemeForBrand(laptop.brand);
     setOsTheme(theme);
     setLogoGlow(theme === "mac");
+    setBrandName(laptop.brand);
+    
+    // Set backlight to red/RGB for gaming brands, otherwise white
+    const b = (laptop.brand || "").toLowerCase();
+    if (b.includes("msi") || b.includes("rog") || b.includes("asus") || b.includes("razer")) {
+      setBacklightIndex(4); // Index 4 is Red
+    } else {
+      setBacklightIndex(0); // Index 0 is Off (or White if we want. Wait, 0 is Off. Let's keep it Off).
+    }
   };
 
   // ---- One-time scene setup ----
@@ -598,6 +691,34 @@ export default function Laptop3DViewer() {
     mat.map = tex;
     mat.needsUpdate = true;
   }, [osTheme]);
+
+  useEffect(() => {
+    const refs = meshesRef.current;
+    if (!refs) return;
+    
+    // Update logo texture
+    const logoTex = makeBrandLogoTexture(brandName);
+    const logoMat = refs.logo.material as THREE.MeshStandardMaterial;
+    logoMat.map = logoTex;
+    logoMat.alphaMap = logoTex;
+    logoMat.needsUpdate = true;
+
+    // Toggle trackpoint
+    const b = (brandName || "").toLowerCase();
+    refs.trackpoint.visible = b.includes("lenovo") || b.includes("thinkpad");
+    
+    // Toggle logo glow (Apple glowing, gaming laptops glowing, others chrome)
+    if (b.includes("apple") || b.includes("macbook") || b.includes("rog") || b.includes("razer") || b.includes("msi")) {
+      logoMat.emissiveIntensity = 0.8;
+      logoMat.metalness = 0.2;
+      logoMat.color.set("#ffffff");
+    } else {
+      logoMat.emissiveIntensity = 0;
+      logoMat.metalness = 1.0; // Chrome look
+      logoMat.roughness = 0.1;
+      logoMat.color.set("#dddddd");
+    }
+  }, [brandName]);
 
   useEffect(() => {
     const refs = meshesRef.current;
