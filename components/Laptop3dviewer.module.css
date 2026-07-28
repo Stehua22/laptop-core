@@ -20,6 +20,20 @@
   height: 100% !important;
 }
 
+.laptopBadge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--border, #e2e4e8);
+  color: var(--text, #1f2328);
+  pointer-events: none;
+}
+
 .filterPanel {
   width: 220px;
   flex-shrink: 0;
@@ -44,6 +58,16 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--text-muted, #6b7280);
+}
+
+.select {
+  width: 100%;
+  font-size: 12px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #e2e4e8);
+  background: #fff;
+  cursor: pointer;
 }
 
 .swatchRow {
