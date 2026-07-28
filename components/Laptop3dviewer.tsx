@@ -6,6 +6,7 @@ import { win11B64, macB64 } from "./images_b64";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { fetchLaptops, fetchLaptopDesign, saveLaptopDesign, type Laptop } from "@/lib/supabase";
 import styles from "./Laptop3dviewer.module.css";
 
@@ -563,6 +564,8 @@ export default function Laptop3DViewer({ isAdmin = false }: { isAdmin?: boolean 
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const groundRef = useRef<THREE.Mesh | null>(null);
+  const customModelRef = useRef<THREE.Group | null>(null);
+  const blobUrlRef = useRef<string | null>(null);
 
   const [laptops, setLaptops] = useState<Laptop[]>([]);
   const [selectedId, setSelectedId] = useState<number | "">("");
@@ -582,6 +585,8 @@ export default function Laptop3DViewer({ isAdmin = false }: { isAdmin?: boolean 
   const [modelName, setModelName] = useState<string>("");
   const [customDisplayUrl, setCustomDisplayUrl] = useState<string>("");
   const [saveMsg, setSaveMsg] = useState<"" | "saving" | "saved" | "error">("" );
+  const [importStatus, setImportStatus] = useState<"" | "loading" | "loaded" | "error">("" );
+  const [importedFileName, setImportedFileName] = useState<string>("");
 
   const autoRotateRef = useRef(autoRotate);
   useEffect(() => {
@@ -638,6 +643,80 @@ export default function Laptop3DViewer({ isAdmin = false }: { isAdmin?: boolean 
       setOpenAngle(design.open_angle);
       setLogoGlow(design.logo_glow);
     });
+  };
+
+  const loadCustomModel = (file: File) => {
+    const scene = sceneRef.current;
+    const refs = meshesRef.current;
+    if (!scene) return;
+
+    // Clean up previous blob URL and custom model
+    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    if (customModelRef.current) {
+      scene.remove(customModelRef.current);
+      customModelRef.current = null;
+    }
+
+    if (!file) {
+      // Restore built-in laptop
+      if (refs) refs.group.visible = true;
+      setImportStatus("");
+      setImportedFileName("");
+      return;
+    }
+
+    setImportStatus("loading");
+    setImportedFileName(file.name);
+
+    const blobUrl = URL.createObjectURL(file);
+    blobUrlRef.current = blobUrl;
+
+    const loader = new GLTFLoader();
+    loader.load(
+      blobUrl,
+      (gltf) => {
+        const model = gltf.scene;
+
+        // Auto-center and scale the model to fit nicely
+        const box = new THREE.Box3().setFromObject(model);
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const targetSize = 2.5;
+        const scale = targetSize / maxDim;
+        model.scale.setScalar(scale);
+        model.position.sub(center.multiplyScalar(scale));
+        model.position.y = 0; // sit on ground
+
+        // Hide the built-in laptop
+        if (refs) refs.group.visible = false;
+
+        scene.add(model);
+        customModelRef.current = model;
+        setImportStatus("loaded");
+      },
+      undefined,
+      () => {
+        setImportStatus("error");
+        if (refs) refs.group.visible = true;
+      }
+    );
+  };
+
+  const clearCustomModel = () => {
+    const scene = sceneRef.current;
+    const refs = meshesRef.current;
+    if (customModelRef.current && scene) {
+      scene.remove(customModelRef.current);
+      customModelRef.current = null;
+    }
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+    if (refs) refs.group.visible = true;
+    setImportStatus("");
+    setImportedFileName("");
   };
 
   // ---- One-time scene setup ----
@@ -1088,6 +1167,72 @@ export default function Laptop3DViewer({ isAdmin = false }: { isAdmin?: boolean 
             >
               {saveMsg === "saving" ? "Saving…" : saveMsg === "saved" ? "✓ Saved!" : saveMsg === "error" ? "✗ Error" : "Save Design"}
             </button>
+          </div>
+        )}
+        {isAdmin && (
+          <div style={{
+            marginTop: 16,
+            paddingTop: 16,
+            borderTop: "1px solid rgba(255,255,255,0.07)",
+          }}>
+            <span style={{
+              display: "block",
+              fontSize: 10,
+              fontFamily: "'DM Mono', monospace",
+              color: "#63e88c",
+              textTransform: "uppercase",
+              letterSpacing: "0.15em",
+              marginBottom: 8,
+            }}>✦ Admin — Import Model</span>
+            <p style={{ fontSize: 11, color: "#8892aa", marginBottom: 10, lineHeight: 1.5 }}>
+              Import a <strong style={{color:"#c9d1e0"}}>GLB / GLTF</strong> file to replace the generated model. Auto-scales to fit.
+            </p>
+
+            {importStatus === "loaded" && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <span style={{ fontSize: 11, color: "#63e88c", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>✓ {importedFileName}</span>
+                <button
+                  onClick={clearCustomModel}
+                  title="Remove custom model"
+                  style={{
+                    padding: "3px 8px", fontSize: 11, border: "1px solid rgba(255,100,100,0.4)",
+                    borderRadius: 6, background: "rgba(255,100,100,0.1)", color: "#f76a6a",
+                    cursor: "pointer",
+                  }}
+                >✕ Clear</button>
+              </div>
+            )}
+            {importStatus === "error" && (
+              <p style={{ fontSize: 11, color: "#f76a6a", marginBottom: 8 }}>Failed to load. Make sure it&apos;s a valid GLB/GLTF file.</p>
+            )}
+
+            <label style={{
+              display: "block",
+              width: "100%",
+              padding: "9px",
+              fontSize: 12,
+              fontWeight: 600,
+              border: "1px dashed rgba(99,232,140,0.4)",
+              borderRadius: 8,
+              background: importStatus === "loading" ? "rgba(99,232,140,0.05)" : "transparent",
+              color: importStatus === "loading" ? "#8892aa" : "#63e88c",
+              cursor: "pointer",
+              textAlign: "center",
+              transition: "all 0.2s",
+              boxSizing: "border-box",
+            }}>
+              {importStatus === "loading" ? "Loading…" : "📂 Choose GLB / GLTF file"}
+              <input
+                type="file"
+                accept=".glb,.gltf"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) loadCustomModel(file);
+                  e.target.value = "";
+                }}
+              />
+            </label>
           </div>
         )}
       </aside>
