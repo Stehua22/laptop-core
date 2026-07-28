@@ -6,7 +6,7 @@ import { win11B64, macB64 } from "./images_b64";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { fetchLaptops, type Laptop } from "@/lib/supabase";
+import { fetchLaptops, fetchLaptopDesign, saveLaptopDesign, type Laptop } from "@/lib/supabase";
 import styles from "./Laptop3dviewer.module.css";
 
 // ---- Config ----
@@ -555,7 +555,7 @@ function buildLaptop(
   };
 }
 
-export default function Laptop3DViewer() {
+export default function Laptop3DViewer({ isAdmin = false }: { isAdmin?: boolean }) {
   const mountRef = useRef<HTMLDivElement>(null);
   const meshesRef = useRef<LaptopMeshRefs | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -581,6 +581,7 @@ export default function Laptop3DViewer() {
   const [brandName, setBrandName] = useState<string>("");
   const [modelName, setModelName] = useState<string>("");
   const [customDisplayUrl, setCustomDisplayUrl] = useState<string>("");
+  const [saveMsg, setSaveMsg] = useState<"" | "saving" | "saved" | "error">("" );
 
   const autoRotateRef = useRef(autoRotate);
   useEffect(() => {
@@ -625,6 +626,18 @@ export default function Laptop3DViewer() {
     }
 
     setCustomDisplayUrl(""); // Force default OS wallpaper instead of laptop's product image
+
+    // Load saved 3D design override if present
+    fetchLaptopDesign(typeof id === "number" ? id : Number(id)).then((design) => {
+      if (!design) return;
+      setBaseColor(design.color_hex);
+      const fi = FINISHES.findIndex((f) => f.name === design.finish);
+      if (fi >= 0) setFinishIndex(fi);
+      const bi = BACKLIGHTS.findIndex((b) => b.name === design.backlight);
+      if (bi >= 0) setBacklightIndex(bi);
+      setOpenAngle(design.open_angle);
+      setLogoGlow(design.logo_glow);
+    });
   };
 
   // ---- One-time scene setup ----
@@ -1020,6 +1033,63 @@ export default function Laptop3DViewer() {
         <button onClick={() => goToView("iso")} className={styles.resetBtn}>
           Reset view
         </button>
+
+        {isAdmin && selectedId !== "" && (
+          <div style={{
+            marginTop: 16,
+            paddingTop: 16,
+            borderTop: "1px solid rgba(255,255,255,0.07)",
+          }}>
+            <span style={{
+              display: "block",
+              fontSize: 10,
+              fontFamily: "'DM Mono', monospace",
+              color: "#63e88c",
+              textTransform: "uppercase",
+              letterSpacing: "0.15em",
+              marginBottom: 8,
+            }}>✦ Admin — Save Design</span>
+            <p style={{ fontSize: 11, color: "#8892aa", marginBottom: 10, lineHeight: 1.5 }}>
+              Saves current color, finish, backlight, angle &amp; glow for this laptop. All visitors will see this design.
+            </p>
+            <button
+              onClick={async () => {
+                if (selectedId === "") return;
+                setSaveMsg("saving");
+                try {
+                  await saveLaptopDesign({
+                    laptop_id: Number(selectedId),
+                    color_hex: baseColor,
+                    finish: FINISHES[finishIndex].name,
+                    backlight: BACKLIGHTS[backlightIndex].name,
+                    open_angle: openAngle,
+                    logo_glow: logoGlow,
+                  });
+                  setSaveMsg("saved");
+                  setTimeout(() => setSaveMsg(""), 3000);
+                } catch {
+                  setSaveMsg("error");
+                  setTimeout(() => setSaveMsg(""), 3000);
+                }
+              }}
+              style={{
+                width: "100%",
+                padding: "10px",
+                fontSize: 13,
+                fontWeight: 700,
+                border: "none",
+                borderRadius: 8,
+                background: saveMsg === "saved" ? "#1e6640" : saveMsg === "error" ? "#7a2222" : "#63e88c",
+                color: saveMsg === "saved" || saveMsg === "error" ? "#fff" : "#0d1f16",
+                cursor: "pointer",
+                transition: "background 0.3s",
+                fontFamily: "'Syne', sans-serif",
+              }}
+            >
+              {saveMsg === "saving" ? "Saving…" : saveMsg === "saved" ? "✓ Saved!" : saveMsg === "error" ? "✗ Error" : "Save Design"}
+            </button>
+          </div>
+        )}
       </aside>
     </div>
   );

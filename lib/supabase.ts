@@ -133,3 +133,31 @@ export async function deleteArticle(id: string) {
   const { error } = await supabase.from("articles").delete().eq("id", id);
   if (error) throw error;
 }
+
+// ---- Laptop 3D Design overrides ----
+
+export type LaptopDesign = {
+  laptop_id: number;
+  color_hex: string;
+  finish: string;       // 'Matte' | 'Aluminum' | 'Glossy'
+  backlight: string;    // 'Off' | 'White' | 'Blue' | 'Green' | 'Red'
+  open_angle: number;
+  logo_glow: boolean;
+};
+
+export async function fetchLaptopDesign(laptopId: number): Promise<LaptopDesign | null> {
+  const { data, error } = await supabase
+    .from("laptop_designs")
+    .select("*")
+    .eq("laptop_id", laptopId)
+    .single();
+  if (error) return null;
+  return data as LaptopDesign;
+}
+
+export async function saveLaptopDesign(design: LaptopDesign): Promise<void> {
+  const { error } = await supabase
+    .from("laptop_designs")
+    .upsert({ ...design, updated_at: new Date().toISOString() }, { onConflict: "laptop_id" });
+  if (error) throw error;
+}
