@@ -825,11 +825,11 @@ export default function Laptop3DViewer() {
       // ThinkPad logo on top-left (when looking from back open, y=depth is lip/top)
       refs.logo.position.set(width / 2 - 0.35, depth - 0.25, -lidThickness - 0.001);
       refs.logo.rotation.z = Math.PI / 8; // Slant the ThinkPad logo
-      refs.logo.scale.set(0.8, 0.8, 1);
+      refs.logo.scale.set(1.2, 1.2, 1); // Make text bigger for Thinkpads
       
       // Show Lenovo badge on bottom-right (when looking from back open, y=0 is hinge/bottom)
       refs.secondaryLogo.visible = true;
-      refs.secondaryLogo.position.set(-width / 2 + 0.25, 0.2, -lidThickness - 0.001);
+      refs.secondaryLogo.position.set(-width / 2 + 0.15, 0.25, -lidThickness - 0.001); // Move more to the side
       refs.secondaryLogo.rotation.z = Math.PI / 2; // Vertical badge
     } else {
       // All other laptops, including normal Lenovos, get the logo centered
