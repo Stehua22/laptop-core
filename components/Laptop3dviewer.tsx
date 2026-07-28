@@ -259,6 +259,7 @@ type LaptopMeshRefs = {
   logo: THREE.Mesh;
   secondaryLogo: THREE.Mesh;
   trackpoint: THREE.Mesh;
+  bottomDetails: THREE.Group;
   group: THREE.Group;
 };
 
@@ -434,6 +435,28 @@ function buildLaptop(
   screenPivot.position.set(0, baseThickness, -depth / 2);
   group.add(screenPivot);
 
+  // Bottom Details (Feet and Vents)
+  const bottomDetails = new THREE.Group();
+  bottomDetails.position.set(0, 0, 0);
+  
+  const footGeo = new RoundedBoxGeometry(0.12, 0.015, 0.04, 4, 0.005);
+  const footMat = new THREE.MeshStandardMaterial({ color: "#000000", roughness: 0.9 });
+  
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([signX, signZ]) => {
+    const foot = new THREE.Mesh(footGeo, footMat);
+    foot.position.set(signX * (width / 2 - 0.2), -0.005, signZ * (depth / 2 - 0.15));
+    bottomDetails.add(foot);
+  });
+
+  const ventGeo = new THREE.BoxGeometry(0.5, 0.005, 0.01);
+  for (let i = 0; i < 7; i++) {
+    const vent = new THREE.Mesh(ventGeo, darkMat);
+    vent.position.set(-width / 4, -0.002, -0.1 + i * 0.03);
+    bottomDetails.add(vent);
+  }
+  bottomDetails.visible = false;
+  group.add(bottomDetails);
+
   const hinge = new THREE.Mesh(
     new THREE.CylinderGeometry(0.028, 0.028, width - 0.3, 20),
     darkMat
@@ -517,7 +540,7 @@ function buildLaptop(
 
   return {
     group,
-    refs: { bodyMeshes, screenPivot, display, backlightPlane, logo, secondaryLogo, trackpoint, group },
+    refs: { bodyMeshes, screenPivot, display, backlightPlane, logo, secondaryLogo, trackpoint, bottomDetails, group },
   };
 }
 
@@ -765,11 +788,12 @@ export default function Laptop3DViewer() {
     logoMat.alphaMap = logoTex;
     logoMat.needsUpdate = true;
 
-    // Toggle trackpoint
+    // Toggle trackpoint and bottom details
     const b = (brandName || "").toLowerCase();
     const m = (modelName || "").toLowerCase();
     const isThinkpad = b.includes("thinkpad") || m.includes("thinkpad") || (b.includes("lenovo") && (m.includes("x1") || m.includes("t14") || m.includes("carbon") || m.includes("p1")));
     refs.trackpoint.visible = isThinkpad;
+    refs.bottomDetails.visible = isThinkpad;
     
     // Toggle logo glow (Apple glowing, gaming laptops glowing, others chrome)
     if (b.includes("apple") || b.includes("macbook") || m.includes("macbook") || b.includes("rog") || m.includes("rog") || b.includes("razer") || b.includes("msi")) {
@@ -787,13 +811,13 @@ export default function Laptop3DViewer() {
     const { width, depth, lidThickness } = DIMS;
     if (isThinkpad) {
       // ThinkPad logo on top-left (when looking from back open, y=depth is lip/top)
-      refs.logo.position.set(-width / 2 + 0.35, depth - 0.25, -lidThickness - 0.001);
+      refs.logo.position.set(width / 2 - 0.35, depth - 0.25, -lidThickness - 0.001);
       refs.logo.rotation.z = Math.PI / 8; // Slant the ThinkPad logo
       refs.logo.scale.set(0.8, 0.8, 1);
       
       // Show Lenovo badge on bottom-right (when looking from back open, y=0 is hinge/bottom)
       refs.secondaryLogo.visible = true;
-      refs.secondaryLogo.position.set(width / 2 - 0.25, 0.2, -lidThickness - 0.001);
+      refs.secondaryLogo.position.set(-width / 2 + 0.25, 0.2, -lidThickness - 0.001);
       refs.secondaryLogo.rotation.z = Math.PI / 2; // Vertical badge
     } else {
       // All other laptops, including normal Lenovos, get the logo centered
