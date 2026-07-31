@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import styles from "./Laptop3DViewer.module.css";
+import styles from "./Laptop3dviewer.module.css";
 
 // ---- Config ----
 const BASE_COLORS = [
