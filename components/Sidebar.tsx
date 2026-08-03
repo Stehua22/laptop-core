@@ -8,6 +8,11 @@ type NavItem = {
   icon: ReactNode;
 };
 
+const BRAND_ICONS: Record<string, string> = {
+  Apple: "🍎", Lenovo: "💻", Dell: "🖥️", HP: "🖨️",
+  ASUS: "⚡", Acer: "🎯", Microsoft: "🪟", Samsung: "📱",
+};
+
 const NAV_ITEMS: NavItem[] = [
   {
     key: "home",
@@ -39,11 +44,53 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
+  {
+    key: "refurbished",
+    label: "Refurbished Market",
+    href: "/refurbished",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.65 6.35A7.95 7.95 0 0012 4a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L13 11h7V4l-2.35 2.35z" />
+      </svg>
+    ),
+  },
+  {
+    key: "articles",
+    label: "Articles",
+    href: "/articles",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M4 4h16a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1zm1 2v12h14V6H5zm2 2h10v2H7V8zm0 4h6v2H7v-2z" />
+      </svg>
+    ),
+  },
+  {
+    key: "view3d",
+    label: "3D View",
+    href: "/view3d",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2l8 4.5v9L12 20l-8-4.5v-9L12 2zm0 2.3L6 7.6v8l6 3.3 6-3.3v-8l-6-3.3zM12 9l4-2.2v4.4L12 13.4l-4-2.2V6.8L12 9z" />
+      </svg>
+    ),
+  },
+  {
+    key: "design",
+    label: "Design Studio",
+    href: "/design",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 3C7 3 3 7 3 12s4 9 9 9 9-4 9-9-4-9-9-9zm-1 14H9V7h2v10zm4-4h-2V7h2v6z"/>
+      </svg>
+    ),
+  },
 ];
 
 type SidebarProps = {
   activeKey?: string;
   onSettingsClick?: () => void;
+  onResetSettings?: () => void;
+  brands?: string[];
 };
 
 /**
@@ -61,11 +108,12 @@ type SidebarProps = {
  *
  * Collapsed state persists across page loads via localStorage.
  */
-export default function Sidebar({ activeKey = "home", onSettingsClick }: SidebarProps) {
+export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSettings, brands = [] }: SidebarProps) {
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("lc-sidebar-collapsed") === "true";
   });
+  const [brandsOpen, setBrandsOpen] = useState(false);
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -112,6 +160,44 @@ export default function Sidebar({ activeKey = "home", onSettingsClick }: Sidebar
             <span className={styles.label}>{item.label}</span>
           </a>
         ))}
+
+        {/* Brands section */}
+        {brands.length > 0 && (
+          <div className={styles.brandsSection}>
+            <button
+              className={styles.brandsSectionToggle}
+              onClick={() => setBrandsOpen((p) => !p)}
+              type="button"
+              title={collapsed ? "Brands" : undefined}
+            >
+              <span className={styles.icon}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16z" />
+                </svg>
+              </span>
+              <span className={styles.label}>Brands</span>
+              <span className={`${styles.brandChev} ${brandsOpen ? styles.brandChevOpen : ""}`}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M9 6l6 6-6 6" />
+                </svg>
+              </span>
+            </button>
+            {brandsOpen && !collapsed && (
+              <div className={styles.brandsList}>
+                {brands.map((b) => (
+                  <a
+                    key={b}
+                    href={`/brand/${encodeURIComponent(b.toLowerCase())}`}
+                    className={styles.brandLink}
+                  >
+                    <span style={{ fontSize: 14 }}>{BRAND_ICONS[b] ?? "💻"}</span>
+                    <span>{b}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </nav>
 
       <button className={styles.collapseRow} onClick={toggleCollapsed} type="button">
@@ -121,6 +207,16 @@ export default function Sidebar({ activeKey = "home", onSettingsClick }: Sidebar
           </svg>
         </span>
         <span className={styles.label}>Collapse</span>
+      </button>
+
+      <button className={styles.resetRow} onClick={onResetSettings} type="button" title="Reset settings to defaults">
+        <span className={styles.resetIcon}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12a9 9 0 1 1 3.2-6.8" />
+            <polyline points="3 2 3 7 8 7" />
+          </svg>
+        </span>
+        <span className={styles.label}>Reset</span>
       </button>
 
       <div className={styles.bottom}>
