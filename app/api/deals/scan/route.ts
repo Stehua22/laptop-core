@@ -19,9 +19,10 @@ async function getMarketPrices(supabase: ReturnType<typeof createClient>): Promi
   // column/table names to match your real schema.
   const { data, error } = await supabase.from("laptops").select("model, price");
   if (error || !data) return {};
+  const rows = data as any[];
 
   const grouped: Record<string, number[]> = {};
-  for (const row of data) {
+  for (const row of rows) {
     const key = extractModelKey(row.model ?? "");
     if (!grouped[key]) grouped[key] = [];
     if (row.price) grouped[key].push(row.price);
