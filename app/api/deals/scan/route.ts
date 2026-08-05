@@ -9,7 +9,9 @@ import { fetchBestBuyDeals } from "@/lib/dealScanner/bestbuy";
 import { fetchFacebookDeals } from "@/lib/dealScanner/facebook";
 import { scoreListing, isLikelyRefurbished, extractModelKey } from "@/lib/dealScanner/scoring";
 
+export const dynamic = "force-dynamic";
 export const maxDuration = 60; // seconds — Facebook scraping is slow; bump on Vercel Pro if needed
+
 
 async function getMarketPrices(supabase: ReturnType<typeof createClient>): Promise<Record<string, number>> {
   // Pull rough "typical price" per model from your existing laptops table so
