@@ -1,12 +1,15 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+let _supabase: SupabaseClient | null = null;
+function getSupabase() {
+  if (!_supabase && process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    _supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  }
+  return _supabase;
+}
 
 type Deal = {
   id: string;
@@ -40,7 +43,9 @@ export default function ScannerClient() {
   const [sourceFilter, setSourceFilter] = useState<string>("all");
 
   const loadDeals = useCallback(async () => {
-    const { data } = await supabase
+    const sb = getSupabase();
+    if (!sb) { setLoading(false); return; }
+    const { data } = await sb
       .from("deals")
       .select("*")
       .eq("is_active", true)
