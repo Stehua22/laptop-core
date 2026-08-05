@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60; // seconds — Facebook scraping is slow; bump on Vercel Pro if needed
 
 
-async function getMarketPrices(supabase: ReturnType<typeof createClient>): Promise<Record<string, number>> {
+async function getMarketPrices(supabase: any): Promise<Record<string, number>> {
   // Pull rough "typical price" per model from your existing laptops table so
   // deal scoring lines up with what LaptopCore already tracks. Adjust the
   // column/table names to match your real schema.
