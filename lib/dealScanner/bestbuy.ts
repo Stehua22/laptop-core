@@ -1,4 +1,4 @@
-﻿// lib/dealScanner/bestbuy.ts
+// lib/dealScanner/bestbuy.ts
 // Best Buy Canada does NOT have an official public product API (the old
 // bestbuyapis.com developer program was shut down). Best Buy US still has
 // one, but it won't have CAD pricing / Canadian stock.
@@ -18,10 +18,38 @@
 import type { RawListing } from "./scoring";
 
 const SEARCH_TERMS = [
+  // Business lines (refurbished)
   "lenovo thinkpad refurbished",
   "dell latitude refurbished",
   "hp elitebook refurbished",
+  "hp probook refurbished",
+  "lenovo legion refurbished",
+  // Consumer lines (refurbished)
+  "lenovo ideapad refurbished",
+  "dell inspiron refurbished",
+  "hp pavilion refurbished",
+  "asus vivobook refurbished",
+  "asus zenbook refurbished",
+  "acer aspire refurbished",
+  "acer swift refurbished",
+  // Gaming
+  "asus rog refurbished",
+  "acer predator refurbished",
+  "acer nitro refurbished",
+  "msi gaming laptop refurbished",
+  "dell g15 refurbished",
+  // Apple / premium
   "macbook refurbished",
+  "macbook air refurbished",
+  "macbook pro refurbished",
+  // 2-in-1s / Surface / other brands
+  "microsoft surface laptop refurbished",
+  "samsung galaxy book refurbished",
+  "lg gram refurbished",
+  "lenovo yoga refurbished",
+  "dell xps refurbished",
+  // Open-box (not refurbished, but still a deal signal)
+  "laptop open box",
 ];
 
 export async function fetchBestBuyDeals(): Promise<RawListing[]> {
@@ -64,5 +92,11 @@ export async function fetchBestBuyDeals(): Promise<RawListing[]> {
     }
   }
 
-  return results;
+  // De-dupe by SKU — multiple search terms can return the same product.
+  const seen = new Set<string>();
+  return results.filter((r) => {
+    if (seen.has(r.externalId)) return false;
+    seen.add(r.externalId);
+    return true;
+  });
 }
