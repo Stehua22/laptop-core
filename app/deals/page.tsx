@@ -1,8 +1,29 @@
 "use client";
+import "./deals.css";
 import { useState, useEffect } from "react";
 import type { Laptop } from "@/lib/supabase";
-import { fetchLaptops, addLaptop, deleteLaptop } from "@/lib/supabase";
+import { fetchLaptops, addLaptop, deleteLaptop, supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+
+type ScannedDeal = {
+  id: string;
+  source: string;
+  title: string;
+  brand: string | null;
+  price: number;
+  currency: string;
+  condition: string | null;
+  url: string;
+  image_url: string | null;
+  deal_score: number | null;
+  market_price: number | null;
+};
+
+const SOURCE_LABEL: Record<string, string> = {
+  ebay: "eBay",
+  bestbuy: "Best Buy",
+  facebook: "Facebook Marketplace",
+};
 
 const ADMIN_PASSWORD = "admin2026.123";
 const fmt = (n: number) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -19,9 +40,39 @@ export default function DealsPage() {
   const [addLoading, setAddLoading] = useState(false);
   const [form, setForm] = useState({ brand: "", model: "", specs: "", store: "", url: "", retail_price: "", current_price: "" });
   const [sortBy, setSortBy] = useState("discount");
+  const [bbDeals, setBbDeals] = useState<any[]>([]);
+  const [bbLoading, setBbLoading] = useState(false);
+  const [bbScannedAt, setBbScannedAt] = useState<string | null>(null);
+  const [scannedDeals, setScannedDeals] = useState<ScannedDeal[]>([]);
+  const [scannedLoading, setScannedLoading] = useState(true);
+
+  const scanBestBuy = async () => {
+    setBbLoading(true);
+    try {
+      const res = await fetch("/api/bestbuy-deals");
+      const data = await res.json();
+      setBbDeals(data.deals ?? []);
+      setBbScannedAt(data.scannedAt ?? null);
+    } catch { /* ignore */ } finally {
+      setBbLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchLaptops().then((data) => { setLaptops(data); setLoading(false); });
+  }, []);
+
+  useEffect(() => {
+    supabase
+      .from("deals")
+      .select("*")
+      .eq("is_active", true)
+      .order("deal_score", { ascending: false, nullsFirst: false })
+      .limit(30)
+      .then(({ data }) => {
+        if (data) setScannedDeals(data as ScannedDeal[]);
+        setScannedLoading(false);
+      });
   }, []);
 
   const deals = laptops
@@ -66,97 +117,6 @@ export default function DealsPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#080c14", color: "#e8edf8", fontFamily: "'Inter', sans-serif", overflowX: "hidden" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
-        * { box-sizing: border-box; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        .deal-row {
-          background: rgba(255,255,255,0.02);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 14px;
-          padding: 20px 24px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-          flex-wrap: wrap;
-          transition: all 0.2s;
-        }
-        .deal-row:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); transform: translateX(4px); }
-        .visit-btn {
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
-          color: #fff;
-          border: none;
-          border-radius: 8px;
-          padding: 9px 18px;
-          font-size: 13px;
-          font-weight: 700;
-          cursor: pointer;
-          font-family: 'Inter', sans-serif;
-          text-decoration: none;
-          white-space: nowrap;
-          box-shadow: 0 4px 14px rgba(59,130,246,0.3);
-          transition: all 0.2s;
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-        }
-        .visit-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,130,246,0.45); }
-        .back-btn {
-          background: transparent;
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 8px;
-          padding: 7px 14px;
-          cursor: pointer;
-          color: #4a5568;
-          font-size: 13px;
-          font-family: 'Inter', sans-serif;
-          transition: all 0.15s;
-          margin-bottom: 20px;
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .back-btn:hover { color: #e8edf8; border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); }
-        .sort-select {
-          font-size: 13px;
-          padding: 8px 14px;
-          border-radius: 8px;
-          border: 1px solid rgba(255,255,255,0.08);
-          background: rgba(255,255,255,0.04);
-          color: #7a85a0;
-          cursor: pointer;
-          font-family: 'JetBrains Mono', monospace;
-          outline: none;
-          transition: all 0.15s;
-        }
-        .sort-select:hover { border-color: rgba(255,255,255,0.15); }
-        .add-btn {
-          background: rgba(251,146,60,0.1);
-          color: #fb923c;
-          border: 1px solid rgba(251,146,60,0.2);
-          border-radius: 8px;
-          padding: 8px 18px;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 13px;
-          font-family: 'Inter', sans-serif;
-          transition: all 0.15s;
-        }
-        .add-btn:hover { background: rgba(251,146,60,0.18); border-color: rgba(251,146,60,0.35); }
-        .rank-num {
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 11px;
-          color: #2a3248;
-          width: 28px;
-          text-align: center;
-          flex-shrink: 0;
-        }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-        .fade-up { animation: fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards; opacity: 0; }
-        .glow-orb { position: fixed; border-radius: 50%; pointer-events: none; filter: blur(80px); z-index: 0; }
-      `}</style>
-
       <div className="glow-orb" style={{ width: 500, height: 500, background: "rgba(251,146,60,0.04)", top: -100, right: "10%" }} />
       <div className="glow-orb" style={{ width: 400, height: 400, background: "rgba(59,130,246,0.04)", bottom: "20%", left: "5%" }} />
 
@@ -305,6 +265,116 @@ export default function DealsPage() {
             })}
           </div>
         )}
+        {/* ── Best Buy Live Deals ── */}
+        <div style={{ marginTop: 48 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 20 }}>🛒</span>
+              <span style={{ fontWeight: 800, fontSize: 20, letterSpacing: "-0.02em", color: "#e8edf8" }}>Best Buy Live Deals</span>
+            </div>
+            <button
+              onClick={scanBestBuy}
+              disabled={bbLoading}
+              style={{ marginLeft: "auto", padding: "8px 20px", borderRadius: 9, border: "none", background: bbLoading ? "#1a2035" : "#2563eb", color: bbLoading ? "#3a4258" : "#fff", fontWeight: 700, fontSize: 13, cursor: bbLoading ? "not-allowed" : "pointer", transition: "all 0.2s", fontFamily: "inherit" }}
+            >
+              {bbLoading ? "Scanning…" : "Scan Best Buy"}
+            </button>
+          </div>
+          {bbScannedAt && (
+            <p className="mono" style={{ fontSize: 11, color: "#2a3248", marginBottom: 16 }}>
+              Last scan: {new Date(bbScannedAt).toLocaleTimeString()} · {bbDeals.length} results
+            </p>
+          )}
+          {bbDeals.length === 0 && !bbLoading && (
+            <div className="mono" style={{ color: "#2a3248", fontSize: 13, padding: "2rem 0" }}>
+              Hit &quot;Scan Best Buy&quot; to fetch live refurbished &amp; open-box laptop deals from bestbuy.ca.
+            </div>
+          )}
+          {bbDeals.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {bbDeals.map((d) => (
+                <div key={d.sku} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 12, flexWrap: "wrap" }}>
+                  {d.image && (
+                    <img src={d.image} alt={d.title} style={{ width: 56, height: 56, objectFit: "contain", borderRadius: 8, background: "rgba(255,255,255,0.04)", flexShrink: 0 }} />
+                  )}
+                  <div style={{ flex: 1, minWidth: 160 }}>
+                    <div className="mono" style={{ fontSize: 10, color: "#3b82f6", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>{d.condition}</div>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: "#e8edf8", lineHeight: 1.3 }}>{d.title}</div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 6, justifyContent: "flex-end", marginBottom: 4 }}>
+                      {d.salePrice && <span style={{ fontWeight: 800, fontSize: 18, color: "#10b981", fontFamily: "'JetBrains Mono', monospace" }}>${d.salePrice}</span>}
+                      {d.regularPrice && d.regularPrice !== d.salePrice && <span className="mono" style={{ fontSize: 12, color: "#2a3248", textDecoration: "line-through" }}>${d.regularPrice}</span>}
+                    </div>
+                    {d.savingsPct > 0 && (
+                      <div style={{ background: "rgba(251,146,60,0.1)", color: "#fb923c", borderRadius: 5, padding: "2px 8px", fontSize: 11, fontFamily: "'JetBrains Mono', monospace", display: "inline-block", marginBottom: 6 }}>-{d.savingsPct}% off</div>
+                    )}
+                    <br />
+                    <a href={d.url} target="_blank" rel="noopener noreferrer" className="visit-btn" style={{ fontSize: 12 }}>View on Best Buy →</a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Live Scanned Deals (from Deal Scanner) */}
+        <div style={{ marginTop: 48 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+            <span style={{ fontSize: 20 }}>🎯</span>
+            <span style={{ fontWeight: 800, fontSize: 20, letterSpacing: "-0.02em", color: "#e8edf8" }}>Live Scanned Deals</span>
+          </div>
+          {scannedLoading ? (
+            <div className="mono" style={{ color: "#2a3248", fontSize: 13, padding: "1rem 0" }}>Loading scanned deals...</div>
+          ) : scannedDeals.length === 0 ? (
+            <div className="mono" style={{ color: "#2a3248", fontSize: 13, padding: "1rem 0" }}>
+              No scanned deals yet. Run a scan from the Deal Scanner page.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
+              {scannedDeals.map((d) => (
+                <a
+                  key={d.id}
+                  href={d.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    borderRadius: 12,
+                    padding: 14,
+                    textDecoration: "none",
+                    color: "inherit",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                    background: "rgba(255,255,255,0.02)",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#4a5568" }} className="mono">
+                    <span>{SOURCE_LABEL[d.source] ?? d.source}</span>
+                    {d.deal_score !== null && (
+                      <span style={{ fontWeight: 700, color: d.deal_score >= 70 ? "#10b981" : d.deal_score >= 40 ? "#fb923c" : "#7a85a0" }}>
+                        {d.deal_score}/100
+                      </span>
+                    )}
+                  </div>
+                  {d.image_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={d.image_url} alt={d.title} style={{ width: "100%", height: 120, objectFit: "contain", background: "rgba(255,255,255,0.03)", borderRadius: 8 }} />
+                  )}
+                  <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3, color: "#e8edf8" }}>{d.title}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span style={{ fontSize: 17, fontWeight: 800, color: "#10b981", fontFamily: "'JetBrains Mono', monospace" }}>${d.price.toFixed(0)} {d.currency}</span>
+                    {d.market_price && (
+                      <span className="mono" style={{ fontSize: 11, color: "#2a3248", textDecoration: "line-through" }}>${d.market_price.toFixed(0)}</span>
+                    )}
+                  </div>
+                  {d.condition && <span className="mono" style={{ fontSize: 11, color: "#4a5568" }}>{d.condition}</span>}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
