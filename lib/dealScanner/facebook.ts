@@ -1,4 +1,4 @@
-﻿// lib/dealScanner/facebook.ts
+// lib/dealScanner/facebook.ts
 //
 // WARNING: READ THIS BEFORE ENABLING
 // Facebook Marketplace has no public API. This scrapes the public search
@@ -39,8 +39,8 @@ export async function fetchFacebookDeals(): Promise<RawListing[]> {
   let chromium: any;
   let puppeteer: any;
   try {
-    chromium = (await import("@sparticuz/chromium")).default;
-    puppeteer = await import("puppeteer-core");
+    chromium = (await import(/* webpackIgnore: true */ "@sparticuz/chromium")).default;
+    puppeteer = await import(/* webpackIgnore: true */ "puppeteer-core");
   } catch (err) {
     console.error("Facebook scraper dependencies not installed, skipping:", err);
     return [];
