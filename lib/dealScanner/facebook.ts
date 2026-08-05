@@ -39,8 +39,10 @@ export async function fetchFacebookDeals(): Promise<RawListing[]> {
   let chromium: any;
   let puppeteer: any;
   try {
-    chromium = (await import(/* webpackIgnore: true */ "@sparticuz/chromium")).default;
-    puppeteer = await import(/* webpackIgnore: true */ "puppeteer-core");
+    const chromiumPkg = "@sparticuz/chromium";
+    const puppeteerPkg = "puppeteer-core";
+    chromium = (await import(chromiumPkg)).default;
+    puppeteer = await import(puppeteerPkg);
   } catch (err) {
     console.error("Facebook scraper dependencies not installed, skipping:", err);
     return [];
