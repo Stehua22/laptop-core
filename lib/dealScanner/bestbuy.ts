@@ -18,38 +18,40 @@
 import type { RawListing } from "./scoring";
 
 const SEARCH_TERMS = [
-  // Business lines (refurbished)
-  "lenovo thinkpad refurbished",
-  "dell latitude refurbished",
-  "hp elitebook refurbished",
-  "hp probook refurbished",
-  "lenovo legion refurbished",
-  // Consumer lines (refurbished)
-  "lenovo ideapad refurbished",
-  "dell inspiron refurbished",
-  "hp pavilion refurbished",
-  "asus vivobook refurbished",
-  "asus zenbook refurbished",
-  "acer aspire refurbished",
-  "acer swift refurbished",
+  // Business lines — all conditions
+  "lenovo thinkpad",
+  "dell latitude",
+  "hp elitebook",
+  "hp probook",
+  "lenovo legion",
+  // Consumer lines — all conditions
+  "lenovo ideapad",
+  "dell inspiron",
+  "hp pavilion",
+  "asus vivobook",
+  "asus zenbook",
+  "acer aspire",
+  "acer swift",
   // Gaming
-  "asus rog refurbished",
-  "acer predator refurbished",
-  "acer nitro refurbished",
-  "msi gaming laptop refurbished",
-  "dell g15 refurbished",
+  "asus rog laptop",
+  "acer predator laptop",
+  "acer nitro laptop",
+  "msi gaming laptop",
+  "dell g15 laptop",
   // Apple / premium
-  "macbook refurbished",
-  "macbook air refurbished",
-  "macbook pro refurbished",
+  "macbook air",
+  "macbook pro",
   // 2-in-1s / Surface / other brands
-  "microsoft surface laptop refurbished",
-  "samsung galaxy book refurbished",
-  "lg gram refurbished",
-  "lenovo yoga refurbished",
-  "dell xps refurbished",
-  // Open-box (not refurbished, but still a deal signal)
+  "microsoft surface laptop",
+  "samsung galaxy book",
+  "lg gram laptop",
+  "lenovo yoga laptop",
+  "dell xps laptop",
+  // Explicit deal signals across any brand/condition
+  "laptop clearance",
   "laptop open box",
+  "laptop on sale",
+  "refurbished laptop",
 ];
 
 export async function fetchBestBuyDeals(): Promise<RawListing[]> {
