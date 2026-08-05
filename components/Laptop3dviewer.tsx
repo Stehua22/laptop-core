@@ -12,11 +12,20 @@ import styles from "./Laptop3dviewer.module.css";
 
 // ---- Config ----
 const BASE_COLORS = [
-  { name: "Space Grey", hex: "#4b4f56" },
-  { name: "Silver", hex: "#d6d9dd" },
-  { name: "Midnight", hex: "#1c1e22" },
-  { name: "Rose Gold", hex: "#d9b8ac" },
-  { name: "Sky Blue", hex: "#8bb4d6" },
+  { name: "Space Grey",      hex: "#4b4f56" },
+  { name: "Silver",          hex: "#d6d9dd" },
+  { name: "Midnight Black",  hex: "#1c1e22" },
+  { name: "Rose Gold",       hex: "#d9b8ac" },
+  { name: "Sky Blue",        hex: "#8bb4d6" },
+  { name: "Starlight",       hex: "#e8e4dc" },
+  { name: "Glacier White",   hex: "#f0f2f5" },
+  { name: "Cobalt Blue",     hex: "#1f4e8c" },
+  { name: "Forest Green",    hex: "#2d5a3d" },
+  { name: "Volcanic Red",    hex: "#7a1a1a" },
+  { name: "Arctic Purple",   hex: "#5b3f7a" },
+  { name: "Champagne Gold",  hex: "#c9a86c" },
+  { name: "Graphite",        hex: "#36383d" },
+  { name: "Copper",          hex: "#8b5c3e" },
 ];
 
 // Best-guess color per brand, since the laptops table has no color column
@@ -60,22 +69,30 @@ function scaleForScreenSize(screenSize?: number | null): number {
 }
 
 const FINISHES = [
-  { name: "Matte", roughness: 0.5, clearcoat: 0.25, sheen: 0.15 },
-  { name: "Aluminum", roughness: 0.28, clearcoat: 0.5, sheen: 0.05 },
-  { name: "Glossy", roughness: 0.06, clearcoat: 0.9, sheen: 0 },
+  { name: "Matte",     roughness: 0.55, clearcoat: 0.2,  sheen: 0.2,  metalness: 0.65, sheenTint: "#ffffff" },
+  { name: "Aluminum", roughness: 0.22, clearcoat: 0.55, sheen: 0.08, metalness: 0.82, sheenTint: "#ffffff" },
+  { name: "Glossy",   roughness: 0.04, clearcoat: 1.0,  sheen: 0,    metalness: 0.7,  sheenTint: "#ffffff" },
+  { name: "Titanium", roughness: 0.32, clearcoat: 0.3,  sheen: 0.35, metalness: 0.9,  sheenTint: "#c8c0b0" },
+  { name: "Carbon",   roughness: 0.42, clearcoat: 0.65, sheen: 0.05, metalness: 0.4,  sheenTint: "#111111" },
 ];
 
 const BACKLIGHTS = [
-  { name: "Off", color: null },
-  { name: "White", color: "#eef3ff" },
-  { name: "Blue", color: "#4d9dff" },
-  { name: "Green", color: "#5df29a" },
-  { name: "Red", color: "#ff4d4d" },
+  { name: "Off",       color: null },
+  { name: "White",     color: "#eef3ff" },
+  { name: "Blue",      color: "#4d9dff" },
+  { name: "Green",     color: "#5df29a" },
+  { name: "Red",       color: "#ff4d4d" },
+  { name: "Purple",    color: "#b04dff" },
+  { name: "Amber",     color: "#ffb84d" },
+  { name: "Cyan",      color: "#4dffe0" },
+  { name: "Rainbow",   color: "__rainbow__" },
 ];
 
 const BACKGROUNDS = [
-  { name: "Studio", color: "#f4f5f7", ground: "#e9eaed" },
-  { name: "Dark", color: "#1b1c1f", ground: "#2a2b2f" },
+  { name: "Studio",   color: "#f4f5f7", ground: "#e9eaed" },
+  { name: "Dark",     color: "#1b1c1f", ground: "#2a2b2f" },
+  { name: "Slate",    color: "#1a2033", ground: "#222840" },
+  { name: "Warm",     color: "#1f1a14", ground: "#2c2418" },
 ];
 
 const VIEWS: Record<string, { pos: [number, number, number]; target: [number, number, number] }> = {
@@ -813,10 +830,13 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.minDistance = 2.0;
-    controls.maxDistance = 7;
+    controls.dampingFactor = 0.055;          // smoother, more weighty feel
+    controls.minDistance = 1.8;
+    controls.maxDistance = 7.5;
     controls.maxPolarAngle = Math.PI * 0.49;
+    controls.zoomSpeed = 0.7;                // gentler scroll zoom
+    controls.rotateSpeed = 0.65;             // slightly slower drag rotation
+    controls.panSpeed = 0.8;
     controls.target.set(...VIEWS.iso.target);
     controlsRef.current = controls;
 
@@ -876,15 +896,15 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     const bodyMat = new THREE.MeshPhysicalMaterial({
       color: baseColor,
       roughness: finish.roughness,
-      metalness: 0.75,
+      metalness: finish.metalness ?? 0.78,
       clearcoat: finish.clearcoat,
-      clearcoatRoughness: 0.15,
+      clearcoatRoughness: 0.12,
       sheen: finish.sheen,
-      sheenColor: new THREE.Color("#ffffff"),
+      sheenColor: new THREE.Color(finish.sheenTint ?? "#ffffff"),
       normalMap,
-      normalScale: new THREE.Vector2(0.12, 0.12),
+      normalScale: new THREE.Vector2(0.14, 0.14),
       roughnessMap,
-      envMapIntensity: 1.15,
+      envMapIntensity: 1.3,
     });
 
     const initialDisplayTexture = getDisplayTexture(osTheme, customDisplayUrl);
@@ -893,14 +913,100 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     scene.add(laptop);
     meshesRef.current = refs;
 
+    // ---- Spring-physics state ----
+    // Auto-rotate uses spring damping so it eases in/out smoothly.
+    // Hover tilt adds a parallax lean that springs back to rest.
+    let rotVelocity = 0.004;         // current angular velocity (rad/frame)
+    const rotTarget  = 0.0032;       // desired auto-rotate speed
+    const rotDamping = 0.96;         // velocity bleed per frame (< 1 = friction)
+    const rotSpring  = 0.015;        // spring towards target speed
+
+    let hoverTiltX   = 0;            // current tilt around X (up/down)
+    let hoverTiltY   = 0;            // current tilt around Y (side)
+    let hoverTiltTargetX = 0;
+    let hoverTiltTargetY = 0;
+    const tiltSpring  = 0.07;        // how fast tilt springs to mouse pos
+    const tiltDamping = 0.82;        // tilt velocity damping
+    let tiltVelX = 0, tiltVelY = 0;
+    const MAX_TILT   = 0.14;         // max tilt radians (~8°)
+
+    let floatT = 0;                  // time accumulator for idle float
+    const FLOAT_SPEED  = 0.5;        // oscillation frequency
+    const FLOAT_AMP    = 0.018;      // float amplitude (scene units)
+
+    // Rainbow backlight time
+    let rainbowT = 0;
+
+    // Pointer tracking for hover tilt
+    const onPointerMove = (e: MouseEvent) => {
+      const rect = mount.getBoundingClientRect();
+      const nx = ((e.clientX - rect.left) / rect.width  - 0.5) * 2;  // -1 to 1
+      const ny = ((e.clientY - rect.top)  / rect.height - 0.5) * 2;
+      hoverTiltTargetY =  nx * MAX_TILT;
+      hoverTiltTargetX = -ny * MAX_TILT * 0.5;
+    };
+    const onPointerLeave = () => {
+      hoverTiltTargetX = 0;
+      hoverTiltTargetY = 0;
+    };
+    mount.addEventListener("pointermove", onPointerMove);
+    mount.addEventListener("pointerleave", onPointerLeave);
+
     let frameId: number;
-    const animate = () => {
+    let lastTime = performance.now();
+    const animate = (now: number) => {
       frameId = requestAnimationFrame(animate);
-      if (autoRotateRef.current) laptop.rotation.y += 0.004;
+      const dt = Math.min((now - lastTime) / 16.67, 3); // normalise to 60 fps units
+      lastTime = now;
+
+      // -- Auto-rotate with spring inertia --
+      if (autoRotateRef.current) {
+        // spring velocity toward target speed
+        rotVelocity += (rotTarget - rotVelocity) * rotSpring * dt;
+        laptop.rotation.y += rotVelocity * dt;
+      } else {
+        // friction bleed-out when auto-rotate is off
+        rotVelocity *= Math.pow(rotDamping, dt);
+        if (Math.abs(rotVelocity) > 0.00005) laptop.rotation.y += rotVelocity * dt;
+      }
+
+      // -- Idle float (gentle up-and-down bob) --
+      floatT += FLOAT_SPEED * 0.016 * dt;
+      laptop.position.y = Math.sin(floatT) * FLOAT_AMP;
+
+      // -- Hover tilt (spring to mouse position) --
+      if (!autoRotateRef.current) {
+        // Only apply tilt when user is controlling
+        tiltVelX += (hoverTiltTargetX - hoverTiltX) * tiltSpring * dt;
+        tiltVelY += (hoverTiltTargetY - hoverTiltY) * tiltSpring * dt;
+        tiltVelX *= Math.pow(tiltDamping, dt);
+        tiltVelY *= Math.pow(tiltDamping, dt);
+        hoverTiltX += tiltVelX * dt;
+        hoverTiltY += tiltVelY * dt;
+        laptop.rotation.x = hoverTiltX;
+      } else {
+        // Ease tilt back to zero while auto-rotating
+        hoverTiltX *= Math.pow(0.92, dt);
+        laptop.rotation.x = hoverTiltX;
+      }
+
+      // -- Rainbow backlight --
+      const blMat = meshesRef.current?.backlightPlane.material as THREE.MeshStandardMaterial | undefined;
+      if (blMat && blMat.emissiveIntensity > 0) {
+        // Check if rainbow mode (detect via emissive cycling)
+        if ((blMat as any).__rainbow) {
+          rainbowT += 0.012 * dt;
+          const r = Math.sin(rainbowT) * 0.5 + 0.5;
+          const g = Math.sin(rainbowT + 2.094) * 0.5 + 0.5;
+          const b2 = Math.sin(rainbowT + 4.189) * 0.5 + 0.5;
+          blMat.emissive.setRGB(r, g, b2);
+        }
+      }
+
       controls.update();
       renderer.render(scene, camera);
     };
-    animate();
+    animate(performance.now());
 
     const handleResize = () => {
       if (!mount) return;
@@ -915,9 +1021,11 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     return () => {
       cancelAnimationFrame(frameId);
       window.removeEventListener("resize", handleResize);
+      mount.removeEventListener("pointermove", onPointerMove);
+      mount.removeEventListener("pointerleave", onPointerLeave);
       controls.dispose();
       renderer.dispose();
-      mount.removeChild(renderer.domElement);
+      if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -946,16 +1054,22 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     if (refs) {
       refs.bodyMeshes.forEach((m) => {
         const mat = m.material as THREE.MeshPhysicalMaterial;
-        mat.roughness = finish.roughness;
-        mat.clearcoat = finish.clearcoat;
-        mat.sheen = finish.sheen;
+        mat.roughness   = finish.roughness;
+        mat.metalness   = finish.metalness ?? 0.78;
+        mat.clearcoat   = finish.clearcoat;
+        mat.sheen       = finish.sheen;
+        mat.sheenColor  = new THREE.Color(finish.sheenTint ?? "#ffffff");
+        mat.needsUpdate = true;
       });
     }
     if (customModelRef.current) {
       customModelRef.current.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           const m = child.material as THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
-          if (m && m.roughness !== undefined) m.roughness = finish.roughness;
+          if (m && m.roughness !== undefined) {
+            m.roughness = finish.roughness;
+            m.metalness = finish.metalness ?? 0.78;
+          }
         }
       });
     }
@@ -1033,10 +1147,16 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     if (!refs) return;
     const mat = refs.backlightPlane.material as THREE.MeshStandardMaterial;
     const bl = BACKLIGHTS[backlightIndex];
-    if (bl.color) {
+    if (bl.color === "__rainbow__") {
+      mat.emissive.set("#ff4444");
+      mat.emissiveIntensity = 1.1;
+      (mat as any).__rainbow = true;
+    } else if (bl.color) {
+      (mat as any).__rainbow = false;
       mat.emissive.set(bl.color);
-      mat.emissiveIntensity = 0.9;
+      mat.emissiveIntensity = 1.0;
     } else {
+      (mat as any).__rainbow = false;
       mat.emissiveIntensity = 0;
     }
   }, [backlightIndex]);

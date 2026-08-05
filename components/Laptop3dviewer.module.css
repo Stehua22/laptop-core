@@ -80,18 +80,23 @@
 }
 
 .swatchRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 7px;
 }
 
 .swatch {
-  width: 26px;
-  height: 26px;
+  width: 100%;
+  aspect-ratio: 1;
   border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  border: 1.5px solid rgba(0, 0, 0, 0.18);
   cursor: pointer;
   outline-offset: 2px;
+  transition: transform 0.12s ease, outline 0.1s ease;
+}
+
+.swatch:hover {
+  transform: scale(1.18);
 }
 
 .toggleRow {
