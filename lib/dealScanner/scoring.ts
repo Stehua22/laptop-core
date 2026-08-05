@@ -12,6 +12,8 @@ export type RawListing = {
   location?: string;
 };
 
+export type MarketInfo = { retailPrice: number; allTimeLow: number };
+
 export type ScoredDeal = RawListing & {
   brand: string | null;
   marketPrice: number | null;
@@ -43,6 +45,9 @@ const REFURB_KEYWORDS = [
   "grade b",
 ];
 
+// % below retail that counts as a "big drop" even if it's not an all-time low
+const BIG_DROP_PCT = 25;
+
 export function detectBrand(title: string): string | null {
   const lower = title.toLowerCase();
   for (const brand of TRACKED_BRANDS) {
@@ -56,10 +61,6 @@ export function isLikelyRefurbished(title: string, condition?: string): boolean 
   return REFURB_KEYWORDS.some((kw) => haystack.includes(kw));
 }
 
-/**
- * Rough model-tier extraction so we can group "ThinkPad T14" vs "ThinkPad X1"
- * separately when estimating market price. Not exhaustive — extend as needed.
- */
 export function extractModelKey(title: string): string {
   const lower = title.toLowerCase();
   const match = lower.match(
@@ -68,24 +69,29 @@ export function extractModelKey(title: string): string {
   return match ? match[1].replace(/\s+/g, " ").trim() : lower.split(" ").slice(0, 3).join(" ");
 }
 
-/**
- * marketPrices: map of modelKey -> known typical price (CAD), e.g. pulled
- * from your existing `laptops` table averages. Pass in whatever you already
- * track in LaptopCore so deal scoring is consistent with the rest of the app.
- */
 export function scoreListing(
   listing: RawListing,
-  marketPrices: Record<string, number>
+  marketPrices: Record<string, MarketInfo>
 ): ScoredDeal {
   const brand = detectBrand(listing.title);
   const modelKey = extractModelKey(listing.title);
-  const marketPrice = marketPrices[modelKey] ?? null;
+  const info = marketPrices[modelKey] ?? null;
+  const marketPrice = info?.retailPrice ?? null;
 
   let dealScore: number | null = null;
-  if (marketPrice && marketPrice > 0) {
-    const discountPct = ((marketPrice - listing.price) / marketPrice) * 100;
-    // clamp 0-100, discount of 40%+ off maps to 100
-    dealScore = Math.max(0, Math.min(100, Math.round((discountPct / 40) * 100)));
+
+  if (info) {
+    const isAllTimeLow = listing.price <= info.allTimeLow;
+    const dropFromRetailPct = ((info.retailPrice - listing.price) / info.retailPrice) * 100;
+    const isBigDrop = dropFromRetailPct >= BIG_DROP_PCT;
+
+    if (isAllTimeLow || isBigDrop) {
+      const base = isAllTimeLow ? 80 : 50;
+      const bonus = Math.max(0, Math.min(20, Math.round((dropFromRetailPct - BIG_DROP_PCT) / 2)));
+      dealScore = Math.min(100, base + bonus);
+    } else {
+      dealScore = 0;
+    }
   }
 
   return {
