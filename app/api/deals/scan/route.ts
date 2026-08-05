@@ -1,4 +1,4 @@
-﻿// app/api/deals/scan/route.ts
+// app/api/deals/scan/route.ts
 // Trigger manually (GET) or via Vercel Cron (see vercel.json).
 // Protect with a secret so randoms can't hammer your eBay/scraper quota.
 
@@ -11,12 +11,7 @@ import { scoreListing, isLikelyRefurbished, extractModelKey } from "@/lib/dealSc
 
 export const maxDuration = 60; // seconds — Facebook scraping is slow; bump on Vercel Pro if needed
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // service role, not anon — this route writes data
-);
-
-async function getMarketPrices(): Promise<Record<string, number>> {
+async function getMarketPrices(supabase: ReturnType<typeof createClient>): Promise<Record<string, number>> {
   // Pull rough "typical price" per model from your existing laptops table so
   // deal scoring lines up with what LaptopCore already tracks. Adjust the
   // column/table names to match your real schema.
@@ -38,6 +33,10 @@ async function getMarketPrices(): Promise<Record<string, number>> {
 }
 
 export async function GET(req: NextRequest) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY! // service role, not anon — this route writes data
+  );
   const secret = req.nextUrl.searchParams.get("secret");
   if (secret !== process.env.DEAL_SCAN_SECRET) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -60,7 +59,7 @@ export async function GET(req: NextRequest) {
           return [];
         })
       : Promise.resolve([]),
-    getMarketPrices(),
+    getMarketPrices(supabase),
   ]);
 
   const allListings = [...ebayResults, ...bestBuyResults, ...facebookResults].filter((l) =>
