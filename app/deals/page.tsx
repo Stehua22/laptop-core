@@ -19,6 +19,21 @@ export default function DealsPage() {
   const [addLoading, setAddLoading] = useState(false);
   const [form, setForm] = useState({ brand: "", model: "", specs: "", store: "", url: "", retail_price: "", current_price: "" });
   const [sortBy, setSortBy] = useState("discount");
+  const [bbDeals, setBbDeals] = useState<any[]>([]);
+  const [bbLoading, setBbLoading] = useState(false);
+  const [bbScannedAt, setBbScannedAt] = useState<string | null>(null);
+
+  const scanBestBuy = async () => {
+    setBbLoading(true);
+    try {
+      const res = await fetch("/api/bestbuy-deals");
+      const data = await res.json();
+      setBbDeals(data.deals ?? []);
+      setBbScannedAt(data.scannedAt ?? null);
+    } catch { /* ignore */ } finally {
+      setBbLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchLaptops().then((data) => { setLaptops(data); setLoading(false); });
@@ -305,6 +320,58 @@ export default function DealsPage() {
             })}
           </div>
         )}
+        {/* ── Best Buy Live Deals ── */}
+        <div style={{ marginTop: 48 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 20 }}>🛒</span>
+              <span style={{ fontWeight: 800, fontSize: 20, letterSpacing: "-0.02em", color: "#e8edf8" }}>Best Buy Live Deals</span>
+            </div>
+            <button
+              onClick={scanBestBuy}
+              disabled={bbLoading}
+              style={{ marginLeft: "auto", padding: "8px 20px", borderRadius: 9, border: "none", background: bbLoading ? "#1a2035" : "#2563eb", color: bbLoading ? "#3a4258" : "#fff", fontWeight: 700, fontSize: 13, cursor: bbLoading ? "not-allowed" : "pointer", transition: "all 0.2s", fontFamily: "inherit" }}
+            >
+              {bbLoading ? "Scanning…" : "Scan Best Buy"}
+            </button>
+          </div>
+          {bbScannedAt && (
+            <p className="mono" style={{ fontSize: 11, color: "#2a3248", marginBottom: 16 }}>
+              Last scan: {new Date(bbScannedAt).toLocaleTimeString()} · {bbDeals.length} results
+            </p>
+          )}
+          {bbDeals.length === 0 && !bbLoading && (
+            <div className="mono" style={{ color: "#2a3248", fontSize: 13, padding: "2rem 0" }}>
+              Hit &quot;Scan Best Buy&quot; to fetch live refurbished &amp; open-box laptop deals from bestbuy.ca.
+            </div>
+          )}
+          {bbDeals.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {bbDeals.map((d) => (
+                <div key={d.sku} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 12, flexWrap: "wrap" }}>
+                  {d.image && (
+                    <img src={d.image} alt={d.title} style={{ width: 56, height: 56, objectFit: "contain", borderRadius: 8, background: "rgba(255,255,255,0.04)", flexShrink: 0 }} />
+                  )}
+                  <div style={{ flex: 1, minWidth: 160 }}>
+                    <div className="mono" style={{ fontSize: 10, color: "#3b82f6", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>{d.condition}</div>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: "#e8edf8", lineHeight: 1.3 }}>{d.title}</div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 6, justifyContent: "flex-end", marginBottom: 4 }}>
+                      {d.salePrice && <span style={{ fontWeight: 800, fontSize: 18, color: "#10b981", fontFamily: "'JetBrains Mono', monospace" }}>${d.salePrice}</span>}
+                      {d.regularPrice && d.regularPrice !== d.salePrice && <span className="mono" style={{ fontSize: 12, color: "#2a3248", textDecoration: "line-through" }}>${d.regularPrice}</span>}
+                    </div>
+                    {d.savingsPct > 0 && (
+                      <div style={{ background: "rgba(251,146,60,0.1)", color: "#fb923c", borderRadius: 5, padding: "2px 8px", fontSize: 11, fontFamily: "'JetBrains Mono', monospace", display: "inline-block", marginBottom: 6 }}>-{d.savingsPct}% off</div>
+                    )}
+                    <br />
+                    <a href={d.url} target="_blank" rel="noopener noreferrer" className="visit-btn" style={{ fontSize: 12 }}>View on Best Buy →</a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
