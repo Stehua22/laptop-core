@@ -80,7 +80,7 @@ async function searchOneTerm(term: string): Promise<RawListing[]> {
         Accept: "application/json",
       },
       // Individual per-request timeout so one slow term can't stall the batch.
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(5000),
     });
 
     if (!res.ok) {

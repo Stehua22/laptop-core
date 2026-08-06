@@ -87,29 +87,37 @@ export async function GET(req: NextRequest) {
   // all-time low OR a big % drop from retail (see scoring.ts).
   const qualifyingDeals = scored.filter((d) => d.dealScore !== null && d.dealScore > 0);
 
+  // Upsert all qualifying deals in a single batched call instead of one
+  // sequential round-trip per row — with 20-40 qualifying deals, sequential
+  // awaits alone can eat several seconds and tip the route over Vercel's
+  // serverless timeout (hard-capped at 10s on Hobby plans, regardless of
+  // the maxDuration setting above).
   let upserted = 0;
-  for (const deal of qualifyingDeals) {
-    const { error } = await supabase.from("deals").upsert(
-      {
-        source: deal.source,
-        external_id: deal.externalId,
-        title: deal.title,
-        brand: deal.brand,
-        price: deal.price,
-        currency: deal.currency ?? "CAD",
-        condition: deal.condition,
-        url: deal.url,
-        image_url: deal.imageUrl,
-        location: deal.location,
-        deal_score: deal.dealScore,
-        market_price: deal.marketPrice,
-        seen_at: new Date().toISOString(),
-        is_active: true,
-      },
-      { onConflict: "source,external_id" }
-    );
-    if (!error) upserted++;
-    else console.error("Upsert failed:", error);
+  if (qualifyingDeals.length > 0) {
+    const rows = qualifyingDeals.map((deal) => ({
+      source: deal.source,
+      external_id: deal.externalId,
+      title: deal.title,
+      brand: deal.brand,
+      price: deal.price,
+      currency: deal.currency ?? "CAD",
+      condition: deal.condition,
+      url: deal.url,
+      image_url: deal.imageUrl,
+      location: deal.location,
+      deal_score: deal.dealScore,
+      market_price: deal.marketPrice,
+      seen_at: new Date().toISOString(),
+      is_active: true,
+    }));
+
+    const { data, error } = await supabase
+      .from("deals")
+      .upsert(rows, { onConflict: "source,external_id" })
+      .select("id");
+
+    if (error) console.error("Batch upsert failed:", error);
+    else upserted = data?.length ?? 0;
   }
 
   return NextResponse.json({
