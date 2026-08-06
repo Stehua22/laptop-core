@@ -5,6 +5,7 @@ export type RawListing = {
   externalId: string;
   title: string;
   price: number;
+  originalPrice?: number; // the listing's own "regular price" before discount, if known
   currency?: string;
   condition?: string;
   url: string;
@@ -91,24 +92,39 @@ export function scoreListing(
   const brand = detectBrand(listing.title);
   const modelKey = extractModelKey(listing.title);
   const info = marketPrices[modelKey] ?? null;
-  const marketPrice = info?.retailPrice ?? null;
 
+  let marketPrice: number | null = info?.retailPrice ?? null;
   let dealScore: number | null = null;
 
   if (info) {
+    // Known laptop already in your tracked catalog — compare against real
+    // history (all-time low / retail price).
     const isAllTimeLow = listing.price <= info.allTimeLow;
     const dropFromRetailPct = ((info.retailPrice - listing.price) / info.retailPrice) * 100;
     const isBigDrop = dropFromRetailPct >= BIG_DROP_PCT;
 
     if (isAllTimeLow || isBigDrop) {
-      // All-time lows score higher by default; big drops get a bonus scaled
-      // by how far past the threshold they go.
       const base = isAllTimeLow ? 80 : 50;
       const bonus = Math.max(0, Math.min(20, Math.round((dropFromRetailPct - BIG_DROP_PCT) / 2)));
       dealScore = Math.min(100, base + bonus);
     } else {
       dealScore = 0;
     }
+  } else if (listing.originalPrice && listing.originalPrice > listing.price) {
+    // Not a laptop we're tracking yet — fall back to the listing's own
+    // advertised discount (sale price vs. regular price) as the signal.
+    // Scored lower than a verified all-time-low/retail comparison since we
+    // have no history to confirm the "regular price" isn't inflated.
+    marketPrice = listing.originalPrice;
+    const dropPct = ((listing.originalPrice - listing.price) / listing.originalPrice) * 100;
+    if (dropPct >= BIG_DROP_PCT) {
+      const bonus = Math.max(0, Math.min(15, Math.round((dropPct - BIG_DROP_PCT) / 2)));
+      dealScore = Math.min(70, 35 + bonus); // capped below verified-catalog scores
+    } else {
+      dealScore = 0;
+    }
+  } else {
+    dealScore = 0;
   }
 
   return {

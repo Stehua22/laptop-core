@@ -89,16 +89,22 @@ async function searchOneTerm(term: string): Promise<RawListing[]> {
     }
 
     const data = await res.json();
-    return (data.products ?? []).map((product: any) => ({
-      source: "bestbuy" as const,
-      externalId: String(product.sku),
-      title: product.name,
-      price: product.salePrice ?? product.regularPrice,
-      currency: "CAD",
-      condition: /open.?box/i.test(product.name) ? "open-box" : "new",
-      url: `https://www.bestbuy.ca${product.productUrl}`,
-      imageUrl: product.thumbnailImage,
-    }));
+    return (data.products ?? []).map((product: any) => {
+      const price = product.salePrice ?? product.regularPrice;
+      const originalPrice =
+        product.regularPrice && product.regularPrice > price ? product.regularPrice : undefined;
+      return {
+        source: "bestbuy" as const,
+        externalId: String(product.sku),
+        title: product.name,
+        price,
+        originalPrice,
+        currency: "CAD",
+        condition: /open.?box/i.test(product.name) ? "open-box" : "new",
+        url: `https://www.bestbuy.ca${product.productUrl}`,
+        imageUrl: product.thumbnailImage,
+      };
+    });
   } catch (err) {
     console.error(`Best Buy fetch error for "${term}":`, err);
     return [];
