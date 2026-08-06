@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 let _supabase: SupabaseClient | null = null;
 function getSupabase() {
-  if (!_supabase && process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    _supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!_supabase && url && key) {
+    _supabase = createClient(url, key);
   }
   return _supabase;
 }
@@ -34,6 +38,12 @@ const SOURCE_LABEL: Record<string, string> = {
   facebook: "Facebook Marketplace",
 };
 
+const selectStyle: React.CSSProperties = {
+  padding: "8px 12px",
+  borderRadius: 8,
+  border: "1px solid #d1d5db",
+};
+
 export default function ScannerClient() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,6 +51,9 @@ export default function ScannerClient() {
   const [lastScan, setLastScan] = useState<Date | null>(null);
   const [minScore, setMinScore] = useState(0);
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [brandFilter, setBrandFilter] = useState<string>("all");
+  const [conditionFilter, setConditionFilter] = useState<string>("all");
+  const [maxPrice, setMaxPrice] = useState<string>("");
 
   const loadDeals = useCallback(async () => {
     const sb = getSupabase();
@@ -50,7 +63,7 @@ export default function ScannerClient() {
       .select("*")
       .eq("is_active", true)
       .order("deal_score", { ascending: false, nullsFirst: false })
-      .limit(100);
+      .limit(200);
     if (data) setDeals(data as Deal[]);
     setLoading(false);
   }, []);
@@ -76,11 +89,28 @@ export default function ScannerClient() {
     }
   }
 
-  const filtered = deals.filter(
-    (d) =>
-      (d.deal_score ?? 0) >= minScore &&
-      (sourceFilter === "all" || d.source === sourceFilter)
-  );
+  const brandOptions = useMemo(() => {
+    const set = new Set<string>();
+    deals.forEach((d) => { if (d.brand) set.add(d.brand); });
+    return Array.from(set).sort();
+  }, [deals]);
+
+  const conditionOptions = useMemo(() => {
+    const set = new Set<string>();
+    deals.forEach((d) => { if (d.condition) set.add(d.condition); });
+    return Array.from(set).sort();
+  }, [deals]);
+
+  const maxPriceNum = maxPrice.trim() === "" ? null : Number(maxPrice);
+
+  const filtered = deals.filter((d) => {
+    if ((d.deal_score ?? 0) < minScore) return false;
+    if (sourceFilter !== "all" && d.source !== sourceFilter) return false;
+    if (brandFilter !== "all" && d.brand !== brandFilter) return false;
+    if (conditionFilter !== "all" && d.condition !== conditionFilter) return false;
+    if (maxPriceNum !== null && !Number.isNaN(maxPriceNum) && d.price > maxPriceNum) return false;
+    return true;
+  });
 
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 20px" }}>
@@ -102,7 +132,7 @@ export default function ScannerClient() {
         {lastScan && ` Last manual scan: ${lastScan.toLocaleTimeString()}.`}
       </p>
 
-      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 24, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
         <button
           onClick={triggerScan}
           disabled={scanning}
@@ -119,16 +149,34 @@ export default function ScannerClient() {
           {scanning ? "Scanning…" : "Scan now"}
         </button>
 
-        <select
-          value={sourceFilter}
-          onChange={(e) => setSourceFilter(e.target.value)}
-          style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #d1d5db" }}
-        >
+        <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} style={selectStyle}>
           <option value="all">All sources</option>
           <option value="ebay">eBay</option>
           <option value="bestbuy">Best Buy</option>
           <option value="facebook">Facebook Marketplace</option>
         </select>
+
+        <select value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)} style={selectStyle}>
+          <option value="all">All brands</option>
+          {brandOptions.map((b) => (
+            <option key={b} value={b}>{b.charAt(0).toUpperCase() + b.slice(1)}</option>
+          ))}
+        </select>
+
+        <select value={conditionFilter} onChange={(e) => setConditionFilter(e.target.value)} style={selectStyle}>
+          <option value="all">All conditions</option>
+          {conditionOptions.map((c) => (
+            <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+          ))}
+        </select>
+
+        <input
+          type="number"
+          placeholder="Max price ($)"
+          value={maxPrice}
+          onChange={(e) => setMaxPrice(e.target.value)}
+          style={{ ...selectStyle, width: 130 }}
+        />
 
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "#374151" }}>
           Min deal score: {minScore}
@@ -140,13 +188,26 @@ export default function ScannerClient() {
             onChange={(e) => setMinScore(Number(e.target.value))}
           />
         </label>
+
+        {(sourceFilter !== "all" || brandFilter !== "all" || conditionFilter !== "all" || maxPrice !== "" || minScore !== 0) && (
+          <button
+            onClick={() => { setSourceFilter("all"); setBrandFilter("all"); setConditionFilter("all"); setMaxPrice(""); setMinScore(0); }}
+            style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #d1d5db", background: "transparent", color: "#6b7280", cursor: "pointer", fontSize: 13 }}
+          >
+            Clear filters
+          </button>
+        )}
       </div>
+
+      <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: 16 }}>
+        {filtered.length} of {deals.length} deals shown
+      </p>
 
       {loading ? (
         <p>Loading deals…</p>
       ) : filtered.length === 0 ? (
         <p style={{ color: "#6b7280" }}>
-          No deals matching your filters yet. Try lowering the min score, or hit &quot;Scan now&quot;.
+          No deals matching your filters yet. Try lowering the min score, clearing filters, or hit &quot;Scan now&quot;.
         </p>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
