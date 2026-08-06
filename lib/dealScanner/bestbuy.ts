@@ -100,7 +100,13 @@ async function searchOneTerm(term: string): Promise<RawListing[]> {
         price,
         originalPrice,
         currency: "CAD",
-        condition: /open.?box/i.test(product.name) ? "open-box" : "new",
+        condition: /refurbished|refurb|renewed|certified pre-owned/i.test(product.name)
+          ? "refurbished"
+          : /open.?box/i.test(product.name)
+          ? "open-box"
+          : /clearance/i.test(product.name)
+          ? "clearance"
+          : "new",
         url: `https://www.bestbuy.ca${product.productUrl}`,
         imageUrl: product.thumbnailImage,
       };
