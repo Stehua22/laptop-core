@@ -52,6 +52,14 @@ const SEARCH_TERMS = [
   "laptop open box",
   "laptop on sale",
   "refurbished laptop",
+  // Seasonal sale events — Best Buy runs these as marketing campaigns, not
+  // a queryable category, so we search the terms shoppers/listings use.
+  "laptop summer sale",
+  "laptop boxing day",
+  "laptop black friday",
+  "laptop cyber monday",
+  "laptop deal of the day",
+  "laptop clearance sale",
 ];
 
 export async function fetchBestBuyDeals(): Promise<RawListing[]> {
