@@ -60,47 +60,57 @@ const SEARCH_TERMS = [
   "laptop cyber monday",
   "laptop deal of the day",
   "laptop clearance sale",
+  // General "new laptop" catch-alls, not tied to any specific brand/line
+  "windows laptop",
+  "student laptop",
+  "budget laptop",
+  "2 in 1 laptop",
 ];
 
-export async function fetchBestBuyDeals(): Promise<RawListing[]> {
-  const results: RawListing[] = [];
+async function searchOneTerm(term: string): Promise<RawListing[]> {
+  try {
+    const url = `https://www.bestbuy.ca/api/v2/json/search?query=${encodeURIComponent(
+      term
+    )}&categoryid=&sortBy=relevance&sortDir=desc&currentRegion=ON&page=1&pageSize=24&lang=en-CA`;
 
-  for (const term of SEARCH_TERMS) {
-    try {
-      const url = `https://www.bestbuy.ca/api/v2/json/search?query=${encodeURIComponent(
-        term
-      )}&categoryid=&sortBy=relevance&sortDir=desc&currentRegion=ON&page=1&pageSize=24&lang=en-CA`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        Accept: "application/json",
+      },
+      // Individual per-request timeout so one slow term can't stall the batch.
+      signal: AbortSignal.timeout(8000),
+    });
 
-      const res = await fetch(url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-          Accept: "application/json",
-        },
-      });
-
-      if (!res.ok) {
-        console.error(`Best Buy search failed for "${term}": ${res.status}`);
-        continue;
-      }
-
-      const data = await res.json();
-      for (const product of data.products ?? []) {
-        results.push({
-          source: "bestbuy",
-          externalId: String(product.sku),
-          title: product.name,
-          price: product.salePrice ?? product.regularPrice,
-          currency: "CAD",
-          condition: /open.?box/i.test(product.name) ? "open-box" : "new",
-          url: `https://www.bestbuy.ca${product.productUrl}`,
-          imageUrl: product.thumbnailImage,
-        });
-      }
-    } catch (err) {
-      console.error(`Best Buy fetch error for "${term}":`, err);
+    if (!res.ok) {
+      console.error(`Best Buy search failed for "${term}": ${res.status}`);
+      return [];
     }
+
+    const data = await res.json();
+    return (data.products ?? []).map((product: any) => ({
+      source: "bestbuy" as const,
+      externalId: String(product.sku),
+      title: product.name,
+      price: product.salePrice ?? product.regularPrice,
+      currency: "CAD",
+      condition: /open.?box/i.test(product.name) ? "open-box" : "new",
+      url: `https://www.bestbuy.ca${product.productUrl}`,
+      imageUrl: product.thumbnailImage,
+    }));
+  } catch (err) {
+    console.error(`Best Buy fetch error for "${term}":`, err);
+    return [];
   }
+}
+
+export async function fetchBestBuyDeals(): Promise<RawListing[]> {
+  // Run all searches in parallel — sequential requests for 30+ terms blow
+  // past Vercel's serverless function time limit (10s on Hobby plans) and
+  // the whole route times out with no response at all.
+  const batches = await Promise.all(SEARCH_TERMS.map(searchOneTerm));
+  const results = batches.flat();
 
   // De-dupe by SKU — multiple search terms can return the same product.
   const seen = new Set<string>();
