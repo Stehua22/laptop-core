@@ -100,7 +100,9 @@ async function searchOneTerm(term: string): Promise<RawListing[]> {
         price,
         originalPrice,
         currency: "CAD",
-        condition: /refurbished|refurb|renewed|certified pre-owned/i.test(product.name)
+        condition: /like new/i.test(product.name)
+          ? "like-new"
+          : /refurbished|refurb|renewed|certified pre-owned/i.test(product.name)
           ? "refurbished"
           : /open.?box/i.test(product.name)
           ? "open-box"
