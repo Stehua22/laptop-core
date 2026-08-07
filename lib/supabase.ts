@@ -1,9 +1,22 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const supabaseAnonKey =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  "";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export function getSupabaseConfigError(): string | null {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return "Missing Supabase credentials. In Supabase go to Settings → API Keys, copy the Publishable key (sb_publishable_...) and Project URL into .env.local.";
+  }
+  return null;
+}
+
+export const supabase = createClient(
+  supabaseUrl || "https://placeholder.supabase.co",
+  supabaseAnonKey || "placeholder"
+);
 export type Laptop = {
   id: number;
   brand: string;
