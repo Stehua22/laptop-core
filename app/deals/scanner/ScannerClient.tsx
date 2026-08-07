@@ -44,10 +44,13 @@ const selectStyle: React.CSSProperties = {
   border: "1px solid #d1d5db",
 };
 
+const SKELETON_COUNT = 8;
+
 export default function ScannerClient() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
   const [lastScan, setLastScan] = useState<Date | null>(null);
   const [minScore, setMinScore] = useState(0);
   const [sourceFilter, setSourceFilter] = useState<string>("all");
@@ -75,6 +78,24 @@ export default function ScannerClient() {
     return () => clearInterval(interval);
   }, [loadDeals]);
 
+  // Smooth fake progress bar while a scan is running — the real scan is one
+  // request with no incremental updates, so this eases from 0 toward ~90%
+  // and then snaps to 100% when the response actually lands. Keeps the UI
+  // honest (never claims "done" before the real fetch resolves) while still
+  // feeling alive during the several-second wait.
+  useEffect(() => {
+    if (!scanning) return;
+    setScanProgress(0);
+    const start = Date.now();
+    const estMs = 6000;
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - start;
+      const pct = Math.min(90, (elapsed / estMs) * 90);
+      setScanProgress(pct);
+    }, 120);
+    return () => clearInterval(interval);
+  }, [scanning]);
+
   async function triggerScan() {
     setScanning(true);
     try {
@@ -82,10 +103,11 @@ export default function ScannerClient() {
       // Fine for a personal single-user project; don't reuse this pattern
       // for anything with real users hitting the client bundle.
       await fetch(`/api/deals/scan?secret=${process.env.NEXT_PUBLIC_DEAL_SCAN_SECRET}`);
+      setScanProgress(100);
       await loadDeals();
       setLastScan(new Date());
     } finally {
-      setScanning(false);
+      setTimeout(() => setScanning(false), 300); // let the bar visibly hit 100%
     }
   }
 
@@ -115,22 +137,53 @@ export default function ScannerClient() {
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 20px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-        <span
-          style={{
-            width: 10,
-            height: 10,
-            borderRadius: "50%",
-            background: scanning ? "var(--accent, #22c55e)" : "#9ca3af",
-            animation: scanning ? "pulse 1s ease-in-out infinite" : "none",
-          }}
-        />
+        <span style={{ position: "relative", width: 10, height: 10, display: "inline-block" }}>
+          <span
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              background: scanning ? "#22c55e" : "#9ca3af",
+            }}
+          />
+          {scanning && (
+            <span
+              style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: "50%",
+                background: "#22c55e",
+                animation: "radarPing 1.2s cubic-bezier(0,0,0.2,1) infinite",
+              }}
+            />
+          )}
+        </span>
         <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>Deal Scanner</h1>
       </div>
-      <p style={{ color: "#6b7280", marginBottom: 20 }}>
+      <p style={{ color: "#6b7280", marginBottom: 12 }}>
         Refurbished Lenovo, Dell, HP &amp; more — scanned from eBay, Best Buy, and Facebook
         Marketplace.
         {lastScan && ` Last manual scan: ${lastScan.toLocaleTimeString()}.`}
       </p>
+
+      {scanning && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ height: 6, borderRadius: 99, background: "#e5e7eb", overflow: "hidden" }}>
+            <div
+              style={{
+                height: "100%",
+                width: `${scanProgress}%`,
+                background: "linear-gradient(90deg, #3b82f6, #22c55e)",
+                borderRadius: 99,
+                transition: "width 0.15s linear",
+              }}
+            />
+          </div>
+          <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 6, fontFamily: "monospace" }}>
+            Scanning eBay, Best Buy &amp; Facebook Marketplace…
+          </p>
+        </div>
+      )}
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
         <button
@@ -144,8 +197,24 @@ export default function ScannerClient() {
             color: "white",
             fontWeight: 600,
             cursor: scanning ? "default" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
           }}
         >
+          {scanning && (
+            <span
+              style={{
+                width: 13,
+                height: 13,
+                borderRadius: "50%",
+                border: "2px solid rgba(255,255,255,0.35)",
+                borderTopColor: "#fff",
+                display: "inline-block",
+                animation: "spin 0.7s linear infinite",
+              }}
+            />
+          )}
           {scanning ? "Scanning…" : "Scan now"}
         </button>
 
@@ -203,20 +272,39 @@ export default function ScannerClient() {
         {filtered.length} of {deals.length} deals shown
       </p>
 
-      {loading ? (
-        <p>Loading deals…</p>
+      {loading || (scanning && deals.length === 0) ? (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
+          {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                border: "1px solid #e5e7eb",
+                borderRadius: 12,
+                padding: 14,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              <div className="shimmer" style={{ height: 140, borderRadius: 8, background: "#f3f4f6" }} />
+              <div className="shimmer" style={{ height: 14, width: "80%", borderRadius: 4, background: "#f3f4f6" }} />
+              <div className="shimmer" style={{ height: 18, width: "50%", borderRadius: 4, background: "#f3f4f6" }} />
+            </div>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <p style={{ color: "#6b7280" }}>
           No deals matching your filters yet. Try lowering the min score, clearing filters, or hit &quot;Scan now&quot;.
         </p>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
-          {filtered.map((deal) => (
+          {filtered.map((deal, i) => (
             <a
               key={deal.id}
               href={deal.url}
               target="_blank"
               rel="noopener noreferrer"
+              className="deal-card-in"
               style={{
                 border: "1px solid #e5e7eb",
                 borderRadius: 12,
@@ -226,6 +314,7 @@ export default function ScannerClient() {
                 display: "flex",
                 flexDirection: "column",
                 gap: 8,
+                animationDelay: `${Math.min(i, 20) * 0.03}s`,
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280" }}>
@@ -271,6 +360,29 @@ export default function ScannerClient() {
         @keyframes pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.4; transform: scale(1.3); }
+        }
+        @keyframes radarPing {
+          0% { transform: scale(1); opacity: 0.7; }
+          100% { transform: scale(2.8); opacity: 0; }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes shimmerMove {
+          0% { background-position: -400px 0; }
+          100% { background-position: 400px 0; }
+        }
+        .shimmer {
+          background-image: linear-gradient(90deg, #f3f4f6 0px, #e5e7eb 40px, #f3f4f6 80px);
+          background-size: 400px 100%;
+          animation: shimmerMove 1.4s linear infinite;
+        }
+        @keyframes dealCardIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .deal-card-in {
+          animation: dealCardIn 0.35s ease-out backwards;
         }
       `}</style>
     </div>
