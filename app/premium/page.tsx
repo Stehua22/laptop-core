@@ -4,6 +4,14 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabaseBrowser } from '@/lib/supabaseBrowser';
 
+const FEATURES: { label: string; free: string; premium: string }[] = [
+  { label: 'Lapi AI chats',        free: '5/day',          premium: 'Unlimited' },
+  { label: 'Laptop comparisons',   free: 'Up to 3',         premium: 'Up to 6' },
+  { label: 'Comparison insights',  free: 'Basic specs',     premium: 'Value score + price-per-spec breakdown' },
+  { label: 'Deal scanner',         free: 'Standard',        premium: 'Priority / expanded' },
+  { label: 'Support',              free: 'Standard',        premium: 'Priority' },
+];
+
 export default function PremiumPage() {
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [isPremium, setIsPremium] = useState(false);
@@ -57,7 +65,7 @@ export default function PremiumPage() {
       <div
         style={{
           width: '100%',
-          maxWidth: 420,
+          maxWidth: 560,
           background: 'var(--bg-primary, #fff)',
           color: 'var(--text-primary, #111)',
           border: '1px solid var(--border-color, #e5e5e5)',
@@ -69,23 +77,52 @@ export default function PremiumPage() {
         <div style={{ fontSize: 32, marginBottom: 8 }}>⭐</div>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>LaptopCore Premium</h1>
         <p style={{ fontSize: 13, color: '#888', marginBottom: 24 }}>
-          Unlimited Lapi chats, no daily cap.
+          $3.99 CAD / month — unlimited chats, advanced comparisons, and more.
         </p>
+
+        {/* Free vs Premium table */}
         <div
           style={{
             textAlign: 'left',
-            background: 'var(--bg-secondary, #f7f7f7)',
+            border: '1px solid var(--border-color, #e5e5e5)',
             borderRadius: 10,
-            padding: '16px 18px',
+            overflow: 'hidden',
             marginBottom: 24,
-            fontSize: 14,
-            lineHeight: 1.8,
           }}
         >
-          <div>✅ Unlimited Lapi AI chats (free plan: 5/day)</div>
-          <div>✅ Priority support</div>
-          <div>✅ Early access to new features</div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1.4fr 1fr 1fr',
+              background: 'var(--bg-secondary, #f7f7f7)',
+              fontSize: 12,
+              fontWeight: 700,
+              padding: '10px 14px',
+            }}
+          >
+            <div>Feature</div>
+            <div style={{ textAlign: 'center' }}>Free</div>
+            <div style={{ textAlign: 'center', color: 'var(--accent-color, #2563eb)' }}>Premium</div>
+          </div>
+          {FEATURES.map((f, i) => (
+            <div
+              key={f.label}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1.4fr 1fr 1fr',
+                fontSize: 12,
+                padding: '10px 14px',
+                borderTop: '1px solid var(--border-color, #e5e5e5)',
+                background: i % 2 === 1 ? 'rgba(0,0,0,0.015)' : 'transparent',
+              }}
+            >
+              <div style={{ fontWeight: 600 }}>{f.label}</div>
+              <div style={{ textAlign: 'center', color: '#888' }}>{f.free}</div>
+              <div style={{ textAlign: 'center', fontWeight: 700, color: 'var(--accent-color, #2563eb)' }}>{f.premium}</div>
+            </div>
+          ))}
         </div>
+
         {loggedIn === false && (
           <>
             <p style={{ fontSize: 13, marginBottom: 14 }}>
@@ -108,11 +145,13 @@ export default function PremiumPage() {
             </Link>
           </>
         )}
+
         {loggedIn === true && isPremium && (
           <p style={{ fontSize: 14, fontWeight: 600, color: '#16a34a' }}>
-            You're already Premium — enjoy unlimited chats! 🎉
+            You're already Premium — enjoy every perk above! 🎉
           </p>
         )}
+
         {loggedIn === true && !isPremium && (
           <>
             {chatCount !== null && (
