@@ -6,6 +6,8 @@ type ChatMessage = {
   content: string;
 };
 
+const FREE_DAILY_LIMIT = 5;
+
 export async function POST(req: Request) {
   try {
     const supabase = createClient(
@@ -13,14 +15,50 @@ export async function POST(req: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    const { messages } = (await req.json()) as { messages: ChatMessage[] };
+    const { messages, userId } = (await req.json()) as {
+      messages: ChatMessage[];
+      userId?: string;
+    };
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: 'No messages provided' }, { status: 400 });
     }
 
+    if (!userId) {
+      return NextResponse.json({ error: 'Login required to use the assistant' }, { status: 401 });
+    }
+
+    // Check premium status + usage
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_premium, chat_count, chat_count_date')
+      .eq('id', userId)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: 'Could not verify account' }, { status: 500 });
+    }
+
+    if (!profile.is_premium) {
+      const today = new Date().toISOString().split('T')[0];
+      const isNewDay = profile.chat_count_date !== today;
+      const currentCount = isNewDay ? 0 : profile.chat_count ?? 0;
+
+      if (currentCount >= FREE_DAILY_LIMIT) {
+        return NextResponse.json(
+          { error: 'daily_limit_reached', message: "You've hit today's 5-chat limit. Upgrade to Premium for unlimited chats." },
+          { status: 429 }
+        );
+      }
+
+      // Increment (and reset date if it's a new day)
+      await supabase
+        .from('profiles')
+        .update({ chat_count: currentCount + 1, chat_count_date: today })
+        .eq('id', userId);
+    }
+
     // Pull a lean catalog snapshot to ground recommendations.
-    // Adjust column names below if they differ from your laptops table.
     const { data: laptops, error } = await supabase
       .from('laptops')
       .select('id, brand, model, retail_price, screen_size, weight_kg, good_for')
