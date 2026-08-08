@@ -23,8 +23,8 @@ export async function POST(req: Request) {
     // Adjust column names below if they differ from your laptops table.
     const { data: laptops, error } = await supabase
       .from('laptops')
-      .select('id, brand, model, price, screen_size, weight_kg, good_for')
-      .order('price', { ascending: true })
+      .select('id, brand, model, retail_price, screen_size, weight_kg, good_for')
+      .order('retail_price', { ascending: true })
       .limit(150);
 
     if (error) {
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     const catalogSummary = (laptops ?? [])
       .map(
         (l) =>
-          `#${l.id} ${l.brand} ${l.model} - $${l.price} CAD, ${l.screen_size}", ${l.weight_kg}kg, good for: ${
+          `#${l.id} ${l.brand} ${l.model} - $${l.retail_price} CAD, ${l.screen_size}", ${l.weight_kg}kg, good for: ${
             Array.isArray(l.good_for) ? l.good_for.join('/') : l.good_for
           }`
       )
