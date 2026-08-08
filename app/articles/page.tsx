@@ -19,8 +19,8 @@ function formatDate(iso: string) {
 
 function getWeekStart(): string {
   const now = new Date();
-  const day = now.getDay(); // 0 = Sunday
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday as start
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(now.setDate(diff));
   return monday.toISOString().slice(0, 10);
 }
@@ -90,7 +90,6 @@ export default function ArticlesPage() {
 
   const [form, setForm] = useState({ title: "", summary: "", content: "", category: "Guide", author: "", cover_image: "" });
 
-  // Article read-limit tracking
   const [userId, setUserId] = useState<string | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [readIds, setReadIds] = useState<string[]>([]);
@@ -116,7 +115,6 @@ export default function ArticlesPage() {
         if (profile.read_week_start === currentWeek) {
           setReadIds(profile.read_article_ids ?? []);
         } else {
-          // New week — reset
           setReadIds([]);
           await supabaseBrowser
             .from("profiles")
@@ -228,7 +226,6 @@ export default function ArticlesPage() {
     setForm((f) => ({ ...f, content: f.content + (f.content.endsWith("\n") || !f.content ? "" : "\n") + `![${alt}](${url})\n` }));
   };
 
-  // Handles expand/collapse with the free-tier weekly read limit
   const handleToggleExpand = async (article: Article) => {
     const isExpanded = expandedId === article.id;
     if (isExpanded) { setExpandedId(null); return; }
@@ -239,7 +236,6 @@ export default function ArticlesPage() {
     }
 
     if (!userId) {
-      // Not logged in — allow (or you could force login; keeping open for now)
       setExpandedId(article.id);
       return;
     }
@@ -478,7 +474,6 @@ export default function ArticlesPage() {
           </div>
         )}
 
-        {/* Weekly limit reached modal */}
         {showLimitModal && (
           <div
             style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)" }}
