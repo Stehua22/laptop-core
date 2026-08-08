@@ -12,7 +12,7 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: "Hey! Tell me what you need a laptop for (budget, use case, portability) and I'll point you at some picks.",
+      content: "Hey, I'm Lapi! Tell me what you need a laptop for (budget, use case, portability) and I'll point you at some picks.",
     },
   ]);
   const [input, setInput] = useState('');
@@ -72,7 +72,7 @@ export default function AIAssistant() {
           boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
         }}
       >
-        {open ? 'Close ✕' : '💬 Ask AI'}
+        {open ? 'Close ✕' : '💬 Lapi'}
       </button>
 
       {open && (
@@ -101,7 +101,7 @@ export default function AIAssistant() {
               fontSize: 14,
             }}
           >
-            Laptop Assistant
+            Lapi
           </div>
 
           <div
