@@ -14,14 +14,12 @@ export default function PremiumPage() {
       const { data: sessionData } = await supabaseBrowser.auth.getSession();
       const session = sessionData.session;
       setLoggedIn(!!session);
-
       if (session) {
         const { data: profile } = await supabaseBrowser
           .from('profiles')
           .select('is_premium, chat_count, chat_count_date')
           .eq('id', session.user.id)
           .single();
-
         if (profile) {
           setIsPremium(profile.is_premium);
           const today = new Date().toISOString().slice(0, 10);
@@ -31,6 +29,20 @@ export default function PremiumPage() {
     }
     load();
   }, []);
+
+  async function handleUpgrade() {
+    const { data: sessionData } = await supabaseBrowser.auth.getSession();
+    const session = sessionData.session;
+    if (!session) return;
+
+    const res = await fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: session.user.id, email: session.user.email }),
+    });
+    const { url } = await res.json();
+    if (url) window.location.href = url;
+  }
 
   return (
     <div
@@ -59,7 +71,6 @@ export default function PremiumPage() {
         <p style={{ fontSize: 13, color: '#888', marginBottom: 24 }}>
           Unlimited Lapi chats, no daily cap.
         </p>
-
         <div
           style={{
             textAlign: 'left',
@@ -75,7 +86,6 @@ export default function PremiumPage() {
           <div>✅ Priority support</div>
           <div>✅ Early access to new features</div>
         </div>
-
         {loggedIn === false && (
           <>
             <p style={{ fontSize: 13, marginBottom: 14 }}>
@@ -98,13 +108,11 @@ export default function PremiumPage() {
             </Link>
           </>
         )}
-
         {loggedIn === true && isPremium && (
           <p style={{ fontSize: 14, fontWeight: 600, color: '#16a34a' }}>
             You're already Premium — enjoy unlimited chats! 🎉
           </p>
         )}
-
         {loggedIn === true && !isPremium && (
           <>
             {chatCount !== null && (
@@ -113,19 +121,19 @@ export default function PremiumPage() {
               </p>
             )}
             <button
-              disabled
+              onClick={handleUpgrade}
               style={{
-                background: '#d1d5db',
-                color: '#6b7280',
+                background: 'var(--accent-color, #2563eb)',
+                color: '#fff',
                 padding: '10px 24px',
                 borderRadius: 8,
                 fontWeight: 600,
                 fontSize: 14,
                 border: 'none',
-                cursor: 'not-allowed',
+                cursor: 'pointer',
               }}
             >
-              Upgrade — coming soon
+              Upgrade to Premium
             </button>
           </>
         )}
