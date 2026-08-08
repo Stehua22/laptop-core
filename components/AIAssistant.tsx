@@ -57,7 +57,49 @@ export default function AIAssistant() {
 
   return (
     <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 999999 }}>
+      <style>{`
+        @keyframes lapiPanelIn {
+          from { opacity: 0; transform: translateY(12px) scale(0.97); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes lapiMsgIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes lapiDot {
+          0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+          40% { opacity: 1; transform: translateY(-3px); }
+        }
+        .lapi-launcher {
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .lapi-launcher:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+        }
+        .lapi-launcher:active {
+          transform: scale(0.96);
+        }
+        .lapi-panel {
+          animation: lapiPanelIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+          transform-origin: bottom right;
+        }
+        .lapi-msg {
+          animation: lapiMsgIn 0.2s ease-out;
+        }
+        .lapi-dot {
+          display: inline-block;
+          width: 5px;
+          height: 5px;
+          margin-right: 3px;
+          border-radius: 50%;
+          background: #888;
+          animation: lapiDot 1s infinite;
+        }
+      `}</style>
+
       <button
+        className="lapi-launcher"
         onClick={() => setOpen((v) => !v)}
         style={{
           width: 160,
@@ -77,6 +119,7 @@ export default function AIAssistant() {
 
       {open && (
         <div
+          className="lapi-panel"
           style={{
             position: 'absolute',
             bottom: 60,
@@ -118,6 +161,7 @@ export default function AIAssistant() {
             {messages.map((m, i) => (
               <div
                 key={i}
+                className="lapi-msg"
                 style={{
                   alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
                   background: m.role === 'user' ? '#2563eb' : '#f1f1f1',
@@ -132,7 +176,13 @@ export default function AIAssistant() {
                 {m.content}
               </div>
             ))}
-            {loading && <div style={{ fontSize: 13, color: '#888' }}>Thinking...</div>}
+            {loading && (
+              <div className="lapi-msg" style={{ fontSize: 13, padding: '6px 10px' }}>
+                <span className="lapi-dot" style={{ animationDelay: '0s' }} />
+                <span className="lapi-dot" style={{ animationDelay: '0.15s' }} />
+                <span className="lapi-dot" style={{ animationDelay: '0.3s' }} />
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: 6, padding: 8, borderTop: '1px solid #eee' }}>
