@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
@@ -13,6 +8,11 @@ type ChatMessage = {
 
 export async function POST(req: Request) {
   try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
     const { messages } = (await req.json()) as { messages: ChatMessage[] };
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
