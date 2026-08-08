@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { supabaseBrowser } from '@/lib/supabaseBrowser';
 
 type Message = {
   role: 'user' | 'assistant';
@@ -35,11 +36,32 @@ export default function AIAssistant() {
     setLoading(true);
 
     try {
+      const { data: sessionData } = await supabaseBrowser.auth.getSession();
+      const userId = sessionData.session?.user.id;
+
+      if (!userId) {
+        setMessages([
+          ...nextMessages,
+          { role: 'assistant', content: 'Please log in to chat with Lapi.' },
+        ]);
+        setLoading(false);
+        return;
+      }
+
       const res = await fetch('/api/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: nextMessages }),
+        body: JSON.stringify({ messages: nextMessages, userId }),
       });
+
+      if (res.status === 429) {
+        const data = await res.json();
+        setMessages([
+          ...nextMessages,
+          { role: 'assistant', content: data.message || "You've hit today's chat limit." },
+        ]);
+        return;
+      }
 
       if (!res.ok) throw new Error('Request failed');
 
