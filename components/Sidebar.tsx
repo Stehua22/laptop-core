@@ -175,7 +175,10 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
   }
 
   return (
-    <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""}`}>
+    <aside
+      className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""}`}
+      style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}
+    >
       <div className={styles.brand}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
           <path
@@ -198,7 +201,7 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
         </span>
       </div>
 
-      <nav className={styles.nav}>
+      <nav className={styles.nav} style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
         {NAV_GROUPS.map((group) => (
           <div key={group.label} style={{ marginTop: 14 }}>
             {!collapsed && <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, opacity: 0.5, padding: "0 12px 6px" }}>{group.label}</div>}
@@ -307,7 +310,7 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
         </div>
       </nav>
 
-      <button className={styles.collapseRow} onClick={toggleCollapsed} type="button">
+      <button className={styles.collapseRow} onClick={toggleCollapsed} type="button" style={{ flexShrink: 0 }}>
         <span className={styles.chev}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M15 6l-6 6 6 6" />
@@ -316,7 +319,7 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
         <span className={styles.label}>Collapse</span>
       </button>
 
-      <button className={styles.resetRow} onClick={onResetSettings} type="button" title="Reset settings to defaults">
+      <button className={styles.resetRow} onClick={onResetSettings} type="button" title="Reset settings to defaults" style={{ flexShrink: 0 }}>
         <span className={styles.resetIcon}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 12a9 9 0 1 1 3.2-6.8" />
@@ -326,7 +329,7 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
         <span className={styles.label}>Reset</span>
       </button>
 
-      <div className={styles.bottom}>
+      <div className={styles.bottom} style={{ flexShrink: 0 }}>
         <button
           className={styles.iconBtn}
           title="Settings"
