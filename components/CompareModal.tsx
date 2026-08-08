@@ -1,4 +1,6 @@
 "use client";
+import { useEffect, useState } from "react";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import type { Laptop } from "@/lib/supabase";
 
 type Props = {
@@ -8,6 +10,9 @@ type Props = {
   currency?: "CAD" | "USD";
   cadToUsd?: number;
 };
+
+const FREE_COMPARE_LIMIT = 3;
+const PREMIUM_COMPARE_LIMIT = 6;
 
 function fmt(n: number, currency: "CAD" | "USD" = "CAD", rate = 0.73) {
   const value = currency === "USD" ? n * rate : n;
@@ -53,10 +58,29 @@ function getBestPrice(laptops: Laptop[]) {
 }
 
 export default function CompareModal({ laptops, onClose, onRemove, currency = "CAD", cadToUsd = 0.73 }: Props) {
+  const [isPremium, setIsPremium] = useState(false);
+  const [checkingPremium, setCheckingPremium] = useState(true);
+
+  useEffect(() => {
+    async function checkPremium() {
+      const { data: sessionData } = await supabaseBrowser.auth.getSession();
+      const session = sessionData.session;
+      if (!session) { setCheckingPremium(false); return; }
+      const { data: profile } = await supabaseBrowser
+        .from("profiles")
+        .select("is_premium")
+        .eq("id", session.user.id)
+        .single();
+      setIsPremium(!!profile?.is_premium);
+      setCheckingPremium(false);
+    }
+    checkPremium();
+  }, []);
+
+  const limit = isPremium ? PREMIUM_COMPARE_LIMIT : FREE_COMPARE_LIMIT;
   const bestPrice = getBestPrice(laptops);
   const cols = laptops.length;
 
-  // Only show rows where at least one laptop has data
   const visibleRows = COMPARE_ROWS.filter(row =>
     laptops.some(l => row.getValue(l, currency, cadToUsd) !== null)
   );
@@ -79,6 +103,18 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
           <button onClick={onClose} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "7px 14px", cursor: "pointer", color: "var(--text-muted)", fontSize: 13 }}>✕ Close</button>
         </div>
 
+        {/* Premium upsell banner for free users */}
+        {!checkingPremium && !isPremium && (
+          <div style={{ padding: "10px 24px", background: "rgba(139,179,245,0.08)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+              Free plan compares up to {FREE_COMPARE_LIMIT} laptops. Premium unlocks up to {PREMIUM_COMPARE_LIMIT}.
+            </span>
+            <a href="/premium" style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", textDecoration: "none", flexShrink: 0, marginLeft: 12 }}>
+              Upgrade →
+            </a>
+          </div>
+        )}
+
         {/* Scrollable content */}
         <div style={{ overflowY: "auto", flex: 1 }}>
           {/* Laptop header cards */}
@@ -92,7 +128,6 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
                   {isBest && cols > 1 && (
                     <div style={{ position: "absolute", top: 12, right: 12, fontSize: 9, fontWeight: 800, background: "rgba(106,247,184,0.15)", color: "var(--accent-3)", border: "1px solid rgba(106,247,184,0.3)", borderRadius: 5, padding: "2px 7px", letterSpacing: "0.06em" }}>BEST PRICE</div>
                   )}
-                  {/* Image */}
                   <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
                     {(l as any).image_url ? (
                       <img src={(l as any).image_url} alt={l.model} style={{ maxHeight: 80, maxWidth: "100%", objectFit: "contain" }} />
@@ -114,18 +149,15 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
           {/* Comparison rows */}
           {visibleRows.map((row, ri) => {
             const values = laptops.map(l => row.getValue(l, currency, cadToUsd));
-            // For price row, highlight the lowest
             const isPrice = row.key === "price";
             const priceValues = isPrice ? laptops.map(l => l.current_price ?? 0) : [];
             const minPriceVal = isPrice ? Math.min(...priceValues) : Infinity;
 
             return (
               <div key={row.key} style={{ display: "grid", gridTemplateColumns: `180px repeat(${cols}, 1fr)`, borderBottom: "1px solid var(--border)", background: ri % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)" }}>
-                {/* Row label */}
                 <div style={{ padding: "14px 16px", borderRight: "1px solid var(--border)", display: "flex", alignItems: "center" }}>
                   <span style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>{row.label}</span>
                 </div>
-                {/* Values */}
                 {values.map((val, vi) => {
                   const l = laptops[vi];
                   const isBestPriceCol = isPrice && (l.current_price ?? 0) === minPriceVal && cols > 1;
@@ -167,3 +199,5 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
     </div>
   );
 }
+
+export { FREE_COMPARE_LIMIT, PREMIUM_COMPARE_LIMIT };
