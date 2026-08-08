@@ -45,8 +45,13 @@ function extractStorageGb(specs?: string): number | null {
   if (!specs) return null;
   const tbMatch = specs.match(/(\d+(?:\.\d+)?)\s*TB/i);
   if (tbMatch) return parseFloat(tbMatch[1]) * 1024;
-  const gbMatches = [...specs.matchAll(/(\d+)\s*GB/gi)];
-  if (gbMatches.length > 1) return parseInt(gbMatches[1][1], 10); // second GB usually storage
+  const gbMatches: string[] = [];
+  const regex = /(\d+)\s*GB/gi;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(specs)) !== null) {
+    gbMatches.push(m[1]);
+  }
+  if (gbMatches.length > 1) return parseInt(gbMatches[1], 10); // second GB usually storage
   return null;
 }
 
