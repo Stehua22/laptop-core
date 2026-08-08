@@ -39,8 +39,8 @@ export default function TopNav() {
         justifyContent: 'flex-end',
         gap: 10,
         padding: '0 20px',
-        background: 'var(--bg-primary, #fff)',
-        borderBottom: '1px solid var(--border-color, #e5e5e5)',
+        background: 'transparent',
+        borderBottom: 'none',
         zIndex: 900,
       }}
     >
@@ -57,16 +57,17 @@ export default function TopNav() {
           >
             ⭐ Premium
           </Link>
-          <span style={{ fontSize: 13, color: 'var(--text-primary, #111)', opacity: 0.7 }}>
+          <span style={{ fontSize: 13, color: 'inherit', opacity: 0.7 }}>
             {email}
           </span>
           <button
             onClick={handleLogout}
             style={{
               fontSize: 13,
-              border: '1px solid var(--border-color, #e5e5e5)',
+              border: '1px solid currentColor',
               background: 'transparent',
-              color: 'var(--text-primary, #111)',
+              color: 'inherit',
+              opacity: 0.8,
               borderRadius: 6,
               padding: '5px 10px',
               cursor: 'pointer',
@@ -82,7 +83,7 @@ export default function TopNav() {
             style={{
               fontSize: 13,
               fontWeight: 600,
-              color: 'var(--text-primary, #111)',
+              color: 'inherit',
               textDecoration: 'none',
               padding: '6px 10px',
             }}
