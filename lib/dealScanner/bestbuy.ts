@@ -128,9 +128,20 @@ export async function fetchBestBuyDeals(): Promise<RawListing[]> {
 
   // De-dupe by SKU — multiple search terms can return the same product.
   const seen = new Set<string>();
-  return results.filter((r) => {
+  const deduped = results.filter((r) => {
     if (seen.has(r.externalId)) return false;
     seen.add(r.externalId);
     return true;
+  });
+
+  // Refurbished / open-box / clearance listings are deals by definition —
+  // keep those as-is. But "new" condition is the fallback classification
+  // for anything that didn't match a deal-signal regex, so a plain
+  // full-price laptop also lands here. Only keep "new" listings that have
+  // an actual price drop (originalPrice > price), so full-price inventory
+  // doesn't flood the deals feed as noise.
+  return deduped.filter((r) => {
+    if (r.condition !== "new") return true;
+    return r.originalPrice !== undefined && r.originalPrice > r.price;
   });
 }
