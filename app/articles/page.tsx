@@ -489,7 +489,7 @@ export default function ArticlesPage() {
                 <button
                   onClick={() => setShowLimitModal(false)}
                   style={{ fontSize: 13, padding: "9px 18px", borderRadius: "var(--btn-radius, 10px)", border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" }}
-                >Close</button>
+              >Close</button>
                 
                   href="/premium"
                   style={{ fontSize: 13, padding: "9px 18px", borderRadius: "var(--btn-radius, 10px)", border: "none", background: "var(--accent)", color: "#fff", fontWeight: 700, textDecoration: "none" }}
