@@ -67,7 +67,7 @@ export default function SplitComparePage() {
     return (
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '5rem 20px', textAlign: 'center' }}>
         <div style={{ fontSize: 32, marginBottom: 10 }}>🔒</div>
-        <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Split View is an Ultra feature</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8, color: 'var(--text)' }}>Split View is an Ultra feature</h1>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
           Upgrade to Ultra to view two laptops side by side with full spec comparison.
         </p>
@@ -92,7 +92,7 @@ export default function SplitComparePage() {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 20px' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Split View</h1>
+      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4, color: 'var(--text)' }}>Split View</h1>
       <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24 }}>
         Compare two laptops side by side.
       </p>
@@ -115,30 +115,31 @@ export default function SplitComparePage() {
       {left && right ? (
         <div
           style={{
-            border: '1px solid var(--border-color, #e5e5e5)',
+            border: '1px solid var(--border)',
             borderRadius: 12,
             overflow: 'hidden',
+            background: 'var(--surface)',
           }}
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid var(--border-color, #e5e5e5)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid var(--border)' }}>
             {[left, right].map((laptop, i) => (
               <div
                 key={laptop.id}
                 style={{
                   padding: 18,
                   textAlign: 'center',
-                  borderLeft: i === 1 ? '1px solid var(--border-color, #e5e5e5)' : 'none',
+                  borderLeft: i === 1 ? '1px solid var(--border)' : 'none',
                 }}
               >
                 {laptop.image_url && (
                   <img
                     src={laptop.image_url}
                     alt={`${laptop.brand} ${laptop.model}`}
-                    style={{ width: '100%', maxWidth: 200, height: 140, objectFit: 'contain', margin: '0 auto 10px' }}
+                    style={{ width: '100%', maxWidth: 200, height: 140, objectFit: 'contain', margin: '0 auto 10px', background: '#fff', borderRadius: 8 }}
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                   />
                 )}
-                <div style={{ fontWeight: 700, fontSize: 15 }}>{laptop.brand} {laptop.model}</div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>{laptop.brand} {laptop.model}</div>
               </div>
             ))}
           </div>
@@ -161,7 +162,7 @@ export default function SplitComparePage() {
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr 1fr',
-                  background: i % 2 === 1 ? 'rgba(0,0,0,0.015)' : 'transparent',
+                  background: i % 2 === 1 ? 'var(--surface-2)' : 'transparent',
                 }}
               >
                 {[left, right].map((laptop, j) => {
@@ -172,12 +173,12 @@ export default function SplitComparePage() {
                       style={{
                         padding: '10px 18px',
                         fontSize: 13,
-                        borderLeft: j === 1 ? '1px solid var(--border-color, #e5e5e5)' : 'none',
+                        borderLeft: j === 1 ? '1px solid var(--border)' : 'none',
                         fontWeight: isBetter ? 700 : 400,
-                        color: isBetter ? '#16a34a' : 'var(--text-primary, #111)',
+                        color: isBetter ? '#22c55e' : 'var(--text)',
                       }}
                     >
-                      <span style={{ color: '#888', marginRight: 6 }}>{row.label}:</span>
+                      <span style={{ color: 'var(--text-muted)', marginRight: 6 }}>{row.label}:</span>
                       {formatValue(row.key, laptop[row.key])}
                     </div>
                   );
@@ -198,10 +199,10 @@ export default function SplitComparePage() {
 const selectStyle: React.CSSProperties = {
   padding: '10px 14px',
   fontSize: 13,
-  border: '1px solid var(--border-color, #e5e5e5)',
+  border: '1px solid var(--border)',
   borderRadius: 8,
-  background: 'var(--bg-secondary, #f7f7f7)',
-  color: 'var(--text-primary, #111)',
+  background: 'var(--surface-2)',
+  color: 'var(--text)',
   fontFamily: 'inherit',
   outline: 'none',
 };
