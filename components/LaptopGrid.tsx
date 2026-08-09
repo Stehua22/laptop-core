@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Laptop } from "@/lib/supabase";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import LaptopCard from "./LaptopCard";
 import CompareModal from "./CompareModal";
 
@@ -16,15 +17,36 @@ type Props = {
   cardLayout?: "row" | "grid" | "compact";
 };
 
+const FREE_COMPARE_LIMIT = 3;
+const PREMIUM_COMPARE_LIMIT = 6;
+
 export default function LaptopGrid({ laptops, onSelect, onHistory, isAdmin, onMoveToDeals, onDelete, currency = "CAD", cadToUsd = 0.73, cardLayout = "row" }: Props) {
   const [compareIds, setCompareIds] = useState<number[]>([]);
   const [showCompare, setShowCompare] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+
+  useEffect(() => {
+    async function checkPremium() {
+      const { data: sessionData } = await supabaseBrowser.auth.getSession();
+      const session = sessionData.session;
+      if (!session) return;
+      const { data: profile } = await supabaseBrowser
+        .from("profiles")
+        .select("is_premium")
+        .eq("id", session.user.id)
+        .single();
+      setIsPremium(!!profile?.is_premium);
+    }
+    checkPremium();
+  }, []);
+
+  const limit = isPremium ? PREMIUM_COMPARE_LIMIT : FREE_COMPARE_LIMIT;
 
   const toggleCompare = (laptop: Laptop) => {
     setCompareIds(prev =>
       prev.includes(laptop.id)
         ? prev.filter(id => id !== laptop.id)
-        : prev.length < 3 ? [...prev, laptop.id] : prev
+        : prev.length < limit ? [...prev, laptop.id] : prev
     );
   };
 
@@ -65,7 +87,7 @@ export default function LaptopGrid({ laptops, onSelect, onHistory, isAdmin, onMo
               currency={currency} cadToUsd={cadToUsd}
               compareSelected={compareIds.includes(l.id)}
               onCompareToggle={toggleCompare}
-              compareDisabled={compareIds.length >= 3 && !compareIds.includes(l.id)}
+              compareDisabled={compareIds.length >= limit && !compareIds.includes(l.id)}
               cardLayout={cardLayout}
             />
           ))}
@@ -91,7 +113,7 @@ export default function LaptopGrid({ laptops, onSelect, onHistory, isAdmin, onMo
               </div>
             ))}
             {/* Empty slots */}
-            {Array.from({ length: 3 - compareIds.length }).map((_, i) => (
+            {Array.from({ length: Math.max(0, limit - compareIds.length) }).map((_, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 10, padding: "6px 20px", fontSize: 11, color: "var(--text-dim)", minWidth: 100 }}>
                 + Add
               </div>
@@ -107,7 +129,7 @@ export default function LaptopGrid({ laptops, onSelect, onHistory, isAdmin, onMo
               disabled={compareIds.length < 2}
               style={{ fontSize: 13, padding: "9px 22px", borderRadius: 10, border: "none", background: compareIds.length >= 2 ? "linear-gradient(135deg, var(--accent), #6ab4f5)" : "var(--surface)", color: compareIds.length >= 2 ? "#fff" : "var(--text-dim)", cursor: compareIds.length >= 2 ? "pointer" : "not-allowed", fontWeight: 700, boxShadow: compareIds.length >= 2 ? "0 4px 16px rgba(139,179,245,0.3)" : "none", transition: "all 0.15s" }}
             >
-              Compare {compareIds.length}/3
+              Compare {compareIds.length}/{limit}
             </button>
           </div>
         </div>

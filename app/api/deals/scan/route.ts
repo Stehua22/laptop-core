@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
   // the maxDuration setting above).
   let upserted = 0;
   if (qualifyingDeals.length > 0) {
-    const rows = qualifyingDeals.map((deal) => ({
+const rows = qualifyingDeals.map((deal) => ({
       source: deal.source,
       external_id: deal.externalId,
       title: deal.title,
@@ -107,6 +107,7 @@ export async function GET(req: NextRequest) {
       location: deal.location,
       deal_score: deal.dealScore,
       market_price: deal.marketPrice,
+      is_premium_deal: deal.isPremiumDeal,
       seen_at: new Date().toISOString(),
       is_active: true,
     }));

@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import {
   fetchArticles,
   addArticle,
@@ -10,9 +11,18 @@ import {
 } from "@/lib/supabase";
 
 const CATEGORIES = ["Guide", "Review", "News", "Comparison", "Tips", "Opinion"];
+const FREE_ARTICLE_LIMIT = 5;
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+}
+
+function getWeekStart(): string {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(now.setDate(diff));
+  return monday.toISOString().slice(0, 10);
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -79,6 +89,43 @@ export default function ArticlesPage() {
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   const [form, setForm] = useState({ title: "", summary: "", content: "", category: "Guide", author: "", cover_image: "" });
+
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
+  const [readIds, setReadIds] = useState<string[]>([]);
+  const [checkingLimit, setCheckingLimit] = useState(true);
+  const [showLimitModal, setShowLimitModal] = useState(false);
+
+  useEffect(() => {
+    async function loadReadState() {
+      const { data: sessionData } = await supabaseBrowser.auth.getSession();
+      const session = sessionData.session;
+      if (!session) { setCheckingLimit(false); return; }
+      setUserId(session.user.id);
+
+      const { data: profile } = await supabaseBrowser
+        .from("profiles")
+        .select("is_premium, read_article_ids, read_week_start")
+        .eq("id", session.user.id)
+        .single();
+
+      if (profile) {
+        setIsPremium(!!profile.is_premium);
+        const currentWeek = getWeekStart();
+        if (profile.read_week_start === currentWeek) {
+          setReadIds(profile.read_article_ids ?? []);
+        } else {
+          setReadIds([]);
+          await supabaseBrowser
+            .from("profiles")
+            .update({ read_article_ids: [], read_week_start: currentWeek })
+            .eq("id", session.user.id);
+        }
+      }
+      setCheckingLimit(false);
+    }
+    loadReadState();
+  }, []);
 
   const loadArticles = async () => {
     setLoading(true);
@@ -179,6 +226,34 @@ export default function ArticlesPage() {
     setForm((f) => ({ ...f, content: f.content + (f.content.endsWith("\n") || !f.content ? "" : "\n") + `![${alt}](${url})\n` }));
   };
 
+  const handleToggleExpand = async (article: Article) => {
+    const isExpanded = expandedId === article.id;
+    if (isExpanded) { setExpandedId(null); return; }
+
+    if (isPremium || readIds.includes(article.id)) {
+      setExpandedId(article.id);
+      return;
+    }
+
+    if (!userId) {
+      setExpandedId(article.id);
+      return;
+    }
+
+    if (readIds.length >= FREE_ARTICLE_LIMIT) {
+      setShowLimitModal(true);
+      return;
+    }
+
+    const nextReadIds = [...readIds, article.id];
+    setReadIds(nextReadIds);
+    setExpandedId(article.id);
+    await supabaseBrowser
+      .from("profiles")
+      .update({ read_article_ids: nextReadIds, read_week_start: getWeekStart() })
+      .eq("id", userId);
+  };
+
   const inputStyle: React.CSSProperties = {
     width: "100%",
     padding: "10px 14px",
@@ -209,6 +284,11 @@ export default function ArticlesPage() {
               </h1>
               <p style={{ marginTop: 10, color: "var(--text-muted)", fontSize: 13 }}>
                 Guides, reviews, and insights · {articles.length} article{articles.length !== 1 ? "s" : ""}
+                {!checkingLimit && !isPremium && userId && (
+                  <span style={{ marginLeft: 8, color: "var(--text-dim)" }}>
+                    · {readIds.length}/{FREE_ARTICLE_LIMIT} read this week
+                  </span>
+                )}
               </p>
             </div>
             <button
@@ -394,6 +474,31 @@ export default function ArticlesPage() {
           </div>
         )}
 
+        {showLimitModal && (
+          <div
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)" }}
+            onClick={(e) => { if (e.target === e.currentTarget) setShowLimitModal(false); }}
+          >
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--modal-radius, 18px)", width: "100%", maxWidth: 380, margin: "1rem", boxShadow: "var(--shadow-lg)", padding: "26px", textAlign: "center" }}>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>📖</div>
+              <h2 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 8px" }}>Weekly limit reached</h2>
+              <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20, lineHeight: 1.5 }}>
+                You've read {FREE_ARTICLE_LIMIT} articles this week on the free plan. Upgrade to Premium for unlimited access.
+              </p>
+              <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                <button
+                  onClick={() => setShowLimitModal(false)}
+                  style={{ fontSize: 13, padding: "9px 18px", borderRadius: "var(--btn-radius, 10px)", border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" }}
+              >Close</button>
+                
+                  href="/premium"
+                  style={{ fontSize: 13, padding: "9px 18px", borderRadius: "var(--btn-radius, 10px)", border: "none", background: "var(--accent)", color: "#fff", fontWeight: 700, textDecoration: "none" }}
+                >Upgrade to Premium</a>
+              </div>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="animate-fade-up" style={{ textAlign: "center", padding: "5rem 1rem", color: "var(--text-muted)", fontSize: 14 }}>
             Loading articles...
@@ -421,6 +526,7 @@ export default function ArticlesPage() {
             {filtered.map((article) => {
               const isExpanded = expandedId === article.id;
               const catColor = CATEGORY_COLORS[article.category] || "var(--accent)";
+              const isLocked = !isPremium && userId && !readIds.includes(article.id) && readIds.length >= FREE_ARTICLE_LIMIT;
               return (
                 <div
                   key={article.id}
@@ -433,6 +539,7 @@ export default function ArticlesPage() {
                     backdropFilter: `blur(var(--card-blur, 0px))`,
                     boxShadow: isExpanded ? `0 8px 32px ${catColor}15` : "var(--card-shadow, 0 2px 8px rgba(0,0,0,0.15))",
                     transition: "all 0.25s cubic-bezier(0.22,1,0.36,1)",
+                    opacity: isLocked ? 0.6 : 1,
                   }}
                 >
                   <div style={{ height: 3, background: `linear-gradient(90deg, ${catColor}, ${catColor}60)`, opacity: isExpanded ? 1 : 0.5, transition: "opacity 0.2s" }} />
@@ -448,7 +555,7 @@ export default function ArticlesPage() {
 
                   <div
                     style={{ padding: "18px 22px", cursor: "pointer" }}
-                    onClick={() => setExpandedId(isExpanded ? null : article.id)}
+                    onClick={() => handleToggleExpand(article)}
                   >
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
                       {!isExpanded && article.cover_image && (
@@ -475,6 +582,9 @@ export default function ArticlesPage() {
                             <span style={{ fontSize: 11, color: "var(--text-dim)" }}>
                               · {article.author}
                             </span>
+                          )}
+                          {isLocked && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)" }}>🔒 Premium</span>
                           )}
                         </div>
                         <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.01em", lineHeight: 1.3 }}>

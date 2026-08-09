@@ -5,7 +5,7 @@ export type RawListing = {
   externalId: string;
   title: string;
   price: number;
-  originalPrice?: number; // the listing's own "regular price" before discount, if known
+  originalPrice?: number;
   currency?: string;
   condition?: string;
   url: string;
@@ -19,6 +19,7 @@ export type ScoredDeal = RawListing & {
   brand: string | null;
   marketPrice: number | null;
   dealScore: number | null;
+  isPremiumDeal: boolean;
 };
 
 const TRACKED_BRANDS = [
@@ -46,8 +47,12 @@ const REFURB_KEYWORDS = [
   "grade b",
 ];
 
-// % below retail that counts as a "big drop" even if it's not an all-time low
+// % below retail that counts as a "big drop" for everyone
 const BIG_DROP_PCT = 25;
+
+// Lower bar — deals in this band (15-25% off) are real but smaller drops.
+// Shown to Premium users only, so free users see fewer/steeper-only deals.
+const PREMIUM_DROP_PCT = 15;
 
 export function detectBrand(title: string): string | null {
   const lower = title.toLowerCase();
@@ -62,11 +67,6 @@ export function isLikelyRefurbished(title: string, condition?: string): boolean 
   return REFURB_KEYWORDS.some((kw) => haystack.includes(kw));
 }
 
-/**
- * Rough model-tier extraction so we can group "ThinkPad T14" vs "ThinkPad X1"
- * separately when estimating market price. Covers business, consumer, and
- * gaming lines across the major brands. Not exhaustive — extend as needed.
- */
 export function extractModelKey(title: string): string {
   const lower = title.toLowerCase();
   const match = lower.match(
@@ -76,14 +76,10 @@ export function extractModelKey(title: string): string {
 }
 
 /**
- * marketPrices: map of modelKey -> { retailPrice, allTimeLow } pulled from
- * your existing `laptops` table (see route.ts getMarketPrices).
- *
- * A listing qualifies as a "good deal" if EITHER:
- *   - its price is at or below the all-time low we've ever tracked, OR
- *   - it's a big % drop off retail (>= BIG_DROP_PCT)
- * Anything that doesn't meet either condition gets dealScore = 0 and is
- * filtered out in route.ts before being saved.
+ * A listing now qualifies as a deal at one of two tiers:
+ *  - Free tier: all-time low, OR a big % drop (>= BIG_DROP_PCT) off retail
+ *  - Premium tier: a smaller but still real drop (>= PREMIUM_DROP_PCT, < BIG_DROP_PCT)
+ * Anything below PREMIUM_DROP_PCT gets dealScore = 0 and is filtered out.
  */
 export function scoreListing(
   listing: RawListing,
@@ -95,31 +91,34 @@ export function scoreListing(
 
   let marketPrice: number | null = info?.retailPrice ?? null;
   let dealScore: number | null = null;
+  let isPremiumDeal = false;
 
   if (info) {
-    // Known laptop already in your tracked catalog — compare against real
-    // history (all-time low / retail price).
     const isAllTimeLow = listing.price <= info.allTimeLow;
     const dropFromRetailPct = ((info.retailPrice - listing.price) / info.retailPrice) * 100;
     const isBigDrop = dropFromRetailPct >= BIG_DROP_PCT;
+    const isPremiumDrop = !isBigDrop && dropFromRetailPct >= PREMIUM_DROP_PCT;
 
     if (isAllTimeLow || isBigDrop) {
       const base = isAllTimeLow ? 80 : 50;
       const bonus = Math.max(0, Math.min(20, Math.round((dropFromRetailPct - BIG_DROP_PCT) / 2)));
       dealScore = Math.min(100, base + bonus);
+    } else if (isPremiumDrop) {
+      const bonus = Math.max(0, Math.min(10, Math.round((dropFromRetailPct - PREMIUM_DROP_PCT) / 2)));
+      dealScore = Math.min(40, 25 + bonus);
+      isPremiumDeal = true;
     } else {
       dealScore = 0;
     }
   } else if (listing.originalPrice && listing.originalPrice > listing.price) {
-    // Not a laptop we're tracking yet — fall back to the listing's own
-    // advertised discount (sale price vs. regular price) as the signal.
-    // Scored lower than a verified all-time-low/retail comparison since we
-    // have no history to confirm the "regular price" isn't inflated.
     marketPrice = listing.originalPrice;
     const dropPct = ((listing.originalPrice - listing.price) / listing.originalPrice) * 100;
     if (dropPct >= BIG_DROP_PCT) {
       const bonus = Math.max(0, Math.min(15, Math.round((dropPct - BIG_DROP_PCT) / 2)));
-      dealScore = Math.min(70, 35 + bonus); // capped below verified-catalog scores
+      dealScore = Math.min(70, 35 + bonus);
+    } else if (dropPct >= PREMIUM_DROP_PCT) {
+      dealScore = Math.min(30, 15 + Math.round((dropPct - PREMIUM_DROP_PCT) / 2));
+      isPremiumDeal = true;
     } else {
       dealScore = 0;
     }
@@ -132,5 +131,6 @@ export function scoreListing(
     brand,
     marketPrice,
     dealScore,
+    isPremiumDeal,
   };
 }
