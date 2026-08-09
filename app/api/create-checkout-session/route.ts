@@ -7,11 +7,17 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId, email } = await req.json();
+    const { userId, email, plan } = await req.json();
 
     if (!userId || !email) {
       return NextResponse.json({ error: 'Missing userId or email' }, { status: 400 });
     }
+
+    const normalizedPlan = plan === 'ultra' ? 'ultra' : 'premium';
+    const priceId =
+      normalizedPlan === 'ultra'
+        ? process.env.STRIPE_PRICE_ID_ULTRA!
+        : process.env.STRIPE_PRICE_ID_PREMIUM!;
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -19,12 +25,13 @@ export async function POST(req: NextRequest) {
       customer_email: email,
       line_items: [
         {
-          price: process.env.STRIPE_PRICE_ID!,
+          price: priceId,
           quantity: 1,
         },
       ],
       metadata: {
         userId,
+        plan: normalizedPlan,
       },
       success_url: `${req.nextUrl.origin}/tracker?premium=success`,
       cancel_url: `${req.nextUrl.origin}/tracker?premium=cancelled`,
@@ -35,4 +42,4 @@ export async function POST(req: NextRequest) {
     console.error('Stripe checkout session error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}  
+}

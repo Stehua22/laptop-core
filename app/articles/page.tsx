@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
@@ -489,8 +489,8 @@ export default function ArticlesPage() {
                 <button
                   onClick={() => setShowLimitModal(false)}
                   style={{ fontSize: 13, padding: "9px 18px", borderRadius: "var(--btn-radius, 10px)", border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" }}
-              >Close</button>
-                
+                >Close</button>
+                <a
                   href="/premium"
                   style={{ fontSize: 13, padding: "9px 18px", borderRadius: "var(--btn-radius, 10px)", border: "none", background: "var(--accent)", color: "#fff", fontWeight: 700, textDecoration: "none" }}
                 >Upgrade to Premium</a>

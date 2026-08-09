@@ -32,16 +32,62 @@ export async function POST(req: NextRequest) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
       const userId = session.metadata?.userId;
+      const plan = session.metadata?.plan === 'ultra' ? 'ultra' : 'premium';
 
       if (userId) {
         await supabase
           .from('profiles')
           .update({
             is_premium: true,
+            plan,
             stripe_customer_id: session.customer as string,
             stripe_subscription_id: session.subscription as string,
           })
           .eq('id', userId);
+
+        // --- Referral reward ---
+        const { data: referredProfile } = await supabase
+          .from('profiles')
+          .select('referred_by')
+          .eq('id', userId)
+          .single();
+
+        if (referredProfile?.referred_by) {
+          const { data: existingReferral } = await supabase
+            .from('referrals')
+            .select('id')
+            .eq('referred_id', userId)
+            .maybeSingle();
+
+          if (!existingReferral) {
+            await supabase.from('referrals').insert({
+              referrer_id: referredProfile.referred_by,
+              referred_id: userId,
+              status: 'confirmed',
+              confirmed_at: new Date().toISOString(),
+            });
+
+            const { data: referrerProfile } = await supabase
+              .from('profiles')
+              .select('stripe_subscription_id')
+              .eq('id', referredProfile.referred_by)
+              .single();
+
+            if (referrerProfile?.stripe_subscription_id && process.env.STRIPE_REFERRAL_COUPON_ID) {
+              try {
+                await stripe.subscriptions.update(referrerProfile.stripe_subscription_id, {
+                  coupon: process.env.STRIPE_REFERRAL_COUPON_ID,
+                });
+                await supabase
+                  .from('referrals')
+                  .update({ status: 'rewarded' })
+                  .eq('referred_id', userId);
+              } catch (err) {
+                console.error('Failed to apply referral coupon:', err);
+              }
+            }
+          }
+        }
       }
       break;
     }
