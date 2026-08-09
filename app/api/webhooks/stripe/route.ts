@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
             if (referrerProfile?.stripe_subscription_id && process.env.STRIPE_REFERRAL_COUPON_ID) {
               try {
                 await stripe.subscriptions.update(referrerProfile.stripe_subscription_id, {
-                  coupon: process.env.STRIPE_REFERRAL_COUPON_ID,
+                  discounts: [{ coupon: process.env.STRIPE_REFERRAL_COUPON_ID }],
                 });
                 await supabase
                   .from('referrals')
