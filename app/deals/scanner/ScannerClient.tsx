@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import Link from "next/link";
 
 let _supabase: SupabaseClient | null = null;
 function getSupabase() {
@@ -28,6 +29,7 @@ type Deal = {
   location: string | null;
   deal_score: number | null;
   market_price: number | null;
+  is_premium_deal: boolean | null;
   seen_at: string;
   first_seen_at: string;
 };
@@ -57,6 +59,7 @@ export default function ScannerClient() {
   const [brandFilter, setBrandFilter] = useState<string>("all");
   const [conditionFilter, setConditionFilter] = useState<string>("all");
   const [maxPrice, setMaxPrice] = useState<string>("");
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
 
   const loadDeals = useCallback(async () => {
     const sb = getSupabase();
@@ -77,6 +80,25 @@ export default function ScannerClient() {
     const interval = setInterval(loadDeals, 30000);
     return () => clearInterval(interval);
   }, [loadDeals]);
+
+  useEffect(() => {
+    async function checkPlan() {
+      const sb = getSupabase();
+      if (!sb) { setHasAccess(false); return; }
+      const { data: sessionData } = await sb.auth.getSession();
+      const session = sessionData.session;
+      if (!session) { setHasAccess(false); return; }
+
+      const { data: profile } = await sb
+        .from("profiles")
+        .select("plan")
+        .eq("id", session.user.id)
+        .single();
+
+      setHasAccess(profile?.plan === "premium" || profile?.plan === "ultra");
+    }
+    checkPlan();
+  }, []);
 
   // Smooth fake progress bar while a scan is running — the real scan is one
   // request with no incremental updates, so this eases from 0 toward ~90%
@@ -134,6 +156,9 @@ export default function ScannerClient() {
     return true;
   });
 
+  const unlockedCount = filtered.filter((d) => !d.is_premium_deal || hasAccess).length;
+  const lockedCount = filtered.length - unlockedCount;
+
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 20px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
@@ -165,6 +190,41 @@ export default function ScannerClient() {
         Marketplace.
         {lastScan && ` Last manual scan: ${lastScan.toLocaleTimeString()}.`}
       </p>
+
+      {hasAccess === false && lockedCount > 0 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            padding: "12px 18px",
+            borderRadius: 10,
+            background: "rgba(147,51,234,0.08)",
+            border: "1px solid rgba(147,51,234,0.25)",
+            marginBottom: 16,
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={{ fontSize: 13, color: "#9333ea", fontWeight: 600 }}>
+            🔒 {lockedCount} more deal{lockedCount !== 1 ? "s" : ""} available with Premium or Ultra
+          </span>
+          <Link
+            href="/premium"
+            style={{
+              fontSize: 12,
+              padding: "7px 16px",
+              borderRadius: 8,
+              background: "#9333ea",
+              color: "#fff",
+              fontWeight: 700,
+              textDecoration: "none",
+            }}
+          >
+            Upgrade
+          </Link>
+        </div>
+      )}
 
       {scanning && (
         <div style={{ marginBottom: 20 }}>
@@ -298,61 +358,133 @@ export default function ScannerClient() {
         </p>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
-          {filtered.map((deal, i) => (
-            <a
-              key={deal.id}
-              href={deal.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="deal-card-in"
-              style={{
-                border: "1px solid #e5e7eb",
-                borderRadius: 12,
-                padding: 14,
-                textDecoration: "none",
-                color: "inherit",
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-                animationDelay: `${Math.min(i, 20) * 0.03}s`,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280" }}>
-                <span>{SOURCE_LABEL[deal.source] ?? deal.source}</span>
-                {deal.deal_score !== null && (
-                  <span
+          {filtered.map((deal, i) => {
+            const isLocked = deal.is_premium_deal && !hasAccess;
+
+            if (isLocked) {
+              return (
+                <div
+                  key={deal.id}
+                  className="deal-card-in"
+                  style={{
+                    border: "1px solid rgba(147,51,234,0.3)",
+                    borderRadius: 12,
+                    padding: 14,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                    position: "relative",
+                    animationDelay: `${Math.min(i, 20) * 0.03}s`,
+                    background: "rgba(147,51,234,0.03)",
+                  }}
+                >
+                  <div style={{ filter: "blur(6px)", pointerEvents: "none", userSelect: "none" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280" }}>
+                      <span>{SOURCE_LABEL[deal.source] ?? deal.source}</span>
+                      <span style={{ fontWeight: 700, color: "#6b7280" }}>{deal.deal_score}/100</span>
+                    </div>
+                    {deal.image_url && (
+                      <img
+                        src={deal.image_url}
+                        alt=""
+                        style={{ width: "100%", height: 140, objectFit: "contain", background: "#f9fafb", borderRadius: 8, marginTop: 8 }}
+                      />
+                    )}
+                    <div style={{ fontSize: 14, fontWeight: 600, marginTop: 8 }}>{deal.title}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>
+                      ${deal.price.toFixed(0)} {deal.currency}
+                    </div>
+                  </div>
+                  <div
                     style={{
-                      fontWeight: 700,
-                      color:
-                        deal.deal_score >= 70 ? "#16a34a" : deal.deal_score >= 40 ? "#ca8a04" : "#6b7280",
+                      position: "absolute",
+                      inset: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      background: "rgba(255,255,255,0.4)",
+                      borderRadius: 12,
                     }}
                   >
-                    {deal.deal_score}/100
-                  </span>
+                    <span style={{ fontSize: 22 }}>🔒</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#9333ea" }}>Premium deal</span>
+                    <Link
+                      href="/premium"
+                      style={{
+                        fontSize: 12,
+                        padding: "6px 14px",
+                        borderRadius: 8,
+                        background: "#9333ea",
+                        color: "#fff",
+                        fontWeight: 700,
+                        textDecoration: "none",
+                      }}
+                    >
+                      Upgrade to unlock
+                    </Link>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <a
+                key={deal.id}
+                href={deal.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="deal-card-in"
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 12,
+                  padding: 14,
+                  textDecoration: "none",
+                  color: "inherit",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  animationDelay: `${Math.min(i, 20) * 0.03}s`,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280" }}>
+                  <span>{SOURCE_LABEL[deal.source] ?? deal.source}</span>
+                  {deal.deal_score !== null && (
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color:
+                          deal.deal_score >= 70 ? "#16a34a" : deal.deal_score >= 40 ? "#ca8a04" : "#6b7280",
+                      }}
+                    >
+                      {deal.deal_score}/100
+                    </span>
+                  )}
+                </div>
+                {deal.image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={deal.image_url}
+                    alt={deal.title}
+                    style={{ width: "100%", height: 140, objectFit: "contain", background: "#f9fafb", borderRadius: 8 }}
+                  />
                 )}
-              </div>
-              {deal.image_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={deal.image_url}
-                  alt={deal.title}
-                  style={{ width: "100%", height: 140, objectFit: "contain", background: "#f9fafb", borderRadius: 8 }}
-                />
-              )}
-              <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3 }}>{deal.title}</div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                <span style={{ fontSize: 18, fontWeight: 700 }}>
-                  ${deal.price.toFixed(0)} {deal.currency}
-                </span>
-                {deal.market_price && (
-                  <span style={{ fontSize: 12, color: "#9ca3af", textDecoration: "line-through" }}>
-                    ${deal.market_price.toFixed(0)}
+                <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3 }}>{deal.title}</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                  <span style={{ fontSize: 18, fontWeight: 700 }}>
+                    ${deal.price.toFixed(0)} {deal.currency}
                   </span>
-                )}
-              </div>
-              {deal.condition && <span style={{ fontSize: 12, color: "#6b7280" }}>{deal.condition}</span>}
-            </a>
-          ))}
+                  {deal.market_price && (
+                    <span style={{ fontSize: 12, color: "#9ca3af", textDecoration: "line-through" }}>
+                      ${deal.market_price.toFixed(0)}
+                    </span>
+                  )}
+                </div>
+                {deal.condition && <span style={{ fontSize: 12, color: "#6b7280" }}>{deal.condition}</span>}
+              </a>
+            );
+          })}
         </div>
       )}
 
