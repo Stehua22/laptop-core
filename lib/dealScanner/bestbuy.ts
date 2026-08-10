@@ -1,4 +1,4 @@
-// lib/dealScanner/bestbuy.ts
+﻿// lib/dealScanner/bestbuy.ts
 // Best Buy Canada does NOT have an official public product API (the old
 // bestbuyapis.com developer program was shut down). Best Buy US still has
 // one, but it won't have CAD pricing / Canadian stock.
@@ -18,13 +18,11 @@
 import type { RawListing } from "./scoring";
 
 const SEARCH_TERMS = [
-  // Business lines — all conditions
   "lenovo thinkpad",
   "dell latitude",
   "hp elitebook",
   "hp probook",
   "lenovo legion",
-  // Consumer lines — all conditions
   "lenovo ideapad",
   "dell inspiron",
   "hp pavilion",
@@ -32,35 +30,28 @@ const SEARCH_TERMS = [
   "asus zenbook",
   "acer aspire",
   "acer swift",
-  // Gaming
   "asus rog laptop",
   "acer predator laptop",
   "acer nitro laptop",
   "msi gaming laptop",
   "dell g15 laptop",
-  // Apple / premium
   "macbook air",
   "macbook pro",
-  // 2-in-1s / Surface / other brands
   "microsoft surface laptop",
   "samsung galaxy book",
   "lg gram laptop",
   "lenovo yoga laptop",
   "dell xps laptop",
-  // Explicit deal signals across any brand/condition
   "laptop clearance",
   "laptop open box",
   "laptop on sale",
   "refurbished laptop",
-  // Seasonal sale events — Best Buy runs these as marketing campaigns, not
-  // a queryable category, so we search the terms shoppers/listings use.
   "laptop summer sale",
   "laptop boxing day",
   "laptop black friday",
   "laptop cyber monday",
   "laptop deal of the day",
   "laptop clearance sale",
-  // General "new laptop" catch-alls, not tied to any specific brand/line
   "windows laptop",
   "student laptop",
   "budget laptop",
@@ -69,9 +60,12 @@ const SEARCH_TERMS = [
 
 async function searchOneTerm(term: string): Promise<RawListing[]> {
   try {
+    // pageSize bumped from 24 to 100 so the combined pool across all
+    // search terms comfortably covers the Ultra-tier result count (350)
+    // after de-dupe and the "must be a real deal" filter below.
     const url = `https://www.bestbuy.ca/api/v2/json/search?query=${encodeURIComponent(
       term
-    )}&categoryid=&sortBy=relevance&sortDir=desc&currentRegion=ON&page=1&pageSize=24&lang=en-CA`;
+    )}&categoryid=&sortBy=relevance&sortDir=desc&currentRegion=ON&page=1&pageSize=100&lang=en-CA`;
 
     const res = await fetch(url, {
       headers: {
@@ -79,7 +73,6 @@ async function searchOneTerm(term: string): Promise<RawListing[]> {
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
         Accept: "application/json",
       },
-      // Individual per-request timeout so one slow term can't stall the batch.
       signal: AbortSignal.timeout(5000),
     });
 
@@ -120,13 +113,9 @@ async function searchOneTerm(term: string): Promise<RawListing[]> {
 }
 
 export async function fetchBestBuyDeals(): Promise<RawListing[]> {
-  // Run all searches in parallel — sequential requests for 30+ terms blow
-  // past Vercel's serverless function time limit (10s on Hobby plans) and
-  // the whole route times out with no response at all.
   const batches = await Promise.all(SEARCH_TERMS.map(searchOneTerm));
   const results = batches.flat();
 
-  // De-dupe by SKU — multiple search terms can return the same product.
   const seen = new Set<string>();
   const deduped = results.filter((r) => {
     if (seen.has(r.externalId)) return false;
@@ -134,12 +123,6 @@ export async function fetchBestBuyDeals(): Promise<RawListing[]> {
     return true;
   });
 
-  // Refurbished / open-box / clearance listings are deals by definition —
-  // keep those as-is. But "new" condition is the fallback classification
-  // for anything that didn't match a deal-signal regex, so a plain
-  // full-price laptop also lands here. Only keep "new" listings that have
-  // an actual price drop (originalPrice > price), so full-price inventory
-  // doesn't flood the deals feed as noise.
   return deduped.filter((r) => {
     if (r.condition !== "new") return true;
     return r.originalPrice !== undefined && r.originalPrice > r.price;
