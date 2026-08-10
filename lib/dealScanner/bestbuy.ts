@@ -65,7 +65,7 @@ async function searchOneTerm(term: string): Promise<RawListing[]> {
     // after de-dupe and the "must be a real deal" filter below.
     const url = `https://www.bestbuy.ca/api/v2/json/search?query=${encodeURIComponent(
       term
-    )}&categoryid=&sortBy=relevance&sortDir=desc&currentRegion=ON&page=1&pageSize=100&lang=en-CA`;
+    )}&categoryid=&sortBy=relevance&sortDir=desc&currentRegion=ON&page=1&pageSize=60&lang=en-CA`;
 
     const res = await fetch(url, {
       headers: {
@@ -73,7 +73,7 @@ async function searchOneTerm(term: string): Promise<RawListing[]> {
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
         Accept: "application/json",
       },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!res.ok) {
