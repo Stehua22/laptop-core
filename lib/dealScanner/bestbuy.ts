@@ -1,20 +1,4 @@
 ﻿// lib/dealScanner/bestbuy.ts
-// Best Buy Canada does NOT have an official public product API (the old
-// bestbuyapis.com developer program was shut down). Best Buy US still has
-// one, but it won't have CAD pricing / Canadian stock.
-//
-// Practical options for Best Buy Canada, ranked by reliability:
-//  1. Best Buy publishes a product RSS/sitemap and a JSON search endpoint
-//     used by their own site (bestbuy.ca/api/...) — undocumented, can change
-//     without notice, but works today and is much lighter-weight than
-//     full-page scraping.
-//  2. Full HTML scraping with a headless browser (fragile, slower, higher
-//     ban risk).
-//
-// This implementation uses option 1. If Best Buy changes their internal API
-// shape, this is the file that breaks — check the Network tab on
-// bestbuy.ca/en-ca/collection/laptops for the current endpoint shape.
-
 import type { RawListing } from "./scoring";
 
 const SEARCH_TERMS = [
@@ -58,14 +42,17 @@ const SEARCH_TERMS = [
   "2 in 1 laptop",
 ];
 
-async function searchOneTerm(term: string): Promise<RawListing[]> {
+const PAGE_SIZE = 60;
+// Best Buy's internal search endpoint may silently clamp pageSize server-side.
+// Paging around it: fetch page 1, and only fetch further pages if the
+// previous page came back completely full.
+const MAX_PAGES_PER_TERM = 4;
+
+async function fetchOnePage(term: string, page: number): Promise<{ items: RawListing[]; full: boolean }> {
   try {
-    // pageSize bumped from 24 to 100 so the combined pool across all
-    // search terms comfortably covers the Ultra-tier result count (350)
-    // after de-dupe and the "must be a real deal" filter below.
     const url = `https://www.bestbuy.ca/api/v2/json/search?query=${encodeURIComponent(
       term
-    )}&categoryid=&sortBy=relevance&sortDir=desc&currentRegion=ON&page=1&pageSize=60&lang=en-CA`;
+    )}&categoryid=&sortBy=relevance&sortDir=desc&currentRegion=ON&page=${page}&pageSize=${PAGE_SIZE}&lang=en-CA`;
 
     const res = await fetch(url, {
       headers: {
@@ -77,12 +64,14 @@ async function searchOneTerm(term: string): Promise<RawListing[]> {
     });
 
     if (!res.ok) {
-      console.error(`Best Buy search failed for "${term}": ${res.status}`);
-      return [];
+      console.error(`Best Buy search failed for "${term}" page ${page}: ${res.status}`);
+      return { items: [], full: false };
     }
 
     const data = await res.json();
-    return (data.products ?? []).map((product: any) => {
+    const products = data.products ?? [];
+
+    const items: RawListing[] = products.map((product: any) => {
       const price = product.salePrice ?? product.regularPrice;
       const originalPrice =
         product.regularPrice && product.regularPrice > price ? product.regularPrice : undefined;
@@ -106,10 +95,22 @@ async function searchOneTerm(term: string): Promise<RawListing[]> {
         imageUrl: product.thumbnailImage,
       };
     });
+
+    return { items, full: items.length >= PAGE_SIZE };
   } catch (err) {
-    console.error(`Best Buy fetch error for "${term}":`, err);
-    return [];
+    console.error(`Best Buy fetch error for "${term}" page ${page}:`, err);
+    return { items: [], full: false };
   }
+}
+
+async function searchOneTerm(term: string): Promise<RawListing[]> {
+  const all: RawListing[] = [];
+  for (let page = 1; page <= MAX_PAGES_PER_TERM; page++) {
+    const { items, full } = await fetchOnePage(term, page);
+    all.push(...items);
+    if (!full) break;
+  }
+  return all;
 }
 
 export async function fetchBestBuyDeals(): Promise<RawListing[]> {
