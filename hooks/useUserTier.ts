@@ -1,11 +1,10 @@
-'use client';
-
+﻿'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export type Tier = 'free' | 'premium' | 'ultra';
 
-// Assumes a `profiles` table with a `tier` column: 'free' | 'premium' | 'ultra'
+// Reads the `plan` column on the `profiles` table
 export function useUserTier(): { tier: Tier; loading: boolean } {
   const [tier, setTier] = useState<Tier>('free');
   const [loading, setLoading] = useState(true);
@@ -22,12 +21,12 @@ export function useUserTier(): { tier: Tier; loading: boolean } {
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('tier')
+        .select('plan')
         .eq('id', user.id)
         .single();
 
       if (!cancelled) {
-        setTier(!error && data?.tier ? (data.tier as Tier) : 'free');
+        setTier(!error && data?.plan ? (data.plan as Tier) : 'free');
         setLoading(false);
       }
     }
