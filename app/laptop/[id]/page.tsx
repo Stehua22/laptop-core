@@ -2,15 +2,22 @@
 import PageTransition from "@/components/PageTransition";
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import type { Laptop } from "@/lib/supabase";
 import { fetchLaptops, supabase } from "@/lib/supabase";
+import { useUserTier } from "@/hooks/useUserTier";
 
 const fmt = (n: number) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const ADMIN_PASSWORD = "admin2026.123";
 
+const SIMILAR_FREE_LIMIT = 4;
+const SIMILAR_ULTRA_LIMIT = 12;
+
 export default function LaptopPage() {
   const router = useRouter();
   const params = useParams();
+  const { tier } = useUserTier();
+  const isUltra = tier === "ultra";
   const [laptop, setLaptop] = useState<Laptop | null>(null);
   const [allLaptops, setAllLaptops] = useState<Laptop[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,7 +120,9 @@ export default function LaptopPage() {
   const specLines = laptop.specs?.split(/[,·\n]/).map(s => s.trim()).filter(Boolean) ?? [];
   const goodForTags = laptop.good_for ? laptop.good_for.split(",").map(s => s.trim()).filter(Boolean) : [];
 
-  const similarLaptops = allLaptops
+  const similarLimit = isUltra ? SIMILAR_ULTRA_LIMIT : SIMILAR_FREE_LIMIT;
+
+  const similarLaptopsScored = allLaptops
     .filter((l) => l.id !== laptop.id)
     .map((l) => {
       let score = 0;
@@ -134,9 +143,10 @@ export default function LaptopPage() {
       return { laptop: l, score };
     })
     .filter((s) => s.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 4)
-    .map((s) => s.laptop);
+    .sort((a, b) => b.score - a.score);
+
+  const similarLaptops = similarLaptopsScored.slice(0, similarLimit).map((s) => s.laptop);
+  const hasMoreSimilar = !isUltra && similarLaptopsScored.length > SIMILAR_FREE_LIMIT;
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "8px 12px", fontSize: 13,
@@ -417,7 +427,14 @@ export default function LaptopPage() {
           {/* Similar Laptops */}
           {similarLaptops.length > 0 && (
             <div style={{ marginBottom: 40 }}>
-              <h2 style={{ fontSize: "1.1rem", fontWeight: 800, marginBottom: 16, letterSpacing: "-0.02em" }}>Similar Laptops</h2>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <h2 style={{ fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.02em", margin: 0 }}>Similar Laptops</h2>
+                {!isUltra && (
+                  <Link href="/premium" style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", textDecoration: "none" }}>
+                    Unlock {SIMILAR_ULTRA_LIMIT} matches with Ultra →
+                  </Link>
+                )}
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
                 {similarLaptops.map((l) => {
                   const lPrice = l.current_price ?? l.retail_price ?? 0;
@@ -446,6 +463,11 @@ export default function LaptopPage() {
                   );
                 })}
               </div>
+              {hasMoreSimilar && (
+                <p style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 12 }}>
+                  Showing {SIMILAR_FREE_LIMIT} of {Math.min(similarLaptopsScored.length, SIMILAR_ULTRA_LIMIT)} matches. Ultra members see the full list.
+                </p>
+              )}
             </div>
           )}
         </div>
