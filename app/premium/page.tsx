@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -11,12 +11,14 @@ const FEATURES: { label: string; free: string; premium: string; ultra: string }[
   { label: 'Lapi AI chats',       free: '5/day',      premium: 'Unlimited', ultra: 'Unlimited' },
   { label: 'Laptop comparisons',  free: 'Up to 3',     premium: 'Up to 6',   ultra: 'Up to 6' },
   { label: 'Comparison insights', free: 'Basic specs', premium: 'Value score + price-per-spec', ultra: 'Value score + price-per-spec' },
-  { label: 'Split View (2-laptop side-by-side)', free: '—', premium: '—', ultra: 'Included' },
-  { label: '3D Model Viewer',     free: '—',           premium: 'Included', ultra: 'Included' },
+  { label: 'Split View (2-laptop side-by-side)', free: 'â€”', premium: 'â€”', ultra: 'Included' },
+  { label: '3D Model Viewer',     free: 'â€”',           premium: 'Included', ultra: 'Included' },
+  { label: 'Similar Laptops results', free: '4', premium: '4', ultra: '12' },
   { label: 'Deal scanner',        free: 'Standard',    premium: 'Priority',  ultra: 'Priority / expanded sources' },
+  { label: 'Deal scanner â€” Best Buy results', free: '155', premium: '250', ultra: '350' },
   { label: 'Articles',            free: '5/week',      premium: 'Unlimited', ultra: 'Unlimited' },
   { label: 'Support',             free: 'Standard',    premium: 'Priority',  ultra: 'Priority' },
-  { label: 'Referral rewards',    free: '—',           premium: '1 free month per referral', ultra: '1 free month per referral' },
+  { label: 'Referral rewards',    free: 'â€”',           premium: '1 free month per referral', ultra: '1 free month per referral' },
 ];
 
 const PLAN_PRICE: Record<PlanKey, string> = {
@@ -99,7 +101,7 @@ export default function PremiumPage() {
           padding: 28,
         }}
       >
-        <div style={{ fontSize: 32, marginBottom: 8 }}>⭐</div>
+        <div style={{ fontSize: 32, marginBottom: 8 }}>â­</div>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>LaptopCore Premium & Ultra</h1>
         <p style={{ fontSize: 13, color: '#888', marginBottom: 24 }}>
           Unlock unlimited chats, advanced comparisons, and more.
@@ -151,7 +153,7 @@ export default function PremiumPage() {
         </div>
 
         {checking ? (
-          <p style={{ fontSize: 14 }}>Loading…</p>
+          <p style={{ fontSize: 14 }}>Loadingâ€¦</p>
         ) : !user ? (
           <p style={{ fontSize: 14 }}>
             You need an account first.{' '}
@@ -232,7 +234,7 @@ function PlanButton({
       <div style={{ fontWeight: 700, fontSize: 14, color, marginBottom: 4 }}>{label}</div>
       <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>{price}</div>
       {active ? (
-        <p style={{ fontSize: 13, fontWeight: 600, color: '#16a34a' }}>Your current plan 🎉</p>
+        <p style={{ fontSize: 13, fontWeight: 600, color: '#16a34a' }}>Your current plan ðŸŽ‰</p>
       ) : (
         <button
           onClick={onClick}
@@ -250,7 +252,7 @@ function PlanButton({
             opacity: disabled || loading ? 0.6 : 1,
           }}
         >
-          {loading ? 'Redirecting…' : disabled ? 'Included in Ultra' : `Upgrade to ${label}`}
+          {loading ? 'Redirectingâ€¦' : disabled ? 'Included in Ultra' : `Upgrade to ${label}`}
         </button>
       )}
     </div>
