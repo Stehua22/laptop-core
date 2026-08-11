@@ -84,6 +84,56 @@ const MAX_PAGES_PER_TERM = 4;
 // zero results, but the scan as a whole reliably completes.
 const FETCH_TIMEOUT_MS = 10000;
 
+// Brand/model search terms (e.g. "acer predator laptop") also surface
+// accessories — batteries, chargers, cases, docks — that share the brand
+// name in their title. These aren't laptops, so they get excluded entirely
+// rather than reaching the scoring step. Left unfiltered, a battery listed
+// at $85 against a $2900 "original price" scores as a near-perfect deal
+// and crowds out real laptop listings at the top of the sort.
+const NON_LAPTOP_KEYWORDS = [
+  "battery",
+  "charger",
+  "charging",
+  "adapter",
+  "power cord",
+  "power supply",
+  "ac adapter",
+  "case",
+  "sleeve",
+  "bag",
+  "backpack",
+  "cover",
+  "skin",
+  "decal",
+  "screen protector",
+  "privacy filter",
+  "stylus",
+  "pen",
+  "dock",
+  "docking station",
+  "hub",
+  "cable",
+  "mouse",
+  "keyboard",
+  "webcam",
+  "stand",
+  "mount",
+  "cooling pad",
+  "cooler",
+  "fan",
+  "ram",
+  "memory module",
+  "ssd",
+  "hard drive",
+  "hdd",
+  "replacement screen",
+];
+
+function isLaptopListing(title: string): boolean {
+  const lower = title.toLowerCase();
+  return !NON_LAPTOP_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
 async function fetchOnePage(term: string, page: number): Promise<{ items: RawListing[]; full: boolean }> {
   try {
     const url = `https://www.bestbuy.ca/api/v2/json/search?query=${encodeURIComponent(
@@ -107,35 +157,39 @@ async function fetchOnePage(term: string, page: number): Promise<{ items: RawLis
     const data = await res.json();
     const products = data.products ?? [];
 
-    const items: RawListing[] = products.map((product: any) => {
-      const price = product.salePrice ?? product.regularPrice;
-      const originalPrice =
-        product.regularPrice && product.regularPrice > price ? product.regularPrice : undefined;
-      return {
-        source: "bestbuy" as const,
-        externalId: String(product.sku),
-        title: product.name,
-        price,
-        originalPrice,
-        currency: "CAD",
-        condition: /like new/i.test(product.name)
-          ? "like-new"
-          : /refurbished|refurb|renewed|certified pre-owned/i.test(product.name)
-          ? "refurbished"
-          : /open.?box/i.test(product.name)
-          ? "open-box"
-          : /clearance/i.test(product.name)
-          ? "clearance"
-          : "new",
-        url: `https://www.bestbuy.ca${product.productUrl}`,
-        imageUrl: product.thumbnailImage,
-      };
-    });
+    const items: RawListing[] = products
+      .filter((product: any) => isLaptopListing(product.name ?? ""))
+      .map((product: any) => {
+        const price = product.salePrice ?? product.regularPrice;
+        const originalPrice =
+          product.regularPrice && product.regularPrice > price ? product.regularPrice : undefined;
+        return {
+          source: "bestbuy" as const,
+          externalId: String(product.sku),
+          title: product.name,
+          price,
+          originalPrice,
+          currency: "CAD",
+          condition: /like new/i.test(product.name)
+            ? "like-new"
+            : /refurbished|refurb|renewed|certified pre-owned/i.test(product.name)
+            ? "refurbished"
+            : /open.?box/i.test(product.name)
+            ? "open-box"
+            : /clearance/i.test(product.name)
+            ? "clearance"
+            : "new",
+          url: `https://www.bestbuy.ca${product.productUrl}`,
+          imageUrl: product.thumbnailImage,
+        };
+      });
 
-    // A page shorter than what we asked for (either because we requested
-    // more than PAGE_SIZE, or the server clamped it) means there's nothing
-    // more to page through for this term.
-    return { items, full: items.length >= PAGE_SIZE };
+    // A page shorter than what Best Buy actually returned (before our own
+    // filtering) means there's nothing more to page through for this term.
+    // Use the raw product count, not the filtered items count, so a page
+    // full of filtered-out accessories doesn't look like a "short page"
+    // and stop pagination early.
+    return { items, full: products.length >= PAGE_SIZE };
   } catch (err) {
     console.error(`Best Buy fetch error for "${term}" page ${page}:`, err);
     return { items: [], full: false };
@@ -158,7 +212,7 @@ export async function fetchBestBuyDeals(): Promise<RawListing[]> {
   const batches = await Promise.all(SEARCH_TERMS.map(searchOneTerm));
   const results = batches.flat();
 
-  console.log(`Best Buy scan: ${results.length} raw listings across ${SEARCH_TERMS.length} search terms`);
+  console.log(`Best Buy scan: ${results.length} laptop listings across ${SEARCH_TERMS.length} search terms`);
 
   // De-dupe by SKU — multiple search terms can return the same product.
   const seen = new Set<string>();
