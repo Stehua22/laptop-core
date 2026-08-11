@@ -2,7 +2,7 @@
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import AIAssistant from '@/components/AIAssistant';
-import TopNav from '@/components/Topnav';
+import TopNav from '@/components/TopNav';
 
 export const metadata: Metadata = {
   title: "LaptopCore",
@@ -21,4 +21,5 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+
 
