@@ -76,7 +76,26 @@ const PAGE_SIZE = 60;
 // full (a short page means we've hit the end of that term's real results).
 const MAX_PAGES_PER_TERM = 4;
 
-async function fetchOnePage(term: string, page: number): Promise<{ items: RawListing[]; full: boolean }> {
+// Firing all 34 terms at once was tripping Best Buy's rate limiting /
+// making individual requests slow enough to hit the fetch timeout (seen in
+// prod logs: "2 in 1 laptop" page 1 timed out at 8s). Batching keeps total
+// scan time reasonable while cutting how many concurrent connections hit
+// Best Buy at once.
+const TERM_BATCH_SIZE = 6;
+
+// 8s was too tight under load — bumped to 15s. A slow response we wait out
+// beats a fast timeout that silently drops an entire search term's results.
+const FETCH_TIMEOUT_MS = 15000;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchOnePage(
+  term: string,
+  page: number,
+  attempt = 1
+): Promise<{ items: RawListing[]; full: boolean }> {
   try {
     const url = `https://www.bestbuy.ca/api/v2/json/search?query=${encodeURIComponent(
       term
@@ -88,9 +107,7 @@ async function fetchOnePage(term: string, page: number): Promise<{ items: RawLis
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
         Accept: "application/json",
       },
-      // 8s, not 5s — a full pageSize=60 response is heavy enough that 5s
-      // caused timeouts that took the whole scan down with it.
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
 
     if (!res.ok) {
@@ -126,12 +143,16 @@ async function fetchOnePage(term: string, page: number): Promise<{ items: RawLis
       };
     });
 
-    // A page shorter than what we asked for (either because we requested
-    // more than PAGE_SIZE, or the server clamped it) means there's nothing
-    // more to page through for this term.
     return { items, full: items.length >= PAGE_SIZE };
   } catch (err) {
-    console.error(`Best Buy fetch error for "${term}" page ${page}:`, err);
+    // Retry once on timeout/network error before giving up on this page —
+    // a single slow response shouldn't cost us the whole term's results.
+    if (attempt < 2) {
+      console.error(`Best Buy fetch error for "${term}" page ${page} (attempt ${attempt}), retrying:`, err);
+      await sleep(500);
+      return fetchOnePage(term, page, attempt + 1);
+    }
+    console.error(`Best Buy fetch error for "${term}" page ${page}, giving up:`, err);
     return { items: [], full: false };
   }
 }
@@ -147,10 +168,14 @@ async function searchOneTerm(term: string): Promise<RawListing[]> {
 }
 
 export async function fetchBestBuyDeals(): Promise<RawListing[]> {
-  // Terms still run in parallel with each other; pages within a term run
-  // sequentially (usually just 1 request per term unless a term is deep).
-  const batches = await Promise.all(SEARCH_TERMS.map(searchOneTerm));
-  const results = batches.flat();
+  // Batch terms instead of firing all 34 at once — cuts concurrent
+  // connections to Best Buy, which was causing timeouts under load.
+  const results: RawListing[] = [];
+  for (let i = 0; i < SEARCH_TERMS.length; i += TERM_BATCH_SIZE) {
+    const batch = SEARCH_TERMS.slice(i, i + TERM_BATCH_SIZE);
+    const batchResults = await Promise.all(batch.map(searchOneTerm));
+    results.push(...batchResults.flat());
+  }
 
   // De-dupe by SKU — multiple search terms can return the same product.
   const seen = new Set<string>();
