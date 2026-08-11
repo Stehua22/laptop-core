@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
@@ -34,11 +34,26 @@ type Deal = {
   first_seen_at: string;
 };
 
+type Plan = "free" | "premium" | "ultra";
+
 const SOURCE_LABEL: Record<string, string> = {
   ebay: "eBay",
   bestbuy: "Best Buy",
   facebook: "Facebook Marketplace",
 };
+
+const BESTBUY_LIMITS: Record<Plan, number> = {
+  free: 155,
+  premium: 250,
+  ultra: 350,
+};
+
+function normalizePlan(raw: unknown): Plan {
+  const val = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  if (val === "ultra") return "ultra";
+  if (val === "premium") return "premium";
+  return "free";
+}
 
 const selectStyle: React.CSSProperties = {
   padding: "8px 12px",
@@ -60,6 +75,7 @@ export default function ScannerClient() {
   const [conditionFilter, setConditionFilter] = useState<string>("all");
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  const [plan, setPlan] = useState<Plan>("free");
 
   const loadDeals = useCallback(async () => {
     const sb = getSupabase();
@@ -69,14 +85,13 @@ export default function ScannerClient() {
       .select("*")
       .eq("is_active", true)
       .order("deal_score", { ascending: false, nullsFirst: false })
-      .limit(200);
+      .limit(500);
     if (data) setDeals(data as Deal[]);
     setLoading(false);
   }, []);
 
   useEffect(() => {
     loadDeals();
-    // pick up new rows written by background cron scans without a manual trigger
     const interval = setInterval(loadDeals, 30000);
     return () => clearInterval(interval);
   }, [loadDeals]);
@@ -84,27 +99,30 @@ export default function ScannerClient() {
   useEffect(() => {
     async function checkPlan() {
       const sb = getSupabase();
-      if (!sb) { setHasAccess(false); return; }
-      const { data: sessionData } = await sb.auth.getSession();
-      const session = sessionData.session;
-      if (!session) { setHasAccess(false); return; }
+      if (!sb) { setHasAccess(false); setPlan("free"); return; }
 
-      const { data: profile } = await sb
+      const { data: sessionData, error: sessionError } = await sb.auth.getSession();
+      const session = sessionData.session;
+      if (sessionError) console.error("Session check failed:", sessionError);
+      if (!session) { setHasAccess(false); setPlan("free"); return; }
+
+      const { data: profile, error: profileError } = await sb
         .from("profiles")
         .select("plan")
         .eq("id", session.user.id)
         .single();
 
-      setHasAccess(profile?.plan === "premium" || profile?.plan === "ultra");
+      if (profileError) {
+        console.error("Profile plan lookup failed:", profileError);
+      }
+
+      const resolvedPlan = normalizePlan(profile?.plan);
+      setPlan(resolvedPlan);
+      setHasAccess(resolvedPlan === "premium" || resolvedPlan === "ultra");
     }
     checkPlan();
   }, []);
 
-  // Smooth fake progress bar while a scan is running — the real scan is one
-  // request with no incremental updates, so this eases from 0 toward ~90%
-  // and then snaps to 100% when the response actually lands. Keeps the UI
-  // honest (never claims "done" before the real fetch resolves) while still
-  // feeling alive during the several-second wait.
   useEffect(() => {
     if (!scanning) return;
     setScanProgress(0);
@@ -121,15 +139,12 @@ export default function ScannerClient() {
   async function triggerScan() {
     setScanning(true);
     try {
-      // NEXT_PUBLIC_DEAL_SCAN_SECRET must match DEAL_SCAN_SECRET server-side.
-      // Fine for a personal single-user project; don't reuse this pattern
-      // for anything with real users hitting the client bundle.
       await fetch(`/api/deals/scan?secret=${process.env.NEXT_PUBLIC_DEAL_SCAN_SECRET}`);
       setScanProgress(100);
       await loadDeals();
       setLastScan(new Date());
     } finally {
-      setTimeout(() => setScanning(false), 300); // let the bar visibly hit 100%
+      setTimeout(() => setScanning(false), 300);
     }
   }
 
@@ -156,8 +171,19 @@ export default function ScannerClient() {
     return true;
   });
 
-  const unlockedCount = filtered.filter((d) => !d.is_premium_deal || hasAccess).length;
-  const lockedCount = filtered.length - unlockedCount;
+  const bestbuyLimit = BESTBUY_LIMITS[plan];
+  let bestbuySeen = 0;
+  const withLocks = filtered.map((d) => {
+    let locked = !!(d.is_premium_deal && !hasAccess);
+    if (d.source === "bestbuy") {
+      bestbuySeen += 1;
+      if (bestbuySeen > bestbuyLimit) locked = true;
+    }
+    return { deal: d, locked };
+  });
+
+  const unlockedCount = withLocks.filter((x) => !x.locked).length;
+  const lockedCount = withLocks.length - unlockedCount;
 
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 20px" }}>
@@ -187,11 +213,11 @@ export default function ScannerClient() {
       </div>
       <p style={{ color: "#6b7280", marginBottom: 12 }}>
         Refurbished Lenovo, Dell, HP &amp; more — scanned from eBay, Best Buy, and Facebook
-        Marketplace.
+        Marketplace. Best Buy results: {bestbuyLimit} on your plan.
         {lastScan && ` Last manual scan: ${lastScan.toLocaleTimeString()}.`}
       </p>
 
-      {hasAccess === false && lockedCount > 0 && (
+      {lockedCount > 0 && (
         <div
           style={{
             display: "flex",
@@ -207,7 +233,7 @@ export default function ScannerClient() {
           }}
         >
           <span style={{ fontSize: 13, color: "#9333ea", fontWeight: 600 }}>
-            🔒 {lockedCount} more deal{lockedCount !== 1 ? "s" : ""} available with Premium or Ultra
+            🔒 {lockedCount} more deal{lockedCount !== 1 ? "s" : ""} available with {plan === "free" ? "Premium or Ultra" : "Ultra"}
           </span>
           <Link
             href="/premium"
@@ -358,10 +384,8 @@ export default function ScannerClient() {
         </p>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
-          {filtered.map((deal, i) => {
-            const isLocked = deal.is_premium_deal && !hasAccess;
-
-            if (isLocked) {
+          {withLocks.map(({ deal, locked }, i) => {
+            if (locked) {
               return (
                 <div
                   key={deal.id}
@@ -409,7 +433,9 @@ export default function ScannerClient() {
                     }}
                   >
                     <span style={{ fontSize: 22 }}>🔒</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "#9333ea" }}>Premium deal</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#9333ea" }}>
+                      {deal.source === "bestbuy" ? "More results with a higher plan" : "Premium deal"}
+                    </span>
                     <Link
                       href="/premium"
                       style={{
@@ -430,7 +456,7 @@ export default function ScannerClient() {
             }
 
             return (
-              <a
+              
                 key={deal.id}
                 href={deal.url}
                 target="_blank"
@@ -520,3 +546,4 @@ export default function ScannerClient() {
     </div>
   );
 }
+
