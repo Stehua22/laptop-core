@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
@@ -42,18 +42,14 @@ const SOURCE_LABEL: Record<string, string> = {
   facebook: "Facebook Marketplace",
 };
 
+// How many Best Buy results each plan can see, ranked by deal score.
+// Everything beyond a tier's count still gets scanned and stored — it's
+// just shown as a locked card, same as an is_premium_deal listing.
 const BESTBUY_LIMITS: Record<Plan, number> = {
   free: 155,
   premium: 250,
   ultra: 350,
 };
-
-function normalizePlan(raw: unknown): Plan {
-  const val = typeof raw === "string" ? raw.trim().toLowerCase() : "";
-  if (val === "ultra") return "ultra";
-  if (val === "premium") return "premium";
-  return "free";
-}
 
 const selectStyle: React.CSSProperties = {
   padding: "8px 12px",
@@ -85,6 +81,8 @@ export default function ScannerClient() {
       .select("*")
       .eq("is_active", true)
       .order("deal_score", { ascending: false, nullsFirst: false })
+      // Bumped from 200 so the Ultra tier's 350-result Best Buy cap has
+      // enough rows to actually draw from, on top of eBay/Facebook results.
       .limit(500);
     if (data) setDeals(data as Deal[]);
     setLoading(false);
@@ -92,6 +90,7 @@ export default function ScannerClient() {
 
   useEffect(() => {
     loadDeals();
+    // pick up new rows written by background cron scans without a manual trigger
     const interval = setInterval(loadDeals, 30000);
     return () => clearInterval(interval);
   }, [loadDeals]);
@@ -100,29 +99,29 @@ export default function ScannerClient() {
     async function checkPlan() {
       const sb = getSupabase();
       if (!sb) { setHasAccess(false); setPlan("free"); return; }
-
-      const { data: sessionData, error: sessionError } = await sb.auth.getSession();
+      const { data: sessionData } = await sb.auth.getSession();
       const session = sessionData.session;
-      if (sessionError) console.error("Session check failed:", sessionError);
       if (!session) { setHasAccess(false); setPlan("free"); return; }
 
-      const { data: profile, error: profileError } = await sb
+      const { data: profile } = await sb
         .from("profiles")
         .select("plan")
         .eq("id", session.user.id)
         .single();
 
-      if (profileError) {
-        console.error("Profile plan lookup failed:", profileError);
-      }
-
-      const resolvedPlan = normalizePlan(profile?.plan);
+      const resolvedPlan: Plan =
+        profile?.plan === "ultra" ? "ultra" : profile?.plan === "premium" ? "premium" : "free";
       setPlan(resolvedPlan);
       setHasAccess(resolvedPlan === "premium" || resolvedPlan === "ultra");
     }
     checkPlan();
   }, []);
 
+  // Smooth fake progress bar while a scan is running — the real scan is one
+  // request with no incremental updates, so this eases from 0 toward ~90%
+  // and then snaps to 100% when the response actually lands. Keeps the UI
+  // honest (never claims "done" before the real fetch resolves) while still
+  // feeling alive during the several-second wait.
   useEffect(() => {
     if (!scanning) return;
     setScanProgress(0);
@@ -139,12 +138,15 @@ export default function ScannerClient() {
   async function triggerScan() {
     setScanning(true);
     try {
+      // NEXT_PUBLIC_DEAL_SCAN_SECRET must match DEAL_SCAN_SECRET server-side.
+      // Fine for a personal single-user project; don't reuse this pattern
+      // for anything with real users hitting the client bundle.
       await fetch(`/api/deals/scan?secret=${process.env.NEXT_PUBLIC_DEAL_SCAN_SECRET}`);
       setScanProgress(100);
       await loadDeals();
       setLastScan(new Date());
     } finally {
-      setTimeout(() => setScanning(false), 300);
+      setTimeout(() => setScanning(false), 300); // let the bar visibly hit 100%
     }
   }
 
@@ -171,6 +173,9 @@ export default function ScannerClient() {
     return true;
   });
 
+  // `filtered` is already ordered by deal_score desc (from the query), so
+  // walking it in order and counting Best Buy rows gives the top-N Best Buy
+  // deals by score for whichever limit this plan gets.
   const bestbuyLimit = BESTBUY_LIMITS[plan];
   let bestbuySeen = 0;
   const withLocks = filtered.map((d) => {
@@ -456,7 +461,7 @@ export default function ScannerClient() {
             }
 
             return (
-              
+              <a
                 key={deal.id}
                 href={deal.url}
                 target="_blank"
@@ -546,4 +551,3 @@ export default function ScannerClient() {
     </div>
   );
 }
-
