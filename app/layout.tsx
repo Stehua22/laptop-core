@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import AIAssistant from '@/components/AIAssistant';
-import TopNav from '@/components/TopNav';
+import TopNav from '@/components/Topnav';
 
 export const metadata: Metadata = {
   title: "LaptopCore",
@@ -21,3 +21,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+
