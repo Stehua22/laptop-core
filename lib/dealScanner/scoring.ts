@@ -1,4 +1,4 @@
-// lib/dealScanner/scoring.ts
+﻿// lib/dealScanner/scoring.ts
 
 export type RawListing = {
   source: "ebay" | "bestbuy" | "facebook";
@@ -47,12 +47,9 @@ const REFURB_KEYWORDS = [
   "grade b",
 ];
 
-// % below retail that counts as a "big drop" for everyone
 const BIG_DROP_PCT = 25;
-
-// Lower bar — deals in this band (15-25% off) are real but smaller drops.
-// Shown to Premium users only, so free users see fewer/steeper-only deals.
 const PREMIUM_DROP_PCT = 15;
+const REFURB_BASELINE_SCORE = 20;
 
 export function detectBrand(title: string): string | null {
   const lower = title.toLowerCase();
@@ -75,12 +72,6 @@ export function extractModelKey(title: string): string {
   return match ? match[1].replace(/\s+/g, " ").trim() : lower.split(" ").slice(0, 3).join(" ");
 }
 
-/**
- * A listing now qualifies as a deal at one of two tiers:
- *  - Free tier: all-time low, OR a big % drop (>= BIG_DROP_PCT) off retail
- *  - Premium tier: a smaller but still real drop (>= PREMIUM_DROP_PCT, < BIG_DROP_PCT)
- * Anything below PREMIUM_DROP_PCT gets dealScore = 0 and is filtered out.
- */
 export function scoreListing(
   listing: RawListing,
   marketPrices: Record<string, MarketInfo>
@@ -107,6 +98,9 @@ export function scoreListing(
       const bonus = Math.max(0, Math.min(10, Math.round((dropFromRetailPct - PREMIUM_DROP_PCT) / 2)));
       dealScore = Math.min(40, 25 + bonus);
       isPremiumDeal = true;
+    } else if (isLikelyRefurbished(listing.title, listing.condition)) {
+      dealScore = REFURB_BASELINE_SCORE;
+      isPremiumDeal = true;
     } else {
       dealScore = 0;
     }
@@ -119,9 +113,15 @@ export function scoreListing(
     } else if (dropPct >= PREMIUM_DROP_PCT) {
       dealScore = Math.min(30, 15 + Math.round((dropPct - PREMIUM_DROP_PCT) / 2));
       isPremiumDeal = true;
+    } else if (isLikelyRefurbished(listing.title, listing.condition)) {
+      dealScore = REFURB_BASELINE_SCORE;
+      isPremiumDeal = true;
     } else {
       dealScore = 0;
     }
+  } else if (isLikelyRefurbished(listing.title, listing.condition)) {
+    dealScore = REFURB_BASELINE_SCORE;
+    isPremiumDeal = true;
   } else {
     dealScore = 0;
   }
