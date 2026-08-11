@@ -67,16 +67,28 @@ const SEARCH_TERMS = [
   "2 in 1 laptop",
 ];
 
-async function searchOneTerm(term: string): Promise<RawListing[]> {
+const PAGE_SIZE = 60;
+// Best Buy's internal search endpoint may silently clamp pageSize server-side
+// (many undocumented search APIs do — the request looks accepted but the
+// response length is capped regardless of what you asked for). Paging
+// instead of relying on one big pageSize gets around that: fetch page 1,
+// and only fetch further pages if the previous page came back completely
+// full (a short page means we've hit the end of that term's real results).
+const MAX_PAGES_PER_TERM = 4;
+
+// All 34 terms fire in parallel — this is necessary to stay under Vercel's
+// serverless function timeout (60s hard cap). A batched/sequential version
+// with retries was tried and blew past 60s, causing the whole scan to fail
+// with a 504 and silently leave stale data in place. Parallel + no retry is
+// the tradeoff: a handful of terms may occasionally time out and return
+// zero results, but the scan as a whole reliably completes.
+const FETCH_TIMEOUT_MS = 10000;
+
+async function fetchOnePage(term: string, page: number): Promise<{ items: RawListing[]; full: boolean }> {
   try {
-    // pageSize 60 (up from the original 24, but backed off from 100 — a
-    // pageSize of 100 made responses heavy enough that several terms blew
-    // past the 5s per-request timeout and the scan came back empty. 60
-    // across 37 terms still gives a large enough pool for the Ultra tier's
-    // 350-result cap after de-dupe and the deal-qualifying filter.
     const url = `https://www.bestbuy.ca/api/v2/json/search?query=${encodeURIComponent(
       term
-    )}&categoryid=&sortBy=relevance&sortDir=desc&currentRegion=ON&page=1&pageSize=60&lang=en-CA`;
+    )}&categoryid=&sortBy=relevance&sortDir=desc&currentRegion=ON&page=${page}&pageSize=${PAGE_SIZE}&lang=en-CA`;
 
     const res = await fetch(url, {
       headers: {
@@ -84,19 +96,18 @@ async function searchOneTerm(term: string): Promise<RawListing[]> {
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
         Accept: "application/json",
       },
-      // Bumped from 5s to 8s — the larger pageSize means bigger response
-      // bodies, and 5s was tight enough that some terms timed out and took
-      // the whole scan down with them (all three sources came back empty).
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
 
     if (!res.ok) {
-      console.error(`Best Buy search failed for "${term}": ${res.status}`);
-      return [];
+      console.error(`Best Buy search failed for "${term}" page ${page}: ${res.status}`);
+      return { items: [], full: false };
     }
 
     const data = await res.json();
-    return (data.products ?? []).map((product: any) => {
+    const products = data.products ?? [];
+
+    const items: RawListing[] = products.map((product: any) => {
       const price = product.salePrice ?? product.regularPrice;
       const originalPrice =
         product.regularPrice && product.regularPrice > price ? product.regularPrice : undefined;
@@ -120,18 +131,34 @@ async function searchOneTerm(term: string): Promise<RawListing[]> {
         imageUrl: product.thumbnailImage,
       };
     });
+
+    // A page shorter than what we asked for (either because we requested
+    // more than PAGE_SIZE, or the server clamped it) means there's nothing
+    // more to page through for this term.
+    return { items, full: items.length >= PAGE_SIZE };
   } catch (err) {
-    console.error(`Best Buy fetch error for "${term}":`, err);
-    return [];
+    console.error(`Best Buy fetch error for "${term}" page ${page}:`, err);
+    return { items: [], full: false };
   }
 }
 
+async function searchOneTerm(term: string): Promise<RawListing[]> {
+  const all: RawListing[] = [];
+  for (let page = 1; page <= MAX_PAGES_PER_TERM; page++) {
+    const { items, full } = await fetchOnePage(term, page);
+    all.push(...items);
+    if (!full) break; // short page = no more results for this term
+  }
+  return all;
+}
+
 export async function fetchBestBuyDeals(): Promise<RawListing[]> {
-  // Run all searches in parallel — sequential requests for 30+ terms blow
-  // past Vercel's serverless function time limit (10s on Hobby plans) and
-  // the whole route times out with no response at all.
+  // Terms run in parallel with each other; pages within a term run
+  // sequentially (usually just 1 request per term unless a term is deep).
   const batches = await Promise.all(SEARCH_TERMS.map(searchOneTerm));
   const results = batches.flat();
+
+  console.log(`Best Buy scan: ${results.length} raw listings across ${SEARCH_TERMS.length} search terms`);
 
   // De-dupe by SKU — multiple search terms can return the same product.
   const seen = new Set<string>();
@@ -140,6 +167,8 @@ export async function fetchBestBuyDeals(): Promise<RawListing[]> {
     seen.add(r.externalId);
     return true;
   });
+
+  console.log(`Best Buy scan: ${deduped.length} unique listings after dedup`);
 
   // Refurbished / open-box / clearance listings are deals by definition —
   // keep those as-is. But "new" condition is the fallback classification
