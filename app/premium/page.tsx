@@ -11,14 +11,14 @@ const FEATURES: { label: string; free: string; premium: string; ultra: string }[
   { label: 'Lapi AI chats',       free: '5/day',      premium: 'Unlimited', ultra: 'Unlimited' },
   { label: 'Laptop comparisons',  free: 'Up to 3',     premium: 'Up to 6',   ultra: 'Up to 6' },
   { label: 'Comparison insights', free: 'Basic specs', premium: 'Value score + price-per-spec', ultra: 'Value score + price-per-spec' },
-  { label: 'Split View (2-laptop side-by-side)', free: 'â€”', premium: 'â€”', ultra: 'Included' },
-  { label: '3D Model Viewer',     free: 'â€”',           premium: 'Included', ultra: 'Included' },
+  { label: 'Split View (2-laptop side-by-side)', free: '❌', premium: '❌', ultra: 'Included' },
+  { label: '3D Model Viewer',     free: '❌',           premium: 'Included', ultra: 'Included' },
   { label: 'Similar Laptops results', free: '4', premium: '4', ultra: '12' },
   { label: 'Deal scanner',        free: 'Standard',    premium: 'Priority',  ultra: 'Priority / expanded sources' },
   { label: 'Deal scanner â€” Best Buy results', free: '155', premium: '250', ultra: '350' },
   { label: 'Articles',            free: '5/week',      premium: 'Unlimited', ultra: 'Unlimited' },
   { label: 'Support',             free: 'Standard',    premium: 'Priority',  ultra: 'Priority' },
-  { label: 'Referral rewards',    free: 'â€”',           premium: '1 free month per referral', ultra: '1 free month per referral' },
+  { label: 'Referral rewards',    free: '❌',           premium: '1 free month per referral', ultra: '1 free month per referral' },
 ];
 
 const PLAN_PRICE: Record<PlanKey, string> = {
