@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { supabaseBrowser } from '@/lib/supabaseBrowser';
+import ThemeToggle from '@/components/ThemeToggle';
 
 // Drop your logo file into /public (e.g. /public/logo.png) and it'll show up here.
-// If you don't have one yet, delete the <Image> block below and the "logo" div.
-// import logo from '@/public/logo.png'; // optional: static import instead of the string path
+// If you don't have one yet, delete the <Image> block below and the "logo" Link.
 
 export default function TopNav() {
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
@@ -76,6 +76,8 @@ export default function TopNav() {
           pointerEvents: 'auto', // buttons/links live here, so they always receive clicks
         }}
       >
+        <ThemeToggle />
+
         {loggedIn === null ? null : loggedIn ? (
           <>
             <Link

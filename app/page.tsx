@@ -1,16 +1,17 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const CAD_TO_USD = 0.73;
 
 const FEATURES = [
-  { title: "Track prices", desc: "Monitor laptop prices over time. See when a listing actually drops." },
-  { title: "Deal scanner", desc: "Find discounted listings from Apple, Lenovo, Dell, ASUS and more." },
-  { title: "Best picks", desc: "Recommendations for students, home users, and business use." },
-  { title: "Compare specs", desc: "Browse the catalog and compare specs and prices side by side." },
-  { title: "Price history", desc: "Charts showing how a laptop's price has moved over time." },
-  { title: "CAD and USD", desc: "Switch currency anywhere on the site." },
+  { icon: "📈", title: "Track prices", desc: "Monitor laptop prices over time. See when a listing actually drops." },
+  { icon: "🔍", title: "Deal scanner", desc: "Find discounted listings from Apple, Lenovo, Dell, ASUS and more." },
+  { icon: "🎯", title: "Best picks", desc: "Recommendations for students, home users, and business use." },
+  { icon: "⚖️", title: "Compare specs", desc: "Browse the catalog and compare specs and prices side by side." },
+  { icon: "📊", title: "Price history", desc: "Charts showing how a laptop's price has moved over time." },
+  { icon: "💱", title: "CAD and USD", desc: "Switch currency anywhere on the site." },
 ];
 
 const BRANDS = ["Apple", "Lenovo", "Dell", "HP", "ASUS", "Acer", "Microsoft", "Samsung"];
@@ -18,8 +19,9 @@ const BRANDS = ["Apple", "Lenovo", "Dell", "HP", "ASUS", "Acer", "Microsoft", "S
 export default function LandingPage() {
   const router = useRouter();
   const [currency, setCurrency] = useState<"CAD" | "USD">("CAD");
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
-  // These now point at the same CSS variables your theme picker (in the
+  // These point at the same CSS variables your theme picker (in the
   // tracker's Settings panel) writes to <html> — so whatever theme is
   // active there (Frost, Noir, Candy, etc.) is what renders here too.
   const bg = "var(--bg)";
@@ -28,6 +30,9 @@ export default function LandingPage() {
   const textMuted = "var(--text-muted)";
   const border = "var(--border)";
   const accent = "var(--accent)";
+  const glow = "var(--glow)";
+  const cardRadius = "var(--card-radius, 14px)";
+  const btnRadius = "var(--btn-radius, 8px)";
 
   const samplePrices = [
     { model: "MacBook Air M5", cad: 1499, store: "Apple" },
@@ -41,15 +46,15 @@ export default function LandingPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: bg, color: text, fontFamily: "Inter, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: bg, color: text, fontFamily: "Inter, sans-serif", overflowX: "hidden" }}>
 
       {/* Nav */}
-      <nav style={{ borderBottom: `1px solid ${border}`, padding: "0 32px", background: surface }}>
+      <nav style={{ borderBottom: `1px solid ${border}`, padding: "0 32px", background: surface, position: "relative", zIndex: 10 }}>
         <div style={{ maxWidth: 1040, margin: "0 auto", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div onClick={() => router.push("/")} style={{ fontWeight: 700, fontSize: 16, cursor: "pointer", color: text, letterSpacing: "-0.01em" }}>
             LaptopCore
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
             {[
               { label: "Home", href: "/" },
               { label: "Deals", href: "/deals" },
@@ -64,44 +69,99 @@ export default function LandingPage() {
             <div style={{ display: "flex", border: `1px solid ${border}`, borderRadius: 7, overflow: "hidden" }}>
               {(["CAD", "USD"] as const).map((c) => (
                 <button key={c} onClick={() => setCurrency(c)}
-                  style={{ fontSize: 12, fontWeight: 600, padding: "6px 13px", border: "none", cursor: "pointer", background: currency === c ? accent : "transparent", color: currency === c ? "#fff" : textMuted }}
+                  style={{ fontSize: 12, fontWeight: 600, padding: "6px 13px", border: "none", cursor: "pointer", background: currency === c ? accent : "transparent", color: currency === c ? "#fff" : textMuted, transition: "background 0.15s" }}
                 >{c}</button>
               ))}
             </div>
+
+            <ThemeToggle />
           </div>
         </div>
       </nav>
 
       {/* Hero */}
-      <section style={{ padding: "110px 32px 80px", maxWidth: 720, margin: "0 auto", textAlign: "center" }}>
-        <p style={{ fontSize: 13, color: accent, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 18 }}>
-          Built for Canadian shoppers
-        </p>
+      <section style={{ position: "relative", padding: "110px 32px 80px", maxWidth: 720, margin: "0 auto", textAlign: "center" }}>
+        {/* Glow blob, purely decorative — sits behind the text */}
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: -60,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: 520,
+            height: 320,
+            background: `radial-gradient(circle, ${glow} 0%, transparent 70%)`,
+            filter: "blur(10px)",
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        />
 
-        <h1 style={{ fontSize: "clamp(2.4rem, 5vw, 3.4rem)", fontWeight: 700, lineHeight: 1.12, letterSpacing: "-0.025em", marginBottom: 22, color: text }}>
-          Track laptop prices.<br />Buy at the right time.
-        </h1>
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <p style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            fontSize: 13, color: accent, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 18,
+          }}>
+            <span style={{
+              width: 6, height: 6, borderRadius: "50%", background: accent,
+              boxShadow: `0 0 0 4px ${glow}`,
+            }} />
+            Built for Canadian shoppers
+          </p>
 
-        <p style={{ fontSize: 17, color: textMuted, lineHeight: 1.7, maxWidth: 460, margin: "0 auto 40px" }}>
-          Monitor prices across Apple, Lenovo, Dell, HP and more. Compare deals in CAD or USD before you buy.
-        </p>
+          <h1 style={{ fontSize: "clamp(2.4rem, 5vw, 3.4rem)", fontWeight: 700, lineHeight: 1.12, letterSpacing: "-0.025em", marginBottom: 22, color: text }}>
+            Track laptop prices.<br />
+            <span style={{
+              background: `linear-gradient(90deg, ${accent}, var(--accent-2, ${accent}))`,
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}>
+              Buy at the right time.
+            </span>
+          </h1>
 
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-          <button onClick={() => router.push("/tracker")}
-            style={{ background: accent, color: "#fff", border: "none", borderRadius: 8, padding: "13px 30px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-          >Browse Laptops</button>
+          <p style={{ fontSize: 17, color: textMuted, lineHeight: 1.7, maxWidth: 460, margin: "0 auto 40px" }}>
+            Monitor prices across Apple, Lenovo, Dell, HP and more. Compare deals in CAD or USD before you buy.
+          </p>
 
-          <button onClick={() => router.push("/deals")}
-            style={{ background: surface, color: text, border: `1px solid ${border}`, borderRadius: 8, padding: "13px 26px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-          >View Deals</button>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            <button
+              onClick={() => router.push("/tracker")}
+              style={{
+                background: accent, color: "#fff", border: "none", borderRadius: btnRadius,
+                padding: "13px 30px", fontSize: 14, fontWeight: 600, cursor: "pointer",
+                boxShadow: `0 6px 20px ${glow}`, transition: "transform 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-2px)")}
+              onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
+            >Browse Laptops</button>
+
+            <button
+              onClick={() => router.push("/deals")}
+              style={{
+                background: surface, color: text, border: `1px solid ${border}`, borderRadius: btnRadius,
+                padding: "13px 26px", fontSize: 14, fontWeight: 600, cursor: "pointer", transition: "transform 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-2px)")}
+              onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
+            >View Deals</button>
+          </div>
         </div>
       </section>
 
       {/* Live price preview */}
       <section style={{ maxWidth: 640, margin: "0 auto 100px", padding: "0 32px" }}>
-        <div style={{ border: `1px solid ${border}`, borderRadius: 14, overflow: "hidden", background: surface, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <div style={{ border: `1px solid ${border}`, borderRadius: cardRadius, overflow: "hidden", background: surface, boxShadow: "var(--shadow, 0 1px 3px rgba(0,0,0,0.04))" }}>
           <div style={{ padding: "14px 22px", borderBottom: `1px solid ${border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 12, color: textMuted, fontWeight: 600, letterSpacing: "0.02em" }}>SAMPLE PRICES</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: textMuted, fontWeight: 600, letterSpacing: "0.02em" }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: "50%", background: "var(--accent-3, #6af7b8)",
+                animation: "lc-pulse 1.6s ease-in-out infinite",
+              }} />
+              SAMPLE PRICES
+            </span>
             <div style={{ display: "flex", border: `1px solid ${border}`, borderRadius: 6, overflow: "hidden" }}>
               {(["CAD", "USD"] as const).map((c) => (
                 <button key={c} onClick={() => setCurrency(c)}
@@ -131,8 +191,16 @@ export default function LandingPage() {
         <p style={{ fontSize: 12.5, color: textMuted, marginBottom: 22, fontWeight: 600, letterSpacing: "0.02em" }}>TRACKING LAPTOPS FROM</p>
         <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
           {BRANDS.map((brand) => (
-            <div key={brand}
-              style={{ border: `1px solid ${border}`, borderRadius: 20, padding: "7px 18px", fontSize: 13.5, color: textMuted, background: surface, fontWeight: 500 }}
+            <div
+              key={brand}
+              onMouseEnter={() => setHoveredCard(brand)}
+              onMouseLeave={() => setHoveredCard(null)}
+              style={{
+                border: `1px solid ${hoveredCard === brand ? accent : border}`,
+                borderRadius: 20, padding: "7px 18px", fontSize: 13.5,
+                color: hoveredCard === brand ? accent : textMuted,
+                background: surface, fontWeight: 500, transition: "all 0.15s", cursor: "default",
+              }}
             >{brand}</div>
           ))}
         </div>
@@ -147,7 +215,18 @@ export default function LandingPage() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
           {FEATURES.map((f) => (
-            <div key={f.title} style={{ background: surface, border: `1px solid ${border}`, borderRadius: 12, padding: "26px 26px" }}>
+            <div
+              key={f.title}
+              onMouseEnter={() => setHoveredCard(f.title)}
+              onMouseLeave={() => setHoveredCard(null)}
+              style={{
+                background: surface, border: `1px solid ${border}`, borderRadius: cardRadius, padding: "26px",
+                transform: hoveredCard === f.title ? "translateY(-3px)" : "translateY(0)",
+                boxShadow: hoveredCard === f.title ? `var(--card-hover-shadow, 0 12px 30px ${glow})` : "none",
+                transition: "transform 0.18s, box-shadow 0.18s",
+              }}
+            >
+              <div style={{ fontSize: 22, marginBottom: 10 }}>{f.icon}</div>
               <h3 style={{ fontWeight: 600, fontSize: 15, marginBottom: 8, color: text }}>{f.title}</h3>
               <p style={{ fontSize: 13.5, color: textMuted, lineHeight: 1.65 }}>{f.desc}</p>
             </div>
@@ -157,12 +236,25 @@ export default function LandingPage() {
 
       {/* Final CTA */}
       <section style={{ maxWidth: 640, margin: "0 auto 100px", padding: "0 32px", textAlign: "center" }}>
-        <div style={{ background: surface, border: `1px solid ${border}`, borderRadius: 16, padding: "56px 40px" }}>
-          <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12, color: text, letterSpacing: "-0.02em" }}>Ready to find your next laptop?</h2>
-          <p style={{ fontSize: 14.5, color: textMuted, marginBottom: 30 }}>Browse tracked laptops with price history, specs, and deals.</p>
-          <button onClick={() => router.push("/tracker")}
-            style={{ background: accent, color: "#fff", border: "none", borderRadius: 8, padding: "13px 34px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-          >Start Tracking</button>
+        <div style={{
+          position: "relative", overflow: "hidden",
+          background: surface, border: `1px solid ${border}`, borderRadius: 16, padding: "56px 40px",
+        }}>
+          <div
+            aria-hidden
+            style={{
+              position: "absolute", inset: 0,
+              background: `radial-gradient(circle at 50% 0%, ${glow} 0%, transparent 60%)`,
+              pointerEvents: "none",
+            }}
+          />
+          <div style={{ position: "relative" }}>
+            <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12, color: text, letterSpacing: "-0.02em" }}>Ready to find your next laptop?</h2>
+            <p style={{ fontSize: 14.5, color: textMuted, marginBottom: 30 }}>Browse tracked laptops with price history, specs, and deals.</p>
+            <button onClick={() => router.push("/tracker")}
+              style={{ background: accent, color: "#fff", border: "none", borderRadius: btnRadius, padding: "13px 34px", fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: `0 6px 20px ${glow}` }}
+            >Start Tracking</button>
+          </div>
         </div>
       </section>
 
@@ -173,6 +265,13 @@ export default function LandingPage() {
           <span style={{ fontSize: 13, color: textMuted }}>Prices may not reflect current store listings.</span>
         </div>
       </footer>
+
+      <style>{`
+        @keyframes lc-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(1.3); }
+        }
+      `}</style>
     </div>
   );
 }
