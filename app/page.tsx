@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const CAD_TO_USD = 0.73;
@@ -82,7 +83,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero — animated multi-color blobs drifting behind everything */}
-      <section style={{ position: "relative", padding: "120px 32px 90px", maxWidth: 720, margin: "0 auto", textAlign: "center", overflow: "hidden" }}>
+      <section style={{ position: "relative", padding: "120px 32px 90px", maxWidth: 1040, margin: "0 auto", textAlign: "center", overflow: "hidden" }}>
         <div aria-hidden style={{ position: "absolute", inset: "-120px -200px", zIndex: 0, pointerEvents: "none" }}>
           <div style={{
             position: "absolute", top: "10%", left: "20%", width: 340, height: 340, borderRadius: "50%",
@@ -113,19 +114,41 @@ export default function LandingPage() {
             Built for Canadian shoppers
           </p>
 
-          <h1 style={{ fontSize: "clamp(2.6rem, 6vw, 3.8rem)", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.03em", marginBottom: 22, color: text }}>
-            Track laptop prices.<br />
-            <span style={{
-              background: `linear-gradient(90deg, ${accent}, ${accent2}, ${accent3}, ${accent})`,
-              backgroundSize: "300% auto",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              animation: "lc-gradient-move 5s linear infinite",
-            }}>
-              Buy at the right time.
-            </span>
-          </h1>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 24, marginBottom: 22 }}>
+            {/* Left image — drop a file into /public and point src at it, e.g. /hero-left.png */}
+            <Image
+              src="/hero-left.png"
+              alt=""
+              width={140}
+              height={140}
+              className="lc-hero-side-img"
+              style={{ objectFit: "contain", flexShrink: 0 }}
+            />
+
+            <h1 style={{ fontSize: "clamp(2.6rem, 6vw, 3.8rem)", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.03em", color: text, margin: 0 }}>
+              Track laptop prices.<br />
+              <span style={{
+                background: `linear-gradient(90deg, ${accent}, ${accent2}, ${accent3}, ${accent})`,
+                backgroundSize: "300% auto",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                animation: "lc-gradient-move 5s linear infinite",
+              }}>
+                Buy at the right time.
+              </span>
+            </h1>
+
+            {/* Right image — drop a file into /public and point src at it, e.g. /hero-right.png */}
+            <Image
+              src="/hero-right.png"
+              alt=""
+              width={140}
+              height={140}
+              className="lc-hero-side-img"
+              style={{ objectFit: "contain", flexShrink: 0 }}
+            />
+          </div>
 
           <p style={{ fontSize: 17, color: textMuted, lineHeight: 1.7, maxWidth: 460, margin: "0 auto 40px" }}>
             Monitor prices across Apple, Lenovo, Dell, HP and more. Compare deals in CAD or USD before you buy.
@@ -306,6 +329,9 @@ export default function LandingPage() {
         @keyframes lc-drift-c {
           0%, 100% { transform: translate(0, 0); }
           50% { transform: translate(30px, -30px); }
+        }
+        @media (max-width: 900px) {
+          .lc-hero-side-img { display: none; }
         }
       `}</style>
     </div>
