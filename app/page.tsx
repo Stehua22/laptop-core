@@ -19,12 +19,15 @@ export default function LandingPage() {
   const router = useRouter();
   const [currency, setCurrency] = useState<"CAD" | "USD">("CAD");
 
-  const bg = "#fafaf9";
-  const surface = "#ffffff";
-  const text = "#1a1a18";
-  const textMuted = "#6b6b66";
-  const border = "#e6e5e1";
-  const accent = "#2f5d4f"; // muted forest green — quiet, not neon
+  // These now point at the same CSS variables your theme picker (in the
+  // tracker's Settings panel) writes to <html> — so whatever theme is
+  // active there (Frost, Noir, Candy, etc.) is what renders here too.
+  const bg = "var(--bg)";
+  const surface = "var(--surface)";
+  const text = "var(--text)";
+  const textMuted = "var(--text-muted)";
+  const border = "var(--border)";
+  const accent = "var(--accent)";
 
   const samplePrices = [
     { model: "MacBook Air M5", cad: 1499, store: "Apple" },
