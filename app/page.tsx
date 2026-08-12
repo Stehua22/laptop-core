@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
-import ThemeToggle from "@/components/ThemeToggle";
 
 // Same bucket the admin panel's "Site Images" tab uploads to — whatever's
 // uploaded there shows up here automatically, no code changes needed.
@@ -58,9 +57,9 @@ export default function LandingPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: bg, color: text, fontFamily: "Inter, sans-serif", overflowX: "hidden", position: "relative" }}>
+    <div style={{ minHeight: "100vh", background: bg, color: text, fontFamily: "Inter, sans-serif", overflowX: "hidden", position: "relative", paddingTop: 48 }}>
 
-      {/* Nav */}
+      {/* Nav — pushed down 48px so the floating TopNav (logo, login, theme toggle) sits above it instead of overlapping */}
       <nav style={{ borderBottom: `1px solid ${border}`, padding: "0 32px", background: surface, position: "relative", zIndex: 10 }}>
         <div style={{ maxWidth: 1040, margin: "0 auto", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div onClick={() => router.push("/")} style={{ fontWeight: 700, fontSize: 16, cursor: "pointer", color: text, letterSpacing: "-0.01em" }}>
@@ -86,7 +85,6 @@ export default function LandingPage() {
               ))}
             </div>
 
-            <ThemeToggle />
           </div>
         </div>
       </nav>
