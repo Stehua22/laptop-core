@@ -30,6 +30,8 @@ export default function LandingPage() {
   const textMuted = "var(--text-muted)";
   const border = "var(--border)";
   const accent = "var(--accent)";
+  const accent2 = "var(--accent-2, var(--accent))";
+  const accent3 = "var(--accent-3, var(--accent))";
   const glow = "var(--glow)";
   const cardRadius = "var(--card-radius, 14px)";
   const btnRadius = "var(--btn-radius, 8px)";
@@ -46,7 +48,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: bg, color: text, fontFamily: "Inter, sans-serif", overflowX: "hidden" }}>
+    <div style={{ minHeight: "100vh", background: bg, color: text, fontFamily: "Inter, sans-serif", overflowX: "hidden", position: "relative" }}>
 
       {/* Nav */}
       <nav style={{ borderBottom: `1px solid ${border}`, padding: "0 32px", background: surface, position: "relative", zIndex: 10 }}>
@@ -79,44 +81,47 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero */}
-      <section style={{ position: "relative", padding: "110px 32px 80px", maxWidth: 720, margin: "0 auto", textAlign: "center" }}>
-        {/* Glow blob, purely decorative — sits behind the text */}
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            top: -60,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: 520,
-            height: 320,
-            background: `radial-gradient(circle, ${glow} 0%, transparent 70%)`,
-            filter: "blur(10px)",
-            pointerEvents: "none",
-            zIndex: 0,
-          }}
-        />
+      {/* Hero — animated multi-color blobs drifting behind everything */}
+      <section style={{ position: "relative", padding: "120px 32px 90px", maxWidth: 720, margin: "0 auto", textAlign: "center", overflow: "hidden" }}>
+        <div aria-hidden style={{ position: "absolute", inset: "-120px -200px", zIndex: 0, pointerEvents: "none" }}>
+          <div style={{
+            position: "absolute", top: "10%", left: "20%", width: 340, height: 340, borderRadius: "50%",
+            background: `radial-gradient(circle, ${accent} 0%, transparent 70%)`,
+            opacity: 0.35, filter: "blur(40px)", animation: "lc-drift-a 9s ease-in-out infinite",
+          }} />
+          <div style={{
+            position: "absolute", top: "5%", right: "15%", width: 300, height: 300, borderRadius: "50%",
+            background: `radial-gradient(circle, ${accent2} 0%, transparent 70%)`,
+            opacity: 0.3, filter: "blur(40px)", animation: "lc-drift-b 11s ease-in-out infinite",
+          }} />
+          <div style={{
+            position: "absolute", bottom: "0%", left: "40%", width: 260, height: 260, borderRadius: "50%",
+            background: `radial-gradient(circle, ${accent3} 0%, transparent 70%)`,
+            opacity: 0.3, filter: "blur(40px)", animation: "lc-drift-c 8s ease-in-out infinite",
+          }} />
+        </div>
 
-        <div style={{ position: "relative", zIndex: 1 }}>
+        <div style={{ position: "relative", zIndex: 1, animation: "lc-rise 0.6s ease both" }}>
           <p style={{
             display: "inline-flex", alignItems: "center", gap: 6,
-            fontSize: 13, color: accent, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 18,
+            fontSize: 13, color: accent, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 18,
           }}>
             <span style={{
-              width: 6, height: 6, borderRadius: "50%", background: accent,
-              boxShadow: `0 0 0 4px ${glow}`,
+              width: 7, height: 7, borderRadius: "50%", background: accent,
+              boxShadow: `0 0 0 4px ${glow}`, animation: "lc-pulse 1.6s ease-in-out infinite",
             }} />
             Built for Canadian shoppers
           </p>
 
-          <h1 style={{ fontSize: "clamp(2.4rem, 5vw, 3.4rem)", fontWeight: 700, lineHeight: 1.12, letterSpacing: "-0.025em", marginBottom: 22, color: text }}>
+          <h1 style={{ fontSize: "clamp(2.6rem, 6vw, 3.8rem)", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.03em", marginBottom: 22, color: text }}>
             Track laptop prices.<br />
             <span style={{
-              background: `linear-gradient(90deg, ${accent}, var(--accent-2, ${accent}))`,
+              background: `linear-gradient(90deg, ${accent}, ${accent2}, ${accent3}, ${accent})`,
+              backgroundSize: "300% auto",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
+              animation: "lc-gradient-move 5s linear infinite",
             }}>
               Buy at the right time.
             </span>
@@ -130,21 +135,21 @@ export default function LandingPage() {
             <button
               onClick={() => router.push("/tracker")}
               style={{
-                background: accent, color: "#fff", border: "none", borderRadius: btnRadius,
-                padding: "13px 30px", fontSize: 14, fontWeight: 600, cursor: "pointer",
-                boxShadow: `0 6px 20px ${glow}`, transition: "transform 0.15s",
+                background: `linear-gradient(135deg, ${accent}, ${accent2})`, color: "#fff", border: "none", borderRadius: btnRadius,
+                padding: "14px 32px", fontSize: 14.5, fontWeight: 700, cursor: "pointer",
+                boxShadow: `0 8px 26px ${glow}`, transition: "transform 0.15s, box-shadow 0.15s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-2px)")}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px) scale(1.03)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0) scale(1)"; }}
             >Browse Laptops</button>
 
             <button
               onClick={() => router.push("/deals")}
               style={{
                 background: surface, color: text, border: `1px solid ${border}`, borderRadius: btnRadius,
-                padding: "13px 26px", fontSize: 14, fontWeight: 600, cursor: "pointer", transition: "transform 0.15s",
+                padding: "14px 28px", fontSize: 14.5, fontWeight: 700, cursor: "pointer", transition: "transform 0.15s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-2px)")}
+              onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-3px)")}
               onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
             >View Deals</button>
           </div>
@@ -152,12 +157,12 @@ export default function LandingPage() {
       </section>
 
       {/* Live price preview */}
-      <section style={{ maxWidth: 640, margin: "0 auto 100px", padding: "0 32px" }}>
+      <section style={{ position: "relative", zIndex: 1, maxWidth: 640, margin: "0 auto 100px", padding: "0 32px", animation: "lc-rise 0.6s ease 0.1s both" }}>
         <div style={{ border: `1px solid ${border}`, borderRadius: cardRadius, overflow: "hidden", background: surface, boxShadow: "var(--shadow, 0 1px 3px rgba(0,0,0,0.04))" }}>
           <div style={{ padding: "14px 22px", borderBottom: `1px solid ${border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: textMuted, fontWeight: 600, letterSpacing: "0.02em" }}>
               <span style={{
-                width: 6, height: 6, borderRadius: "50%", background: "var(--accent-3, #6af7b8)",
+                width: 6, height: 6, borderRadius: "50%", background: accent3,
                 animation: "lc-pulse 1.6s ease-in-out infinite",
               }} />
               SAMPLE PRICES
@@ -186,47 +191,50 @@ export default function LandingPage() {
         <p style={{ textAlign: "center", fontSize: 12.5, color: textMuted, marginTop: 14 }}>Sample data — live prices are on the tracker page</p>
       </section>
 
-      {/* Brands */}
-      <section style={{ maxWidth: 1040, margin: "0 auto 100px", padding: "0 32px", textAlign: "center" }}>
+      {/* Brands — scrolling marquee instead of a static row */}
+      <section style={{ position: "relative", zIndex: 1, margin: "0 auto 100px", textAlign: "center" }}>
         <p style={{ fontSize: 12.5, color: textMuted, marginBottom: 22, fontWeight: 600, letterSpacing: "0.02em" }}>TRACKING LAPTOPS FROM</p>
-        <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-          {BRANDS.map((brand) => (
-            <div
-              key={brand}
-              onMouseEnter={() => setHoveredCard(brand)}
-              onMouseLeave={() => setHoveredCard(null)}
-              style={{
-                border: `1px solid ${hoveredCard === brand ? accent : border}`,
-                borderRadius: 20, padding: "7px 18px", fontSize: 13.5,
-                color: hoveredCard === brand ? accent : textMuted,
-                background: surface, fontWeight: 500, transition: "all 0.15s", cursor: "default",
-              }}
-            >{brand}</div>
-          ))}
+        <div style={{ overflow: "hidden", maskImage: "linear-gradient(90deg, transparent, black 10%, black 90%, transparent)" }}>
+          <div style={{ display: "flex", gap: 10, width: "max-content", animation: "lc-marquee 18s linear infinite" }}>
+            {[...BRANDS, ...BRANDS].map((brand, i) => (
+              <div
+                key={brand + i}
+                style={{
+                  border: `1px solid ${border}`, borderRadius: 20, padding: "8px 20px", fontSize: 13.5,
+                  color: textMuted, background: surface, fontWeight: 500, whiteSpace: "nowrap",
+                }}
+              >{brand}</div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* Features */}
-      <section style={{ maxWidth: 1040, margin: "0 auto 100px", padding: "0 32px" }}>
+      <section style={{ position: "relative", zIndex: 1, maxWidth: 1040, margin: "0 auto 100px", padding: "0 32px" }}>
         <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <h2 style={{ fontSize: 26, fontWeight: 700, marginBottom: 10, color: text, letterSpacing: "-0.02em" }}>What LaptopCore does</h2>
+          <h2 style={{ fontSize: 27, fontWeight: 800, marginBottom: 10, color: text, letterSpacing: "-0.02em" }}>What LaptopCore does</h2>
           <p style={{ fontSize: 14.5, color: textMuted }}>Built for people who want to shop smarter, not harder.</p>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
-          {FEATURES.map((f) => (
+          {FEATURES.map((f, i) => (
             <div
               key={f.title}
               onMouseEnter={() => setHoveredCard(f.title)}
               onMouseLeave={() => setHoveredCard(null)}
               style={{
-                background: surface, border: `1px solid ${border}`, borderRadius: cardRadius, padding: "26px",
-                transform: hoveredCard === f.title ? "translateY(-3px)" : "translateY(0)",
-                boxShadow: hoveredCard === f.title ? `var(--card-hover-shadow, 0 12px 30px ${glow})` : "none",
-                transition: "transform 0.18s, box-shadow 0.18s",
+                background: surface, border: `1px solid ${hoveredCard === f.title ? accent : border}`, borderRadius: cardRadius, padding: "26px",
+                transform: hoveredCard === f.title ? "translateY(-5px) scale(1.02)" : "translateY(0) scale(1)",
+                boxShadow: hoveredCard === f.title ? `var(--card-hover-shadow, 0 14px 32px ${glow})` : "none",
+                transition: "transform 0.18s, box-shadow 0.18s, border-color 0.18s",
+                animation: `lc-rise 0.5s ease ${0.15 + i * 0.06}s both`,
               }}
             >
-              <div style={{ fontSize: 22, marginBottom: 10 }}>{f.icon}</div>
+              <div style={{
+                fontSize: 22, marginBottom: 10, display: "inline-block",
+                transform: hoveredCard === f.title ? "scale(1.25) rotate(-6deg)" : "scale(1) rotate(0deg)",
+                transition: "transform 0.2s",
+              }}>{f.icon}</div>
               <h3 style={{ fontWeight: 600, fontSize: 15, marginBottom: 8, color: text }}>{f.title}</h3>
               <p style={{ fontSize: 13.5, color: textMuted, lineHeight: 1.65 }}>{f.desc}</p>
             </div>
@@ -235,31 +243,36 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section style={{ maxWidth: 640, margin: "0 auto 100px", padding: "0 32px", textAlign: "center" }}>
+      <section style={{ position: "relative", zIndex: 1, maxWidth: 640, margin: "0 auto 100px", padding: "0 32px", textAlign: "center" }}>
         <div style={{
           position: "relative", overflow: "hidden",
-          background: surface, border: `1px solid ${border}`, borderRadius: 16, padding: "56px 40px",
+          background: `linear-gradient(135deg, ${surface}, ${surface})`,
+          border: `1px solid ${border}`, borderRadius: 18, padding: "56px 40px",
         }}>
           <div
             aria-hidden
             style={{
               position: "absolute", inset: 0,
-              background: `radial-gradient(circle at 50% 0%, ${glow} 0%, transparent 60%)`,
+              background: `radial-gradient(circle at 30% 0%, ${glow} 0%, transparent 55%), radial-gradient(circle at 80% 100%, ${accent2} 0%, transparent 45%)`,
+              opacity: 0.5,
               pointerEvents: "none",
             }}
           />
           <div style={{ position: "relative" }}>
-            <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12, color: text, letterSpacing: "-0.02em" }}>Ready to find your next laptop?</h2>
+            <h2 style={{ fontSize: 25, fontWeight: 800, marginBottom: 12, color: text, letterSpacing: "-0.02em" }}>Ready to find your next laptop?</h2>
             <p style={{ fontSize: 14.5, color: textMuted, marginBottom: 30 }}>Browse tracked laptops with price history, specs, and deals.</p>
-            <button onClick={() => router.push("/tracker")}
-              style={{ background: accent, color: "#fff", border: "none", borderRadius: btnRadius, padding: "13px 34px", fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: `0 6px 20px ${glow}` }}
+            <button
+              onClick={() => router.push("/tracker")}
+              style={{ background: `linear-gradient(135deg, ${accent}, ${accent2})`, color: "#fff", border: "none", borderRadius: btnRadius, padding: "14px 36px", fontSize: 14.5, fontWeight: 700, cursor: "pointer", boxShadow: `0 8px 26px ${glow}`, transition: "transform 0.15s" }}
+              onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-3px) scale(1.03)")}
+              onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0) scale(1)")}
             >Start Tracking</button>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer style={{ borderTop: `1px solid ${border}`, padding: "32px", background: surface }}>
+      <footer style={{ position: "relative", zIndex: 1, borderTop: `1px solid ${border}`, padding: "32px", background: surface }}>
         <div style={{ maxWidth: 1040, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <span style={{ fontSize: 13, color: textMuted }}>© 2026 LaptopCore</span>
           <span style={{ fontSize: 13, color: textMuted }}>Prices may not reflect current store listings.</span>
@@ -270,6 +283,29 @@ export default function LandingPage() {
         @keyframes lc-pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.4; transform: scale(1.3); }
+        }
+        @keyframes lc-rise {
+          from { opacity: 0; transform: translateY(14px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes lc-gradient-move {
+          to { background-position: 300% center; }
+        }
+        @keyframes lc-marquee {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
+        @keyframes lc-drift-a {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(40px, 30px); }
+        }
+        @keyframes lc-drift-b {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-30px, 40px); }
+        }
+        @keyframes lc-drift-c {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(30px, -30px); }
         }
       `}</style>
     </div>
