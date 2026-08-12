@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { supabaseBrowser } from '@/lib/supabaseBrowser';
 import ThemeToggle from '@/components/ThemeToggle';
 
-// Drop your logo file into /public (e.g. /public/logo.png) and it'll show up here.
-// If you don't have one yet, delete the <Image> block below and the "logo" Link.
+// Same bucket the admin panel's "Site Images" tab uploads to.
+const SITE_IMAGES_BUCKET = 'site-images';
+const logoUrl = supabaseBrowser.storage.from(SITE_IMAGES_BUCKET).getPublicUrl('logo.png').data.publicUrl;
 
 export default function TopNav() {
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [logoOk, setLogoOk] = useState(true);
 
   useEffect(() => {
     supabaseBrowser.auth.getSession().then(({ data }) => {
@@ -50,7 +51,7 @@ export default function TopNav() {
         pointerEvents: 'none', // container itself stays click-through
       }}
     >
-      {/* Logo slot */}
+      {/* Logo — set in Admin Panel → Site Images → "Logo (top nav)" */}
       <Link
         href="/"
         style={{
@@ -59,13 +60,16 @@ export default function TopNav() {
           pointerEvents: 'auto',
         }}
       >
-        <Image
-          src="/logo.png"
-          alt="LaptopCore logo"
-          width={28}
-          height={28}
-          priority
-        />
+        {logoOk && (
+          <img
+            src={logoUrl}
+            alt="LaptopCore logo"
+            width={28}
+            height={28}
+            style={{ objectFit: 'contain' }}
+            onError={() => setLogoOk(false)}
+          />
+        )}
       </Link>
 
       <div

@@ -1,8 +1,15 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import ThemeToggle from "@/components/ThemeToggle";
+
+// Same bucket the admin panel's "Site Images" tab uploads to — whatever's
+// uploaded there shows up here automatically, no code changes needed.
+const SITE_IMAGES_BUCKET = "site-images";
+function siteImageUrl(path: string) {
+  return supabaseBrowser.storage.from(SITE_IMAGES_BUCKET).getPublicUrl(path).data.publicUrl;
+}
 
 const CAD_TO_USD = 0.73;
 
@@ -21,6 +28,8 @@ export default function LandingPage() {
   const router = useRouter();
   const [currency, setCurrency] = useState<"CAD" | "USD">("CAD");
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [heroLeftOk, setHeroLeftOk] = useState(true);
+  const [heroRightOk, setHeroRightOk] = useState(true);
 
   // These point at the same CSS variables your theme picker (in the
   // tracker's Settings panel) writes to <html> — so whatever theme is
@@ -83,7 +92,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero — animated multi-color blobs drifting behind everything */}
-      <section style={{ position: "relative", padding: "120px 32px 90px", maxWidth: 1040, margin: "0 auto", textAlign: "center", overflow: "hidden" }}>
+      <section style={{ position: "relative", padding: "120px 32px 90px", maxWidth: 1180, margin: "0 auto", textAlign: "center", overflow: "hidden" }}>
         <div aria-hidden style={{ position: "absolute", inset: "-120px -200px", zIndex: 0, pointerEvents: "none" }}>
           <div style={{
             position: "absolute", top: "10%", left: "20%", width: 340, height: 340, borderRadius: "50%",
@@ -114,16 +123,17 @@ export default function LandingPage() {
             Built for Canadian shoppers
           </p>
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 24, marginBottom: 22 }}>
-            {/* Left image — drop a file into /public and point src at it, e.g. /hero-left.png */}
-            <Image
-              src="/hero-left.png"
-              alt=""
-              width={140}
-              height={140}
-              className="lc-hero-side-img"
-              style={{ objectFit: "contain", flexShrink: 0 }}
-            />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 56, marginBottom: 22 }}>
+            {/* Uploaded from Admin Panel → Site Images → "Hero — left image" */}
+            {heroLeftOk && (
+              <img
+                src={siteImageUrl("hero-left.png")}
+                alt=""
+                className="lc-hero-side-img"
+                style={{ width: 140, height: 140, objectFit: "contain", flexShrink: 0 }}
+                onError={() => setHeroLeftOk(false)}
+              />
+            )}
 
             <h1 style={{ fontSize: "clamp(2.6rem, 6vw, 3.8rem)", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.03em", color: text, margin: 0 }}>
               Track laptop prices.<br />
@@ -139,15 +149,16 @@ export default function LandingPage() {
               </span>
             </h1>
 
-            {/* Right image — drop a file into /public and point src at it, e.g. /hero-right.png */}
-            <Image
-              src="/hero-right.png"
-              alt=""
-              width={140}
-              height={140}
-              className="lc-hero-side-img"
-              style={{ objectFit: "contain", flexShrink: 0 }}
-            />
+            {/* Uploaded from Admin Panel → Site Images → "Hero — right image" */}
+            {heroRightOk && (
+              <img
+                src={siteImageUrl("hero-right.png")}
+                alt=""
+                className="lc-hero-side-img"
+                style={{ width: 140, height: 140, objectFit: "contain", flexShrink: 0 }}
+                onError={() => setHeroRightOk(false)}
+              />
+            )}
           </div>
 
           <p style={{ fontSize: 17, color: textMuted, lineHeight: 1.7, maxWidth: 460, margin: "0 auto 40px" }}>

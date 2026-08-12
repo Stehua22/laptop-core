@@ -4,6 +4,15 @@ import { useRouter } from "next/navigation";
 import type { Laptop } from "@/lib/supabase";
 import { fetchLaptops, deleteLaptop, supabase } from "@/lib/supabase";
 
+// Bucket must exist in Supabase Storage (Dashboard → Storage → New bucket →
+// name it "site-images" → toggle "Public bucket" on). One-time setup.
+const SITE_IMAGES_BUCKET = "site-images";
+const SITE_IMAGE_SLOTS = [
+  { key: "hero-left.png", label: "Hero — left image" },
+  { key: "hero-right.png", label: "Hero — right image" },
+  { key: "logo.png", label: "Logo (top nav)" },
+] as const;
+
 const ADMIN_PASSWORD = "admin2026.123";
 const fmt = (n: number) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
@@ -77,7 +86,30 @@ export default function AdminPage() {
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
-  const [tab, setTab] = useState<"laptops" | "add" | "picks">("laptops");
+  const [tab, setTab] = useState<"laptops" | "add" | "picks" | "images">("laptops");
+  const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
+  const [imageMsg, setImageMsg] = useState("");
+  const [imageVersion, setImageVersion] = useState(0); // bump to bust cached preview after upload
+
+  async function handleImageUpload(slotKey: string, file: File) {
+    setUploadingSlot(slotKey);
+    setImageMsg("");
+    const { error } = await supabase.storage
+      .from(SITE_IMAGES_BUCKET)
+      .upload(slotKey, file, { upsert: true, cacheControl: "3600" });
+    setUploadingSlot(null);
+    if (error) {
+      setImageMsg(`❌ ${error.message}`);
+    } else {
+      setImageMsg("✅ Uploaded");
+      setImageVersion((v) => v + 1);
+    }
+  }
+
+  function getSiteImageUrl(slotKey: string) {
+    const { data } = supabase.storage.from(SITE_IMAGES_BUCKET).getPublicUrl(slotKey);
+    return `${data.publicUrl}?v=${imageVersion}`;
+  }
   const [addForm, setAddForm] = useState({ brand: "", model: "", specs: "", store: "", url: "", image_url: "", retail_price: "", current_price: "", release_year: "" });
   const [adding, setAdding] = useState(false);
 
@@ -277,9 +309,9 @@ export default function AdminPage() {
             <p style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 4 }}>{laptops.length} laptops · {laptops.filter((l: any) => l.is_deal).length} deals</p>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {(["laptops", "picks", "add"] as const).map(t => (
+            {(["laptops", "picks", "add", "images"] as const).map(t => (
               <button key={t} onClick={() => setTab(t)} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 99, border: `1px solid ${tab === t ? "var(--accent)" : "var(--border)"}`, background: tab === t ? "var(--accent)" : "transparent", color: tab === t ? "#fff" : "var(--text-muted)", cursor: "pointer", fontWeight: 600 }}>
-                {t === "laptops" ? "📋 All Laptops" : t === "picks" ? "🎓 Best Picks" : "+ Add New"}
+                {t === "laptops" ? "📋 All Laptops" : t === "picks" ? "🎓 Best Picks" : t === "images" ? "🖼️ Site Images" : "+ Add New"}
               </button>
             ))}
           </div>
@@ -347,6 +379,61 @@ export default function AdminPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {/* ── SITE IMAGES TAB ── */}
+        {tab === "images" && (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 24 }}>
+            <h2 style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Site Images</h2>
+            <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginBottom: 24 }}>
+              Upload the homepage hero images and logo here. Each one replaces
+              itself instantly on the live site — no code or git push needed.
+            </p>
+
+            {imageMsg && <p style={{ fontSize: 13, marginBottom: 16 }}>{imageMsg}</p>}
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
+              {SITE_IMAGE_SLOTS.map((slot) => (
+                <div key={slot.key} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 16, background: "var(--surface-2)" }}>
+                  <p style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 10 }}>{slot.label}</p>
+                  <div style={{
+                    width: "100%", height: 120, borderRadius: 8, marginBottom: 12,
+                    background: "var(--surface)", border: "1px solid var(--border)",
+                    display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+                  }}>
+                    <img
+                      key={imageVersion}
+                      src={getSiteImageUrl(slot.key)}
+                      alt=""
+                      style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      onLoad={(e) => { (e.target as HTMLImageElement).style.display = "block"; }}
+                    />
+                  </div>
+                  <label style={{
+                    display: "block", textAlign: "center", fontSize: 12.5, fontWeight: 600,
+                    padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)",
+                    background: uploadingSlot === slot.key ? "var(--surface)" : "var(--accent)",
+                    color: uploadingSlot === slot.key ? "var(--text-muted)" : "#fff",
+                    cursor: uploadingSlot === slot.key ? "default" : "pointer",
+                  }}>
+                    {uploadingSlot === slot.key ? "Uploading…" : "Choose image"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      disabled={uploadingSlot !== null}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageUpload(slot.key, file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                </div>
+              ))}
             </div>
           </div>
         )}
