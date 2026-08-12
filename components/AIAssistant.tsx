@@ -42,7 +42,7 @@ export default function AIAssistant() {
       if (!userId) {
         setMessages([
           ...nextMessages,
-          { role: 'assistant', content: 'Please log in to chat with Lapi.' },
+          { role: 'assistant', content: 'Please log in or sign up to chat with Lapi.' },
         ]);
         setLoading(false);
         return;
