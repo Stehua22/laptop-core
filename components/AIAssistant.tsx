@@ -13,7 +13,7 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: "Hey, I'm Lapi! Tell me what you need a laptop for (budget, use case, portability) and I'll point you at some picks.",
+      content: "Hey, I'm Lapi! Tell me what you need a laptop for (budget, use case, portability) and I'll show you some picks.",
     },
   ]);
   const [input, setInput] = useState('');

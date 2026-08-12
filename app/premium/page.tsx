@@ -194,7 +194,7 @@ export default function PremiumPage() {
         {user && (
           <p style={{ fontSize: 12, color: '#888', marginTop: 20 }}>
             Refer friends and earn a free month for every one who subscribes.{' '}
-            <Link href="/account/referrals" style={{ color: 'var(--accent-color, #2563eb)' }}>
+            <Link href="/account/referrals" style={{ color: 'var(--accent-color,rgb(123, 165, 255))' }}>
               Get your referral link
             </Link>
           </p>
