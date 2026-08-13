@@ -6,8 +6,12 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 // Same bucket the admin panel's "Site Images" tab uploads to — whatever's
 // uploaded there shows up here automatically, no code changes needed.
 const SITE_IMAGES_BUCKET = "site-images";
+// Cache-bust per page load so a browser that cached an old 404 (from before
+// the bucket/policy existed) is forced to re-check instead of reusing it.
+const IMG_CACHE_BUST = Date.now();
 function siteImageUrl(path: string) {
-  return supabaseBrowser.storage.from(SITE_IMAGES_BUCKET).getPublicUrl(path).data.publicUrl;
+  const { publicUrl } = supabaseBrowser.storage.from(SITE_IMAGES_BUCKET).getPublicUrl(path).data;
+  return `${publicUrl}?t=${IMG_CACHE_BUST}`;
 }
 
 const CAD_TO_USD = 0.73;

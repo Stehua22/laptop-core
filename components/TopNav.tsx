@@ -7,7 +7,8 @@ import ThemeToggle from '@/components/ThemeToggle';
 
 // Same bucket the admin panel's "Site Images" tab uploads to.
 const SITE_IMAGES_BUCKET = 'site-images';
-const logoUrl = supabaseBrowser.storage.from(SITE_IMAGES_BUCKET).getPublicUrl('logo.png').data.publicUrl;
+// Cache-bust per page load so a browser that cached an old 404 is forced to re-check.
+const logoUrl = `${supabaseBrowser.storage.from(SITE_IMAGES_BUCKET).getPublicUrl('logo.png').data.publicUrl}?t=${Date.now()}`;
 
 export default function TopNav() {
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
