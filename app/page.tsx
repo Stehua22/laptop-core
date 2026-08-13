@@ -1,7 +1,32 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+
+// Scroll-triggered reveal: returns a ref + whether the element has entered
+// the viewport yet (fires once, then stops observing).
+function useInView<T extends HTMLElement>(threshold = 0.15) {
+  const ref = useRef<T | null>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.unobserve(el);
+        }
+      },
+      { threshold }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [threshold]);
+
+  return { ref, inView };
+}
 
 // Same bucket the admin panel's "Site Images" tab uploads to — whatever's
 // uploaded there shows up here automatically, no code changes needed.
@@ -33,6 +58,13 @@ export default function LandingPage() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [heroLeftOk, setHeroLeftOk] = useState(true);
   const [heroRightOk, setHeroRightOk] = useState(true);
+
+  // Scroll-triggered sections — these were animating on page load (often
+  // finished before the user scrolls that far), now they play when the
+  // section actually enters view.
+  const brandsView = useInView<HTMLDivElement>();
+  const featuresView = useInView<HTMLDivElement>();
+  const ctaView = useInView<HTMLDivElement>();
 
   // These point at the same CSS variables your theme picker (in the
   // tracker's Settings panel) writes to <html> — so whatever theme is
@@ -238,16 +270,25 @@ export default function LandingPage() {
       </section>
 
       {/* Brands — scrolling marquee instead of a static row */}
-      <section style={{ position: "relative", zIndex: 1, margin: "0 auto 100px", textAlign: "center" }}>
+      <section
+        ref={brandsView.ref}
+        style={{
+          position: "relative", zIndex: 1, margin: "0 auto 100px", textAlign: "center",
+          opacity: brandsView.inView ? 1 : 0,
+          animation: brandsView.inView ? "lc-rise 0.6s ease both" : "none",
+        }}
+      >
         <p style={{ fontSize: 12.5, color: textMuted, marginBottom: 22, fontWeight: 600, letterSpacing: "0.02em" }}>TRACKING LAPTOPS FROM</p>
         <div style={{ overflow: "hidden", maskImage: "linear-gradient(90deg, transparent, black 10%, black 90%, transparent)" }}>
           <div style={{ display: "flex", gap: 10, width: "max-content", animation: "lc-marquee 18s linear infinite" }}>
             {[...BRANDS, ...BRANDS].map((brand, i) => (
               <div
                 key={brand + i}
+                className="lc-brand-pill"
                 style={{
                   border: `1px solid ${border}`, borderRadius: 20, padding: "8px 20px", fontSize: 13.5,
                   color: textMuted, background: surface, fontWeight: 500, whiteSpace: "nowrap",
+                  transition: "transform 0.2s, border-color 0.2s, color 0.2s",
                 }}
               >{brand}</div>
             ))}
@@ -256,8 +297,14 @@ export default function LandingPage() {
       </section>
 
       {/* Features */}
-      <section style={{ position: "relative", zIndex: 1, maxWidth: 1040, margin: "0 auto 100px", padding: "0 32px" }}>
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
+      <section ref={featuresView.ref} style={{ position: "relative", zIndex: 1, maxWidth: 1040, margin: "0 auto 100px", padding: "0 32px" }}>
+        <div
+          style={{
+            textAlign: "center", marginBottom: 40,
+            opacity: featuresView.inView ? 1 : 0,
+            animation: featuresView.inView ? "lc-rise 0.5s ease both" : "none",
+          }}
+        >
           <h2 style={{ fontSize: 27, fontWeight: 800, marginBottom: 10, color: text, letterSpacing: "-0.02em" }}>What LaptopCore does</h2>
           <p style={{ fontSize: 14.5, color: textMuted }}>Built for people who want to shop smarter, not harder.</p>
         </div>
@@ -273,13 +320,16 @@ export default function LandingPage() {
                 transform: hoveredCard === f.title ? "translateY(-5px) scale(1.02)" : "translateY(0) scale(1)",
                 boxShadow: hoveredCard === f.title ? `var(--card-hover-shadow, 0 14px 32px ${glow})` : "none",
                 transition: "transform 0.18s, box-shadow 0.18s, border-color 0.18s",
-                animation: `lc-rise 0.5s ease ${0.15 + i * 0.06}s both`,
+                opacity: featuresView.inView ? 1 : 0,
+                animation: featuresView.inView ? `lc-rise 0.5s ease ${0.1 + i * 0.07}s both` : "none",
               }}
             >
               <div style={{
                 fontSize: 22, marginBottom: 10, display: "inline-block",
                 transform: hoveredCard === f.title ? "scale(1.25) rotate(-6deg)" : "scale(1) rotate(0deg)",
                 transition: "transform 0.2s",
+                animation: hoveredCard === f.title ? "none" : "lc-icon-bob 3s ease-in-out infinite",
+                animationDelay: `${i * 0.15}s`,
               }}>{f.icon}</div>
               <h3 style={{ fontWeight: 600, fontSize: 15, marginBottom: 8, color: text }}>{f.title}</h3>
               <p style={{ fontSize: 13.5, color: textMuted, lineHeight: 1.65 }}>{f.desc}</p>
@@ -289,7 +339,14 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section style={{ position: "relative", zIndex: 1, maxWidth: 640, margin: "0 auto 100px", padding: "0 32px", textAlign: "center" }}>
+      <section
+        ref={ctaView.ref}
+        style={{
+          position: "relative", zIndex: 1, maxWidth: 640, margin: "0 auto 100px", padding: "0 32px", textAlign: "center",
+          opacity: ctaView.inView ? 1 : 0,
+          animation: ctaView.inView ? "lc-cta-in 0.6s cubic-bezier(0.16,1,0.3,1) both" : "none",
+        }}
+      >
         <div style={{
           position: "relative", overflow: "hidden",
           background: `linear-gradient(135deg, ${surface}, ${surface})`,
@@ -370,9 +427,21 @@ export default function LandingPage() {
           0%, 100% { box-shadow: 0 8px 26px ${glow}; }
           50% { box-shadow: 0 8px 40px ${glow}, 0 0 0 6px ${glow}; }
         }
+        @keyframes lc-icon-bob {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+        @keyframes lc-cta-in {
+          from { opacity: 0; transform: translateY(20px) scale(0.97); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
         .lc-float-a { animation: lc-float-a 5s ease-in-out infinite; }
         .lc-float-b { animation: lc-float-b 5.5s ease-in-out infinite; }
         .lc-cta-pulse { animation: lc-cta-glow 2.4s ease-in-out infinite; }
+        .lc-brand-pill:hover { transform: translateY(-2px) scale(1.06); border-color: ${accent}; color: ${text}; }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation: none !important; transition: none !important; }
+        }
         @media (max-width: 900px) {
           .lc-hero-side-img { display: none; }
         }
