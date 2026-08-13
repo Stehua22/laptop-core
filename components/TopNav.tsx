@@ -41,7 +41,7 @@ export default function TopNav() {
         // No paddingTop hacks needed on any page, ever.
         position: 'sticky',
         top: 0,
-        height: 56,
+        height: 72,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -58,8 +58,8 @@ export default function TopNav() {
           <img
             src={logoUrl}
             alt=""
-            width={40}
-            height={40}
+            width={64}
+            height={64}
             style={{ objectFit: 'contain' }}
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = 'none'; // hide instantly, no broken-icon flash
