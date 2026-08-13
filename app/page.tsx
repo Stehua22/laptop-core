@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
@@ -52,10 +52,31 @@ const FEATURES = [
 
 const BRANDS = ["Apple", "Lenovo", "Dell", "HP", "ASUS", "Acer", "Microsoft", "Samsung"];
 
-const HOW_IT_WORKS = [
-  { step: "1", title: "Browse the catalog", desc: "Search and filter by brand, price, screen size, weight, or use case." },
-  { step: "2", title: "Watch the price", desc: "Every laptop's price history is tracked, so you can see if now is actually a good time to buy." },
-  { step: "3", title: "Buy with confidence", desc: "Compare deals across stores in CAD or USD, then head straight to the retailer." },
+const TUTORIAL_STEPS = [
+  {
+    label: "Search & Filter",
+    title: "Find laptops that fit your needs",
+    desc: "Filter by brand, price range, screen size, weight, or what you'll actually use it for — student, home, or business.",
+    mock: "filter" as const,
+  },
+  {
+    label: "Track Prices",
+    title: "See where the price has actually been",
+    desc: "Every laptop has a price history chart, so you can tell if today's price is a real deal or just marketing.",
+    mock: "chart" as const,
+  },
+  {
+    label: "Compare",
+    title: "Put laptops side by side",
+    desc: "Select a few laptops and compare specs and prices in one view before you decide.",
+    mock: "compare" as const,
+  },
+  {
+    label: "Spot Deals",
+    title: "Catch the real price drops",
+    desc: "The Deal Scanner flags genuine discounts across stores, so you don't have to go hunting for them yourself.",
+    mock: "deals" as const,
+  },
 ];
 
 export default function LandingPage() {
@@ -71,7 +92,8 @@ export default function LandingPage() {
   const brandsView = useInView<HTMLDivElement>();
   const featuresView = useInView<HTMLDivElement>();
   const ctaView = useInView<HTMLDivElement>();
-  const howItWorksView = useInView<HTMLDivElement>();
+  const tutorialView = useInView<HTMLDivElement>();
+  const [activeTutorial, setActiveTutorial] = useState(0);
 
   // These point at the same CSS variables your theme picker (in the
   // tracker's Settings panel) writes to <html> — so whatever theme is
@@ -98,6 +120,106 @@ export default function LandingPage() {
     const amount = currency === "USD" ? Math.round(cad * CAD_TO_USD) : cad;
     return `$${amount.toLocaleString()} ${currency}`;
   };
+
+  // Auto-advance the tutorial tabs, but only once they've scrolled into view.
+  useEffect(() => {
+    if (!tutorialView.inView) return;
+    const id = setInterval(() => {
+      setActiveTutorial((i) => (i + 1) % TUTORIAL_STEPS.length);
+    }, 4500);
+    return () => clearInterval(id);
+  }, [tutorialView.inView]);
+
+  function TutorialMock({ type }: { type: typeof TUTORIAL_STEPS[number]["mock"] }) {
+    const chip = (label: string) => (
+      <span style={{ fontSize: 10.5, fontWeight: 600, color: textMuted, background: bg, border: `1px solid ${border}`, borderRadius: 6, padding: "4px 9px" }}>{label}</span>
+    );
+
+    if (type === "filter") {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", background: bg, border: `1px solid ${border}`, borderRadius: 8, padding: "8px 12px" }}>
+            <span style={{ opacity: 0.5, fontSize: 12 }}>🔍</span>
+            <span style={{ fontSize: 12, color: textMuted }}>thinkpad x1 carbon</span>
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {chip("Lenovo ✕")}{chip("Under $2,500")}{chip("14\"")}{chip("Business")}
+          </div>
+          {[1, 2].map((i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: bg, border: `1px solid ${border}`, borderRadius: 8, padding: "10px 12px", opacity: i === 1 ? 1 : 0.55 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: text }}>ThinkPad X1 Carbon Gen {12 + i}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: accent3 }}>{i === 1 ? "$2,199" : "$2,449"}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (type === "chart") {
+      return (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: text }}>MacBook Air 13 M5</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: accent3 }}>▼ 12% since June</span>
+          </div>
+          <svg viewBox="0 0 260 90" style={{ width: "100%", height: 90, display: "block" }}>
+            <polyline points="0,20 40,26 80,22 120,40 160,36 200,58 240,50 260,66" fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline points="0,20 40,26 80,22 120,40 160,36 200,58 240,50 260,66 260,90 0,90" fill={`url(#lc-chart-grad)`} opacity="0.18" stroke="none" />
+            <defs>
+              <linearGradient id="lc-chart-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={accent} />
+                <stop offset="100%" stopColor={accent} stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <circle cx="260" cy="66" r="4" fill={accent3} />
+          </svg>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: textMuted, marginTop: 4 }}>
+            <span>90 days ago</span><span>Today</span>
+          </div>
+        </div>
+      );
+    }
+
+    if (type === "compare") {
+      const rows = ["CPU", "RAM", "Price"];
+      const cols = [
+        { name: "Air M5", vals: ["M5", "16GB", "$1,499"] },
+        { name: "Zenbook A14", vals: ["Ultra 7", "32GB", "$1,399"] },
+      ];
+      return (
+        <div style={{ display: "grid", gridTemplateColumns: `90px repeat(${cols.length}, 1fr)`, gap: 6, fontSize: 11 }}>
+          <div />
+          {cols.map((c) => (
+            <div key={c.name} style={{ fontWeight: 700, color: text, textAlign: "center", paddingBottom: 6, borderBottom: `2px solid ${accent}` }}>{c.name}</div>
+          ))}
+          {rows.map((r, ri) => (
+            <Fragment key={r}>
+              <div style={{ color: textMuted, fontWeight: 600, display: "flex", alignItems: "center" }}>{r}</div>
+              {cols.map((c) => (
+                <div key={c.name + r} style={{ textAlign: "center", color: text, background: bg, border: `1px solid ${border}`, borderRadius: 6, padding: "6px 4px", fontWeight: ri === 2 ? 700 : 500 }}>{c.vals[ri]}</div>
+              ))}
+            </Fragment>
+          ))}
+        </div>
+      );
+    }
+
+    // deals
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {[
+          { m: "IdeaPad Pro 5i", pct: 34 },
+          { m: "ZenBook 14 OLED", pct: 22 },
+          { m: "Surface Laptop 6", pct: 41 },
+        ].map((d) => (
+          <div key={d.m} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: bg, border: `1px solid ${border}`, borderRadius: 8, padding: "9px 12px" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: text }}>{d.m}</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#1a1200", background: "linear-gradient(135deg, #f7c26a, #f4a830)", borderRadius: 6, padding: "2px 8px" }}>-{d.pct}%</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: bg, color: text, fontFamily: "Inter, sans-serif", overflowX: "hidden", position: "relative" }}>
@@ -316,40 +438,73 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How it works */}
+      {/* Tutorial — interactive walkthrough of the core features */}
       <section
-        ref={howItWorksView.ref}
+        ref={tutorialView.ref}
         style={{
-          position: "relative", zIndex: 1, maxWidth: 900, margin: "0 auto 100px", padding: "0 32px",
-          opacity: howItWorksView.inView ? 1 : 0,
-          animation: howItWorksView.inView ? "lc-rise 0.5s ease both" : "none",
+          position: "relative", zIndex: 1, maxWidth: 980, margin: "0 auto 100px", padding: "0 32px",
+          opacity: tutorialView.inView ? 1 : 0,
+          animation: tutorialView.inView ? "lc-rise 0.5s ease both" : "none",
         }}
       >
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <h2 style={{ fontSize: 27, fontWeight: 800, marginBottom: 10, color: text, letterSpacing: "-0.02em" }}>How it works</h2>
-          <p style={{ fontSize: 14.5, color: textMuted }}>Three steps between you and a laptop you're not overpaying for.</p>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <h2 style={{ fontSize: 27, fontWeight: 800, marginBottom: 10, color: text, letterSpacing: "-0.02em" }}>See how it works</h2>
+          <p style={{ fontSize: 14.5, color: textMuted }}>A quick walkthrough of the tools you'll actually use.</p>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 24, position: "relative" }}>
-          {HOW_IT_WORKS.map((s, i) => (
-            <div
-              key={s.step}
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: 28 }}>
+          {TUTORIAL_STEPS.map((s, i) => (
+            <button
+              key={s.label}
+              onClick={() => setActiveTutorial(i)}
               style={{
-                textAlign: "center", position: "relative",
-                opacity: howItWorksView.inView ? 1 : 0,
-                animation: howItWorksView.inView ? `lc-rise 0.5s ease ${0.15 + i * 0.12}s both` : "none",
+                fontSize: 12.5, fontWeight: 700, padding: "9px 16px", borderRadius: 20, cursor: "pointer",
+                border: `1px solid ${i === activeTutorial ? accent : border}`,
+                background: i === activeTutorial ? accent : surface,
+                color: i === activeTutorial ? "#fff" : textMuted,
+                transition: "all 0.2s ease",
               }}
             >
-              <div style={{
-                width: 44, height: 44, borderRadius: "50%", margin: "0 auto 16px",
-                background: `linear-gradient(135deg, ${accent}, ${accent2})`, color: "#fff",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 17, fontWeight: 800, boxShadow: `0 6px 18px ${glow}`,
-              }}>{s.step}</div>
-              <h3 style={{ fontWeight: 700, fontSize: 15.5, marginBottom: 8, color: text }}>{s.title}</h3>
-              <p style={{ fontSize: 13.5, color: textMuted, lineHeight: 1.6 }}>{s.desc}</p>
-            </div>
+              <span style={{ opacity: 0.7, marginRight: 6 }}>{i + 1}</span>{s.label}
+            </button>
           ))}
+        </div>
+
+        {/* Panel */}
+        <div className="lc-tutorial-panel" style={{
+          display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0,
+          border: `1px solid ${border}`, borderRadius: 18, overflow: "hidden", background: surface,
+          boxShadow: "var(--shadow, 0 1px 3px rgba(0,0,0,0.04))",
+        }}>
+          <div key={`text-${activeTutorial}`} style={{ padding: "36px 32px", display: "flex", flexDirection: "column", justifyContent: "center", animation: "lc-tutorial-in 0.35s ease both" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: accent, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>
+              Step {activeTutorial + 1} of {TUTORIAL_STEPS.length}
+            </span>
+            <h3 style={{ fontSize: 19, fontWeight: 800, color: text, marginBottom: 10, letterSpacing: "-0.01em" }}>{TUTORIAL_STEPS[activeTutorial].title}</h3>
+            <p style={{ fontSize: 13.5, color: textMuted, lineHeight: 1.7 }}>{TUTORIAL_STEPS[activeTutorial].desc}</p>
+            <div style={{ display: "flex", gap: 5, marginTop: 22 }}>
+              {TUTORIAL_STEPS.map((_, i) => (
+                <div key={i} style={{ height: 3, borderRadius: 2, flex: 1, background: i === activeTutorial ? accent : border, transition: "background 0.2s" }} />
+              ))}
+            </div>
+          </div>
+          <div
+            key={`mock-${activeTutorial}`}
+            style={{
+              padding: "28px", background: bg, borderLeft: `1px solid ${border}`,
+              display: "flex", alignItems: "center", animation: "lc-tutorial-in 0.35s ease 0.05s both",
+            }}
+          >
+            <div style={{ width: "100%", background: surface, border: `1px solid ${border}`, borderRadius: 12, padding: 16 }}>
+              <div style={{ display: "flex", gap: 5, marginBottom: 14 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f76a6a" }} />
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f7c26a" }} />
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#6af7a8" }} />
+              </div>
+              <TutorialMock type={TUTORIAL_STEPS[activeTutorial].mock} />
+            </div>
+          </div>
         </div>
       </section>
 
@@ -492,6 +647,10 @@ export default function LandingPage() {
           from { opacity: 0; transform: translateY(20px) scale(0.97); }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
+        @keyframes lc-tutorial-in {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         .lc-float-a { animation: lc-float-a 5s ease-in-out infinite; }
         .lc-float-b { animation: lc-float-b 5.5s ease-in-out infinite; }
         .lc-cta-pulse { animation: lc-cta-glow 2.4s ease-in-out infinite; }
@@ -507,6 +666,9 @@ export default function LandingPage() {
         }
         @media (max-width: 900px) {
           .lc-hero-side-img { display: none; }
+        }
+        @media (max-width: 700px) {
+          .lc-tutorial-panel { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </div>
