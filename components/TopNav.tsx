@@ -56,11 +56,14 @@ export default function TopNav() {
         {logoOk && (
           <img
             src={logoUrl}
-            alt="LaptopCore logo"
+            alt=""
             width={28}
             height={28}
             style={{ objectFit: 'contain' }}
-            onError={() => setLogoOk(false)}
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = 'none'; // hide instantly, no broken-icon flash
+              setLogoOk(false);
+            }}
           />
         )}
       </Link>

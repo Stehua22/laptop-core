@@ -127,9 +127,12 @@ export default function LandingPage() {
               <img
                 src={siteImageUrl("hero-left.png")}
                 alt=""
-                className="lc-hero-side-img"
+                className="lc-hero-side-img lc-float-a"
                 style={{ width: 140, height: 140, objectFit: "contain", flexShrink: 0 }}
-                onError={() => setHeroLeftOk(false)}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                  setHeroLeftOk(false);
+                }}
               />
             )}
 
@@ -152,9 +155,12 @@ export default function LandingPage() {
               <img
                 src={siteImageUrl("hero-right.png")}
                 alt=""
-                className="lc-hero-side-img"
+                className="lc-hero-side-img lc-float-b"
                 style={{ width: 140, height: 140, objectFit: "contain", flexShrink: 0 }}
-                onError={() => setHeroRightOk(false)}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                  setHeroRightOk(false);
+                }}
               />
             )}
           </div>
@@ -210,13 +216,17 @@ export default function LandingPage() {
 
           {samplePrices.map((p, i) => (
             <div key={i}
-              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px", borderBottom: i < samplePrices.length - 1 ? `1px solid ${border}` : "none" }}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px",
+                borderBottom: i < samplePrices.length - 1 ? `1px solid ${border}` : "none",
+                animation: `lc-rise 0.45s ease ${0.3 + i * 0.1}s both`,
+              }}
             >
               <div>
                 <div style={{ fontWeight: 600, fontSize: 14.5, marginBottom: 3, color: text }}>{p.model}</div>
                 <div style={{ fontSize: 12.5, color: textMuted }}>{p.store}</div>
               </div>
-              <div style={{ fontWeight: 700, fontSize: 17, color: text }}>{displayPrice(p.cad)}</div>
+              <div key={`${currency}-${i}`} style={{ fontWeight: 700, fontSize: 17, color: text, animation: "lc-price-flip 0.3s ease" }}>{displayPrice(p.cad)}</div>
             </div>
           ))}
         </div>
@@ -295,7 +305,8 @@ export default function LandingPage() {
             <p style={{ fontSize: 14.5, color: textMuted, marginBottom: 30 }}>Browse tracked laptops with price history, specs, and deals.</p>
             <button
               onClick={() => router.push("/tracker")}
-              style={{ background: `linear-gradient(135deg, ${accent}, ${accent2})`, color: "#fff", border: "none", borderRadius: btnRadius, padding: "14px 36px", fontSize: 14.5, fontWeight: 700, cursor: "pointer", boxShadow: `0 8px 26px ${glow}`, transition: "transform 0.15s" }}
+              className="lc-cta-pulse"
+              style={{ background: `linear-gradient(135deg, ${accent}, ${accent2})`, color: "#fff", border: "none", borderRadius: btnRadius, padding: "14px 36px", fontSize: 14.5, fontWeight: 700, cursor: "pointer", transition: "transform 0.15s" }}
               onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-3px) scale(1.03)")}
               onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0) scale(1)")}
             >Start Tracking</button>
@@ -339,6 +350,25 @@ export default function LandingPage() {
           0%, 100% { transform: translate(0, 0); }
           50% { transform: translate(30px, -30px); }
         }
+        @keyframes lc-float-a {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-14px) rotate(-3deg); }
+        }
+        @keyframes lc-float-b {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-14px) rotate(3deg); }
+        }
+        @keyframes lc-price-flip {
+          from { opacity: 0; transform: translateY(-6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes lc-cta-glow {
+          0%, 100% { box-shadow: 0 8px 26px ${glow}; }
+          50% { box-shadow: 0 8px 40px ${glow}, 0 0 0 6px ${glow}; }
+        }
+        .lc-float-a { animation: lc-float-a 5s ease-in-out infinite; }
+        .lc-float-b { animation: lc-float-b 5.5s ease-in-out infinite; }
+        .lc-cta-pulse { animation: lc-cta-glow 2.4s ease-in-out infinite; }
         @media (max-width: 900px) {
           .lc-hero-side-img { display: none; }
         }
