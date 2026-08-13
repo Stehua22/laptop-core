@@ -35,31 +35,24 @@ export default function TopNav() {
   return (
     <div
       style={{
-        position: 'fixed',
+        // sticky (not fixed) — this makes TopNav take up real space in
+        // the page flow, so it can never overlap a page's own nav below it.
+        // No paddingTop hacks needed on any page, ever.
+        position: 'sticky',
         top: 0,
-        left: 0,
-        right: 0,
         height: 48,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 10,
         padding: '0 20px',
-        background: 'transparent',
-        borderBottom: 'none',
-        zIndex: 9999,
-        pointerEvents: 'none', // container itself stays click-through
+        background: 'var(--surface, #0f1220)',
+        borderBottom: '1px solid var(--border, rgba(255,255,255,0.06))',
+        zIndex: 900,
       }}
     >
       {/* Logo — set in Admin Panel → Site Images → "Logo (top nav)" */}
-      <Link
-        href="/"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          pointerEvents: 'auto',
-        }}
-      >
+      <Link href="/" style={{ display: 'flex', alignItems: 'center' }}>
         {logoOk && (
           <img
             src={logoUrl}
@@ -72,14 +65,7 @@ export default function TopNav() {
         )}
       </Link>
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          pointerEvents: 'auto', // buttons/links live here, so they always receive clicks
-        }}
-      >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <ThemeToggle />
 
         {loggedIn === null ? null : loggedIn ? (

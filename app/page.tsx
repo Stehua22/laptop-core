@@ -57,9 +57,9 @@ export default function LandingPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: bg, color: text, fontFamily: "Inter, sans-serif", overflowX: "hidden", position: "relative", paddingTop: 48 }}>
+    <div style={{ minHeight: "100vh", background: bg, color: text, fontFamily: "Inter, sans-serif", overflowX: "hidden", position: "relative" }}>
 
-      {/* Nav — pushed down 48px so the floating TopNav (logo, login, theme toggle) sits above it instead of overlapping */}
+      {/* Nav — TopNav (logo, login, theme toggle) is sticky and sits above this automatically, no padding needed */}
       <nav style={{ borderBottom: `1px solid ${border}`, padding: "0 32px", background: surface, position: "relative", zIndex: 10 }}>
         <div style={{ maxWidth: 1040, margin: "0 auto", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div onClick={() => router.push("/")} style={{ fontWeight: 700, fontSize: 16, cursor: "pointer", color: text, letterSpacing: "-0.01em" }}>
