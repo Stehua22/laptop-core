@@ -80,19 +80,35 @@ export default function LaptopGrid({ laptops, onSelect, onHistory, isAdmin, onMo
         </div>
       ) : (
         <div style={cardLayout === "grid" ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14, paddingBottom: compareIds.length > 0 ? 100 : 0 } : { display: "flex", flexDirection: "column" as const, gap: cardLayout === "compact" ? 6 : 10, paddingBottom: compareIds.length > 0 ? 100 : 0 }}>
-          {laptops.map((l) => (
-            <LaptopCard
-              key={l.id} laptop={l} onSelect={onSelect} onHistory={onHistory}
-              isAdmin={isAdmin} onMoveToDeals={onMoveToDeals} onDelete={onDelete}
-              currency={currency} cadToUsd={cadToUsd}
-              compareSelected={compareIds.includes(l.id)}
-              onCompareToggle={toggleCompare}
-              compareDisabled={compareIds.length >= limit && !compareIds.includes(l.id)}
-              cardLayout={cardLayout}
-            />
+          {laptops.map((l, i) => (
+            <div key={l.id} style={{ animation: `lc-card-in 0.4s cubic-bezier(0.16,1,0.3,1) ${Math.min(i * 0.03, 0.4)}s both` }}>
+              <LaptopCard
+                laptop={l} onSelect={onSelect} onHistory={onHistory}
+                isAdmin={isAdmin} onMoveToDeals={onMoveToDeals} onDelete={onDelete}
+                currency={currency} cadToUsd={cadToUsd}
+                compareSelected={compareIds.includes(l.id)}
+                onCompareToggle={toggleCompare}
+                compareDisabled={compareIds.length >= limit && !compareIds.includes(l.id)}
+                cardLayout={cardLayout}
+              />
+            </div>
           ))}
         </div>
       )}
+
+      <style>{`
+        @keyframes lc-card-in {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes lc-bar-in {
+          from { opacity: 0; transform: translateY(100%); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation: none !important; }
+        }
+      `}</style>
 
       {/* Sticky compare bar */}
       {compareIds.length > 0 && (
@@ -102,6 +118,7 @@ export default function LaptopGrid({ laptops, onSelect, onHistory, isAdmin, onMo
           borderTop: "1px solid var(--border)",
           padding: "16px 24px",
           display: "flex", alignItems: "center", justifyContent: "center", gap: 16,
+          animation: "lc-bar-in 0.3s cubic-bezier(0.16,1,0.3,1) both",
         }}>
           {/* Laptop chips */}
           <div style={{ display: "flex", gap: 8, flex: 1, justifyContent: "flex-end" }}>

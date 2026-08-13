@@ -52,6 +52,12 @@ const FEATURES = [
 
 const BRANDS = ["Apple", "Lenovo", "Dell", "HP", "ASUS", "Acer", "Microsoft", "Samsung"];
 
+const HOW_IT_WORKS = [
+  { step: "1", title: "Browse the catalog", desc: "Search and filter by brand, price, screen size, weight, or use case." },
+  { step: "2", title: "Watch the price", desc: "Every laptop's price history is tracked, so you can see if now is actually a good time to buy." },
+  { step: "3", title: "Buy with confidence", desc: "Compare deals across stores in CAD or USD, then head straight to the retailer." },
+];
+
 export default function LandingPage() {
   const router = useRouter();
   const [currency, setCurrency] = useState<"CAD" | "USD">("CAD");
@@ -65,6 +71,7 @@ export default function LandingPage() {
   const brandsView = useInView<HTMLDivElement>();
   const featuresView = useInView<HTMLDivElement>();
   const ctaView = useInView<HTMLDivElement>();
+  const howItWorksView = useInView<HTMLDivElement>();
 
   // These point at the same CSS variables your theme picker (in the
   // tracker's Settings panel) writes to <html> — so whatever theme is
@@ -108,8 +115,8 @@ export default function LandingPage() {
               { label: "Best Picks", href: "/best-picks" },
               { label: "Shop", href: "/tracker" },
             ].map(({ label, href }) => (
-              <button key={label} onClick={() => router.push(href)}
-                style={{ background: "none", border: "none", color: textMuted, fontSize: 14, cursor: "pointer", padding: 0, fontWeight: 500 }}
+              <button key={label} onClick={() => router.push(href)} className="lc-nav-link"
+                style={{ background: "none", border: "none", color: textMuted, fontSize: 14, cursor: "pointer", padding: "4px 0", fontWeight: 500, position: "relative" }}
               >{label}</button>
             ))}
 
@@ -227,6 +234,19 @@ export default function LandingPage() {
               onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
             >View Deals</button>
           </div>
+
+          <div style={{ display: "flex", gap: 28, justifyContent: "center", flexWrap: "wrap", marginTop: 44, animation: "lc-rise 0.6s ease 0.35s both" }}>
+            {[
+              { n: "100%", l: "Free to use" },
+              { n: "CAD/USD", l: "Live currency toggle" },
+              { n: "9+", l: "Brands tracked" },
+            ].map((s) => (
+              <div key={s.l} style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 19, fontWeight: 800, color: text, letterSpacing: "-0.01em" }}>{s.n}</div>
+                <div style={{ fontSize: 11.5, color: textMuted, marginTop: 2 }}>{s.l}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -293,6 +313,43 @@ export default function LandingPage() {
               >{brand}</div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section
+        ref={howItWorksView.ref}
+        style={{
+          position: "relative", zIndex: 1, maxWidth: 900, margin: "0 auto 100px", padding: "0 32px",
+          opacity: howItWorksView.inView ? 1 : 0,
+          animation: howItWorksView.inView ? "lc-rise 0.5s ease both" : "none",
+        }}
+      >
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <h2 style={{ fontSize: 27, fontWeight: 800, marginBottom: 10, color: text, letterSpacing: "-0.02em" }}>How it works</h2>
+          <p style={{ fontSize: 14.5, color: textMuted }}>Three steps between you and a laptop you're not overpaying for.</p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 24, position: "relative" }}>
+          {HOW_IT_WORKS.map((s, i) => (
+            <div
+              key={s.step}
+              style={{
+                textAlign: "center", position: "relative",
+                opacity: howItWorksView.inView ? 1 : 0,
+                animation: howItWorksView.inView ? `lc-rise 0.5s ease ${0.15 + i * 0.12}s both` : "none",
+              }}
+            >
+              <div style={{
+                width: 44, height: 44, borderRadius: "50%", margin: "0 auto 16px",
+                background: `linear-gradient(135deg, ${accent}, ${accent2})`, color: "#fff",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 17, fontWeight: 800, boxShadow: `0 6px 18px ${glow}`,
+              }}>{s.step}</div>
+              <h3 style={{ fontWeight: 700, fontSize: 15.5, marginBottom: 8, color: text }}>{s.title}</h3>
+              <p style={{ fontSize: 13.5, color: textMuted, lineHeight: 1.6 }}>{s.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -439,6 +496,12 @@ export default function LandingPage() {
         .lc-float-b { animation: lc-float-b 5.5s ease-in-out infinite; }
         .lc-cta-pulse { animation: lc-cta-glow 2.4s ease-in-out infinite; }
         .lc-brand-pill:hover { transform: translateY(-2px) scale(1.06); border-color: ${accent}; color: ${text}; }
+        .lc-nav-link::after {
+          content: ""; position: absolute; left: 0; right: 100%; bottom: -2px; height: 2px;
+          background: ${accent}; transition: right 0.2s ease;
+        }
+        .lc-nav-link:hover { color: ${text}; }
+        .lc-nav-link:hover::after { right: 0; }
         @media (prefers-reduced-motion: reduce) {
           * { animation: none !important; transition: none !important; }
         }

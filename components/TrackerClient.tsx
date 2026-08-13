@@ -372,10 +372,11 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     cursor: disabled ? "not-allowed" : "pointer",
     opacity: disabled ? 0.5 : 1,
     fontWeight: 600,
+    transition: "transform 0.15s, background 0.15s",
   });
 
   return (
-    <div style={{ position: "relative", zIndex: 1, display: "flex" }}>
+    <div style={{ position: "relative", zIndex: 1, display: "flex", animation: "lc-page-in 0.35s ease both" }}>
       <Sidebar activeKey="home" onSettingsClick={() => setShowSettings(true)} onResetSettings={handleResetSettings} brands={brands} />
       <div style={{ flex: 1, maxWidth: 1300, margin: "0 auto", padding: "32px 20px" }}>
         {dbError && (
@@ -465,9 +466,9 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
 
       {showAuthModal && (
         <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)" }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)", animation: "lc-overlay-in 0.2s ease both" }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowAuthModal(false); }}>
-          <div className="modal-content" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "1.75rem", width: "100%", maxWidth: 400, margin: "1rem", boxShadow: "var(--shadow-lg)" }}>
+          <div className="modal-content" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "1.75rem", width: "100%", maxWidth: 400, margin: "1rem", boxShadow: "var(--shadow-lg)", animation: "lc-modal-in 0.25s cubic-bezier(0.16,1,0.3,1) both" }}>
             <div style={{ height: 3, background: "linear-gradient(90deg, var(--accent), var(--accent-3))", borderRadius: 99, marginBottom: 20, marginLeft: -28, marginRight: -28, marginTop: -28 }} />
             <p style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>🔒 Admin access</p>
             <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20 }}>Enter the password to unlock admin actions.</p>
@@ -489,6 +490,24 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
       <div style={{ position: "fixed", top: 20, right: 20, display: "flex", flexDirection: "column", gap: 10, zIndex: 9999 }}>
         {toasts.map((t) => <Toast key={t.id} message={t.message} type={t.type} />)}
       </div>
+
+      <style>{`
+        @keyframes lc-page-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes lc-overlay-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes lc-modal-in {
+          from { opacity: 0; transform: translateY(12px) scale(0.97); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation: none !important; }
+        }
+      `}</style>
     </div>
   );
 }
