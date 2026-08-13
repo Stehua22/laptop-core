@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -41,7 +41,7 @@ export default function TopNav() {
         // No paddingTop hacks needed on any page, ever.
         position: 'sticky',
         top: 0,
-        height: 48,
+        height: 56,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -58,8 +58,8 @@ export default function TopNav() {
           <img
             src={logoUrl}
             alt=""
-            width={28}
-            height={28}
+            width={40}
+            height={40}
             style={{ objectFit: 'contain' }}
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = 'none'; // hide instantly, no broken-icon flash
