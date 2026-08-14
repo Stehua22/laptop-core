@@ -34,6 +34,20 @@ export function formatPrice(price: number, currency: "CAD" | "USD", rate = CAD_T
   return new Intl.NumberFormat("en-CA", { style: "currency", currency, maximumFractionDigits: 2 }).format(value);
 }
 
+// Windowed page numbers with "…" gaps, e.g. 1 … 4 5 [6] 7 8 … 24
+function getPageWindow(current: number, total: number): (number | "gap")[] {
+  const delta = 1;
+  const range: number[] = [];
+  for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) range.push(i);
+
+  const pages: (number | "gap")[] = [1];
+  if (range[0] > 2) pages.push("gap");
+  pages.push(...range);
+  if (range[range.length - 1] < total - 1) pages.push("gap");
+  if (total > 1) pages.push(total);
+  return pages;
+}
+
 export default function TrackerClient({ initialLaptops, dbError }: { initialLaptops: Laptop[]; dbError: string | null }) {
   const [laptops, setLaptops] = useState<Laptop[]>(initialLaptops);
   const [search, setSearch] = useState("");
@@ -273,13 +287,24 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     return list;
   }, [laptops, search, brandFilter, sortBy, goodForFilter, screenFilter, weightFilter, priceMin, priceMax]);
 
+  const hasActiveFilters = Boolean(search || brandFilter || goodForFilter || screenFilter || weightFilter || priceMin || priceMax);
+
+  const clearAllFilters = () => {
+    setSearch(""); setBrandFilter(""); setGoodForFilter(""); setScreenFilter("");
+    setWeightFilter(""); setPriceMin(""); setPriceMax("");
+  };
+
   const totalPages = perPage === "all" ? 1 : Math.max(1, Math.ceil(filtered.length / perPage));
+  const pageWindow = useMemo(() => getPageWindow(currentPage, totalPages), [currentPage, totalPages]);
 
   const paginated = useMemo(() => {
     if (perPage === "all") return filtered;
     const start = (currentPage - 1) * perPage;
     return filtered.slice(start, start + perPage);
   }, [filtered, perPage, currentPage]);
+
+  const rangeStart = filtered.length === 0 ? 0 : perPage === "all" ? 1 : (currentPage - 1) * perPage + 1;
+  const rangeEnd = perPage === "all" ? filtered.length : Math.min(filtered.length, (currentPage) * (perPage === "all" ? 1 : perPage));
 
   const recommendations = useMemo(() => {
     const ids = recommendationIds[recCategory] ?? [];
@@ -382,14 +407,15 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     showToast("↺ Settings reset to defaults");
   };
 
-  const pageBtnStyle = (disabled: boolean): React.CSSProperties => ({
-    fontSize: 12, padding: "7px 14px", borderRadius: 8,
-    border: "1px solid var(--border)",
-    background: "var(--surface-2)",
-    color: disabled ? "var(--text-dim)" : "var(--text)",
+  const pageBtnStyle = (active: boolean, disabled = false): React.CSSProperties => ({
+    fontSize: 12, minWidth: 32, height: 32, padding: active ? 0 : "0 12px", borderRadius: 8,
+    border: active ? "1px solid var(--accent)" : "1px solid var(--border)",
+    background: active ? "var(--accent)" : "var(--surface-2)",
+    color: disabled ? "var(--text-dim)" : active ? "#fff" : "var(--text)",
     cursor: disabled ? "not-allowed" : "pointer",
     opacity: disabled ? 0.5 : 1,
     fontWeight: 600,
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
     transition: "transform 0.15s, background 0.15s",
   });
 
@@ -408,6 +434,38 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
           currency={currency} onCurrencyToggle={toggleCurrency} cadToUsd={cadToUsd}
         />
 
+        {/* Market stats strip */}
+        {laptops.length > 0 && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+              gap: 12,
+              marginBottom: 24,
+            }}
+          >
+            {[
+              { label: "Tracked", value: stats.count.toLocaleString("en-CA") },
+              { label: "Average price", value: formatPrice(stats.avg, currency, cadToUsd) },
+              { label: "Lowest price", value: formatPrice(stats.min, currency, cadToUsd) },
+              { label: "Highest price", value: formatPrice(stats.max, currency, cadToUsd) },
+            ].map((s) => (
+              <div
+                key={s.label}
+                style={{
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
+                  padding: "14px 16px",
+                }}
+              >
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600, letterSpacing: 0.2 }}>{s.label}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text)" }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <Controls
           search={search} onSearch={setSearch}
           brands={brands} brandFilter={brandFilter} onBrandFilter={setBrandFilter}
@@ -419,41 +477,100 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
           onPriceMin={setPriceMin} onPriceMax={setPriceMax}
         />
 
-        <div ref={gridTopRef} style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
-          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Show</span>
-          <select
-            value={perPage}
-            onChange={(e) => setPerPage(e.target.value === "all" ? "all" : parseInt(e.target.value, 10))}
-            style={{ padding: "6px 10px", fontSize: 12, borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--text)", cursor: "pointer", fontFamily: "inherit" }}
-          >
-            {PER_PAGE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
-            <option value="all">All</option>
-          </select>
-          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>per page</span>
+        <div
+          ref={gridTopRef}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            gap: 8, marginBottom: 16, paddingTop: 4,
+          }}
+        >
+          <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
+            {filtered.length === 0
+              ? "No results"
+              : `Showing ${rangeStart}–${rangeEnd} of ${filtered.length}`}
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                style={{ marginLeft: 10, fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+              >
+                Clear filters
+              </button>
+            )}
+          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Show</span>
+            <select
+              value={perPage}
+              onChange={(e) => setPerPage(e.target.value === "all" ? "all" : parseInt(e.target.value, 10))}
+              style={{ padding: "6px 10px", fontSize: 12, borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--text)", cursor: "pointer", fontFamily: "inherit" }}
+            >
+              {PER_PAGE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+              <option value="all">All</option>
+            </select>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>per page</span>
+          </div>
         </div>
 
-        <LaptopGrid
-          laptops={paginated} onSelect={setSelectedLaptop} onHistory={setHistoryLaptop}
-          isAdmin={unlocked} onMoveToDeals={(l) => requireAuth(() => handleMoveToDeals(l))}
-          onDelete={(id) => requireAuth(() => handleDeleteLaptop(id))}
-          currency={currency} cadToUsd={cadToUsd}
-          cardLayout={cardLayout}
-        />
+        {filtered.length === 0 ? (
+          <div
+            style={{
+              textAlign: "center", padding: "64px 24px", border: "1px dashed var(--border)",
+              borderRadius: 16, color: "var(--text-muted)",
+            }}
+          >
+            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>
+              Nothing matches those filters
+            </div>
+            <div style={{ fontSize: 13, marginBottom: hasActiveFilters ? 18 : 0 }}>
+              Try widening your search or clearing a filter.
+            </div>
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                style={{ fontSize: 13, padding: "8px 18px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--text)", cursor: "pointer", fontWeight: 600 }}
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div key={currentPage} style={{ animation: "lc-grid-in 0.3s ease both" }}>
+            <LaptopGrid
+              laptops={paginated} onSelect={setSelectedLaptop} onHistory={setHistoryLaptop}
+              isAdmin={unlocked} onMoveToDeals={(l) => requireAuth(() => handleMoveToDeals(l))}
+              onDelete={(id) => requireAuth(() => handleDeleteLaptop(id))}
+              currency={currency} cadToUsd={cadToUsd}
+              cardLayout={cardLayout}
+            />
+          </div>
+        )}
 
         {perPage !== "all" && totalPages > 1 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 28 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 28, flexWrap: "wrap" }}>
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              style={pageBtnStyle(currentPage === 1)}
+              style={{ ...pageBtnStyle(false, currentPage === 1), padding: "0 12px" }}
             >‹ Prev</button>
-            <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
-              Page {currentPage} of {totalPages}
-            </span>
+
+            {pageWindow.map((p, i) =>
+              p === "gap" ? (
+                <span key={`gap-${i}`} style={{ fontSize: 12, color: "var(--text-muted)", padding: "0 4px" }}>…</span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setCurrentPage(p)}
+                  style={pageBtnStyle(p === currentPage)}
+                >
+                  {p}
+                </button>
+              )
+            )}
+
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              style={pageBtnStyle(currentPage === totalPages)}
+              style={{ ...pageBtnStyle(false, currentPage === totalPages), padding: "0 12px" }}
             >Next ›</button>
           </div>
         )}
@@ -537,6 +654,10 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
         @keyframes lc-page-in {
           from { opacity: 0; }
           to { opacity: 1; }
+        }
+        @keyframes lc-grid-in {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         @keyframes lc-overlay-in {
           from { opacity: 0; }
