@@ -159,8 +159,16 @@ async function fetchOnePage(term: string, page: number): Promise<{ items: RawLis
 
     const items: RawListing[] = products
       .filter((product: any) => isLaptopListing(product.name ?? ""))
+      // Best Buy's API occasionally returns salePrice: 0 (or some other junk
+      // near-zero value) for a SKU — a glitch on their end, not a real price.
+      // `??` alone doesn't catch this since 0 isn't null/undefined, so it was
+      // sailing straight through and scoring as a "100% off" perfect deal.
+      .filter((product: any) => {
+        const p = product.salePrice ?? product.regularPrice;
+        return typeof p === "number" && p > 1; // reject 0 / negative / junk
+      })
       .map((product: any) => {
-        const price = product.salePrice ?? product.regularPrice;
+        const price = product.salePrice > 1 ? product.salePrice : product.regularPrice;
         const originalPrice =
           product.regularPrice && product.regularPrice > price ? product.regularPrice : undefined;
         return {

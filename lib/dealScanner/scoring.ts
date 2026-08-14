@@ -50,6 +50,11 @@ const REFURB_KEYWORDS = [
 const BIG_DROP_PCT = 25;
 const PREMIUM_DROP_PCT = 15;
 const REFURB_BASELINE_SCORE = 20;
+// A real laptop clearance rarely exceeds ~80% off. Anything past this is
+// almost certainly bad source data (a glitched $0/near-$0 price, or a
+// non-laptop SKU that slipped through) rather than a genuine deal — reject
+// it instead of letting it score as a perfect 100.
+const MAX_PLAUSIBLE_DROP_PCT = 80;
 
 export function detectBrand(title: string): string | null {
   const lower = title.toLowerCase();
@@ -84,9 +89,17 @@ export function scoreListing(
   let dealScore: number | null = null;
   let isPremiumDeal = false;
 
+  // Reject implausible prices outright, regardless of source.
+  if (!listing.price || listing.price <= 1) {
+    return { ...listing, brand, marketPrice: null, dealScore: null, isPremiumDeal: false };
+  }
+
   if (info) {
-    const isAllTimeLow = listing.price <= info.allTimeLow;
     const dropFromRetailPct = ((info.retailPrice - listing.price) / info.retailPrice) * 100;
+    if (dropFromRetailPct > MAX_PLAUSIBLE_DROP_PCT) {
+      return { ...listing, brand, marketPrice: info.retailPrice, dealScore: null, isPremiumDeal: false };
+    }
+    const isAllTimeLow = listing.price <= info.allTimeLow;
     const isBigDrop = dropFromRetailPct >= BIG_DROP_PCT;
     const isPremiumDrop = !isBigDrop && dropFromRetailPct >= PREMIUM_DROP_PCT;
 
@@ -107,7 +120,9 @@ export function scoreListing(
   } else if (listing.originalPrice && listing.originalPrice > listing.price) {
     marketPrice = listing.originalPrice;
     const dropPct = ((listing.originalPrice - listing.price) / listing.originalPrice) * 100;
-    if (dropPct >= BIG_DROP_PCT) {
+    if (dropPct > MAX_PLAUSIBLE_DROP_PCT) {
+      dealScore = null;
+    } else if (dropPct >= BIG_DROP_PCT) {
       const bonus = Math.max(0, Math.min(15, Math.round((dropPct - BIG_DROP_PCT) / 2)));
       dealScore = Math.min(70, 35 + bonus);
     } else if (dropPct >= PREMIUM_DROP_PCT) {
