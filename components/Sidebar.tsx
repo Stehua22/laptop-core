@@ -204,7 +204,7 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
       <nav className={styles.nav} style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
         {NAV_GROUPS.map((group) => (
           <div key={group.label} style={{ marginTop: 14 }}>
-            {!collapsed && <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, opacity: 0.5, padding: "0 12px 6px" }}>{group.label}</div>}
+            {!collapsed && <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.55, padding: "0 12px 8px" }}>{group.label}</div>}
             {group.items.map((item) => (
               <a
                 key={item.key}
@@ -221,7 +221,7 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
         {/* Brands section */}
         {brands.length > 0 && (
           <div style={{ marginTop: 14 }}>
-            {!collapsed && <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, opacity: 0.5, padding: "0 12px 6px" }}>Brands</div>}
+            {!collapsed && <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.55, padding: "0 12px 8px" }}>Brands</div>}
             <div className={styles.brandsSection}>
               <button
                 className={styles.brandsSectionToggle}
@@ -261,7 +261,7 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
 
         {/* Account section */}
         <div style={{ marginTop: 14, borderTop: "1px solid var(--border-color, #e5e5e5)", paddingTop: 10 }}>
-          {!collapsed && <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, opacity: 0.5, padding: "0 12px 6px" }}>Account</div>}
+          {!collapsed && <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.55, padding: "0 12px 8px" }}>Account</div>}
 
           <a
             href="/compare/split"

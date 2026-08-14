@@ -5,7 +5,6 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import type { Laptop } from "@/lib/supabase";
 import { addLaptop, addPriceEntry, deleteLaptop, supabase } from "@/lib/supabase";
 import Header from "./Header";
-import StatsBar from "./StatsBar";
 import Controls from "./Controls";
 import LaptopGrid from "./LaptopGrid";
 import LaptopModal from "./LaptopModal";
@@ -408,8 +407,6 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
           onDeals={() => router.push("/deals")}
           currency={currency} onCurrencyToggle={toggleCurrency} cadToUsd={cadToUsd}
         />
-
-        <StatsBar stats={stats} currency={currency} cadToUsd={cadToUsd} />
 
         <Controls
           search={search} onSearch={setSearch}
