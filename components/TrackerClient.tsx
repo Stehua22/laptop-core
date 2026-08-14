@@ -304,7 +304,7 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
   }, [filtered, perPage, currentPage]);
 
   const rangeStart = filtered.length === 0 ? 0 : perPage === "all" ? 1 : (currentPage - 1) * perPage + 1;
-  const rangeEnd = perPage === "all" ? filtered.length : Math.min(filtered.length, (currentPage) * (perPage === "all" ? 1 : perPage));
+  const rangeEnd = perPage === "all" ? filtered.length : Math.min(filtered.length, currentPage * perPage);
 
   const recommendations = useMemo(() => {
     const ids = recommendationIds[recCategory] ?? [];
