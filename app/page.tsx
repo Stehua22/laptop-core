@@ -254,54 +254,42 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero — animated multi-color blobs drifting behind everything */}
-      <section style={{ position: "relative", padding: "120px 32px 90px", maxWidth: 1180, margin: "0 auto", textAlign: "center", overflow: "hidden" }}>
+      {/* Hero — two-column: pitch on the left, live price card on the right */}
+      <section style={{ position: "relative", padding: "96px 32px 100px", maxWidth: 1180, margin: "0 auto", overflow: "hidden" }}>
         <div aria-hidden style={{ position: "absolute", inset: "-120px -200px", zIndex: 0, pointerEvents: "none" }}>
           <div style={{
-            position: "absolute", top: "10%", left: "20%", width: 340, height: 340, borderRadius: "50%",
+            position: "absolute", top: "10%", left: "10%", width: 340, height: 340, borderRadius: "50%",
             background: `radial-gradient(circle, ${accent} 0%, transparent 70%)`,
             opacity: 0.35, filter: "blur(40px)", animation: "lc-drift-a 9s ease-in-out infinite",
           }} />
           <div style={{
-            position: "absolute", top: "5%", right: "15%", width: 300, height: 300, borderRadius: "50%",
+            position: "absolute", top: "5%", right: "10%", width: 320, height: 320, borderRadius: "50%",
             background: `radial-gradient(circle, ${accent2} 0%, transparent 70%)`,
             opacity: 0.3, filter: "blur(40px)", animation: "lc-drift-b 11s ease-in-out infinite",
           }} />
           <div style={{
-            position: "absolute", bottom: "0%", left: "40%", width: 260, height: 260, borderRadius: "50%",
+            position: "absolute", bottom: "0%", left: "45%", width: 260, height: 260, borderRadius: "50%",
             background: `radial-gradient(circle, ${accent3} 0%, transparent 70%)`,
             opacity: 0.3, filter: "blur(40px)", animation: "lc-drift-c 8s ease-in-out infinite",
           }} />
         </div>
 
-        <div style={{ position: "relative", zIndex: 1, animation: "lc-rise 0.6s ease both" }}>
-          <p style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            fontSize: 13, color: accent, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 18,
-          }}>
-            <span style={{
-              width: 7, height: 7, borderRadius: "50%", background: accent,
-              boxShadow: `0 0 0 4px ${glow}`, animation: "lc-pulse 1.6s ease-in-out infinite",
-            }} />
-            Built for Canadian shoppers
-          </p>
+        <div className="lc-hero-grid" style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "1.05fr 0.95fr", gap: 56, alignItems: "center" }}>
+          {/* Left: pitch */}
+          <div style={{ animation: "lc-rise 0.6s ease both" }}>
+            <p style={{
+              display: "inline-flex", alignItems: "center", gap: 7,
+              fontSize: 12.5, color: accent, fontWeight: 700, letterSpacing: "0.03em", textTransform: "uppercase",
+              marginBottom: 20, background: glow, border: `1px solid ${accent}33`, borderRadius: 99, padding: "6px 14px",
+            }}>
+              <span style={{
+                width: 7, height: 7, borderRadius: "50%", background: accent,
+                boxShadow: `0 0 0 4px ${glow}`, animation: "lc-pulse 1.6s ease-in-out infinite",
+              }} />
+              Built for Canadian shoppers
+            </p>
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 56, marginBottom: 22 }}>
-            {/* Uploaded from Admin Panel → Site Images → "Hero — left image" */}
-            {heroLeftOk && (
-              <img
-                src={siteImageUrl("hero-left.png")}
-                alt=""
-                className="lc-hero-side-img lc-float-a"
-                style={{ width: 140, height: 140, objectFit: "contain", flexShrink: 0 }}
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                  setHeroLeftOk(false);
-                }}
-              />
-            )}
-
-            <h1 style={{ fontSize: "clamp(2.6rem, 6vw, 3.8rem)", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.03em", color: text, margin: 0 }}>
+            <h1 style={{ fontSize: "clamp(2.4rem, 4.6vw, 3.6rem)", fontWeight: 800, lineHeight: 1.08, letterSpacing: "-0.03em", color: text, margin: "0 0 20px" }}>
               Track laptop prices.<br />
               <span style={{
                 background: `linear-gradient(90deg, ${accent}, ${accent2}, ${accent3}, ${accent})`,
@@ -315,100 +303,114 @@ export default function LandingPage() {
               </span>
             </h1>
 
-            {/* Uploaded from Admin Panel → Site Images → "Hero — right image" */}
+            <p style={{ fontSize: 16.5, color: textMuted, lineHeight: 1.7, maxWidth: 440, margin: "0 0 36px" }}>
+              Monitor prices across Apple, Lenovo, Dell, HP and more. Compare deals in CAD or USD before you buy.
+            </p>
+
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 40 }}>
+              <button
+                onClick={() => router.push("/tracker")}
+                style={{
+                  background: `linear-gradient(135deg, ${accent}, ${accent2})`, color: "#fff", border: "none", borderRadius: btnRadius,
+                  padding: "14px 32px", fontSize: 14.5, fontWeight: 700, cursor: "pointer",
+                  boxShadow: `0 8px 26px ${glow}`, transition: "transform 0.15s, box-shadow 0.15s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px) scale(1.03)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0) scale(1)"; }}
+              >Browse Laptops</button>
+
+              <button
+                onClick={() => router.push("/deals")}
+                style={{
+                  background: surface, color: text, border: `1px solid ${border}`, borderRadius: btnRadius,
+                  padding: "14px 28px", fontSize: 14.5, fontWeight: 700, cursor: "pointer", transition: "transform 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-3px)")}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
+              >View Deals</button>
+            </div>
+
+            <div style={{ display: "flex", gap: 32, flexWrap: "wrap", animation: "lc-rise 0.6s ease 0.35s both" }}>
+              {[
+                { n: "100%", l: "Free to use" },
+                { n: "CAD/USD", l: "Live currency toggle" },
+                { n: "9+", l: "Brands tracked" },
+              ].map((s) => (
+                <div key={s.l}>
+                  <div style={{ fontSize: 19, fontWeight: 800, color: text, letterSpacing: "-0.01em" }}>{s.n}</div>
+                  <div style={{ fontSize: 11.5, color: textMuted, marginTop: 2 }}>{s.l}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: live price card, with the optional admin-uploaded mascots floating around it */}
+          <div style={{ position: "relative", animation: "lc-rise 0.6s ease 0.15s both" }}>
+            {heroLeftOk && (
+              <img
+                src={siteImageUrl("hero-left.png")}
+                alt=""
+                className="lc-hero-side-img lc-float-a"
+                style={{ position: "absolute", top: -46, left: -36, width: 104, height: 104, objectFit: "contain", zIndex: 2 }}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                  setHeroLeftOk(false);
+                }}
+              />
+            )}
             {heroRightOk && (
               <img
                 src={siteImageUrl("hero-right.png")}
                 alt=""
                 className="lc-hero-side-img lc-float-b"
-                style={{ width: 140, height: 140, objectFit: "contain", flexShrink: 0 }}
+                style={{ position: "absolute", bottom: -40, right: -30, width: 104, height: 104, objectFit: "contain", zIndex: 2 }}
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).style.display = "none";
                   setHeroRightOk(false);
                 }}
               />
             )}
-          </div>
 
-          <p style={{ fontSize: 17, color: textMuted, lineHeight: 1.7, maxWidth: 460, margin: "0 auto 40px" }}>
-            Monitor prices across Apple, Lenovo, Dell, HP and more. Compare deals in CAD or USD before you buy.
-          </p>
-
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            <button
-              onClick={() => router.push("/tracker")}
-              style={{
-                background: `linear-gradient(135deg, ${accent}, ${accent2})`, color: "#fff", border: "none", borderRadius: btnRadius,
-                padding: "14px 32px", fontSize: 14.5, fontWeight: 700, cursor: "pointer",
-                boxShadow: `0 8px 26px ${glow}`, transition: "transform 0.15s, box-shadow 0.15s",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px) scale(1.03)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0) scale(1)"; }}
-            >Browse Laptops</button>
-
-            <button
-              onClick={() => router.push("/deals")}
-              style={{
-                background: surface, color: text, border: `1px solid ${border}`, borderRadius: btnRadius,
-                padding: "14px 28px", fontSize: 14.5, fontWeight: 700, cursor: "pointer", transition: "transform 0.15s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-3px)")}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
-            >View Deals</button>
-          </div>
-
-          <div style={{ display: "flex", gap: 28, justifyContent: "center", flexWrap: "wrap", marginTop: 44, animation: "lc-rise 0.6s ease 0.35s both" }}>
-            {[
-              { n: "100%", l: "Free to use" },
-              { n: "CAD/USD", l: "Live currency toggle" },
-              { n: "9+", l: "Brands tracked" },
-            ].map((s) => (
-              <div key={s.l} style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 19, fontWeight: 800, color: text, letterSpacing: "-0.01em" }}>{s.n}</div>
-                <div style={{ fontSize: 11.5, color: textMuted, marginTop: 2 }}>{s.l}</div>
+            <div style={{
+              border: `1px solid ${border}`, borderRadius: cardRadius, overflow: "hidden", background: surface,
+              boxShadow: "var(--shadow-lg, 0 20px 50px rgba(0,0,0,0.12))", position: "relative", zIndex: 1,
+            }}>
+              <div style={{ padding: "14px 22px", borderBottom: `1px solid ${border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: textMuted, fontWeight: 600, letterSpacing: "0.02em" }}>
+                  <span style={{
+                    width: 6, height: 6, borderRadius: "50%", background: accent3,
+                    animation: "lc-pulse 1.6s ease-in-out infinite",
+                  }} />
+                  SAMPLE PRICES
+                </span>
+                <div style={{ display: "flex", border: `1px solid ${border}`, borderRadius: 6, overflow: "hidden" }}>
+                  {(["CAD", "USD"] as const).map((c) => (
+                    <button key={c} onClick={() => setCurrency(c)}
+                      style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", border: "none", cursor: "pointer", background: currency === c ? accent : "transparent", color: currency === c ? "#fff" : textMuted }}
+                    >{c}</button>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* Live price preview */}
-      <section style={{ position: "relative", zIndex: 1, maxWidth: 640, margin: "0 auto 100px", padding: "0 32px", animation: "lc-rise 0.6s ease 0.1s both" }}>
-        <div style={{ border: `1px solid ${border}`, borderRadius: cardRadius, overflow: "hidden", background: surface, boxShadow: "var(--shadow, 0 1px 3px rgba(0,0,0,0.04))" }}>
-          <div style={{ padding: "14px 22px", borderBottom: `1px solid ${border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: textMuted, fontWeight: 600, letterSpacing: "0.02em" }}>
-              <span style={{
-                width: 6, height: 6, borderRadius: "50%", background: accent3,
-                animation: "lc-pulse 1.6s ease-in-out infinite",
-              }} />
-              SAMPLE PRICES
-            </span>
-            <div style={{ display: "flex", border: `1px solid ${border}`, borderRadius: 6, overflow: "hidden" }}>
-              {(["CAD", "USD"] as const).map((c) => (
-                <button key={c} onClick={() => setCurrency(c)}
-                  style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", border: "none", cursor: "pointer", background: currency === c ? accent : "transparent", color: currency === c ? "#fff" : textMuted }}
-                >{c}</button>
+              {samplePrices.map((p, i) => (
+                <div key={i}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px",
+                    borderBottom: i < samplePrices.length - 1 ? `1px solid ${border}` : "none",
+                    animation: `lc-rise 0.45s ease ${0.3 + i * 0.1}s both`,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 14.5, marginBottom: 3, color: text }}>{p.model}</div>
+                    <div style={{ fontSize: 12.5, color: textMuted }}>{p.store}</div>
+                  </div>
+                  <div key={`${currency}-${i}`} style={{ fontWeight: 700, fontSize: 17, color: text, animation: "lc-price-flip 0.3s ease" }}>{displayPrice(p.cad)}</div>
+                </div>
               ))}
             </div>
+            <p style={{ textAlign: "center", fontSize: 12, color: textMuted, marginTop: 14 }}>Sample data — live prices are on the tracker page</p>
           </div>
-
-          {samplePrices.map((p, i) => (
-            <div key={i}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px",
-                borderBottom: i < samplePrices.length - 1 ? `1px solid ${border}` : "none",
-                animation: `lc-rise 0.45s ease ${0.3 + i * 0.1}s both`,
-              }}
-            >
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 14.5, marginBottom: 3, color: text }}>{p.model}</div>
-                <div style={{ fontSize: 12.5, color: textMuted }}>{p.store}</div>
-              </div>
-              <div key={`${currency}-${i}`} style={{ fontWeight: 700, fontSize: 17, color: text, animation: "lc-price-flip 0.3s ease" }}>{displayPrice(p.cad)}</div>
-            </div>
-          ))}
         </div>
-        <p style={{ textAlign: "center", fontSize: 12.5, color: textMuted, marginTop: 14 }}>Sample data — live prices are on the tracker page</p>
       </section>
 
       {/* Brands — scrolling marquee instead of a static row */}
@@ -692,6 +694,8 @@ export default function LandingPage() {
         }
         @media (max-width: 900px) {
           .lc-hero-side-img { display: none; }
+          .lc-hero-grid { grid-template-columns: 1fr !important; text-align: center; }
+          .lc-hero-grid > div:first-child { display: flex; flex-direction: column; align-items: center; }
         }
         @media (max-width: 700px) {
           .lc-tutorial-panel { grid-template-columns: 1fr !important; }

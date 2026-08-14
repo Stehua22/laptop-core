@@ -246,7 +246,7 @@ export default function LaptopCard({ laptop, onSelect, onHistory, isAdmin, onMov
           padding: 24, position: "relative", minHeight: 160,
         }}>
           {hasDiscount && (
-            <div style={{ position: "absolute", top: 12, left: 12, background: "linear-gradient(135deg, #f7c26a, #f4a830)", color: "#1a1200", fontSize: 10, fontWeight: 900, borderRadius: "var(--btn-radius, 10px)", padding: "3px 8px", letterSpacing: "0.04em" }}>-{discountPct}%</div>
+            <div style={{ position: "absolute", top: 12, left: 12, background: "linear-gradient(135deg, #f7c26a, #f4a830)", color: "#1a1200", fontSize: 10, fontWeight: 900, borderRadius: "var(--btn-radius, 10px)", padding: "3px 8px", letterSpacing: "0.04em", boxShadow: "0 3px 10px rgba(247,194,106,0.4)", animation: "lc-badge-glow 2.2s ease-in-out infinite" }}>-{discountPct}%</div>
           )}
           {(laptop as any).is_deal && (
             <div style={{ position: "absolute", top: hasDiscount ? 38 : 12, left: 12, background: "rgba(106,247,184,0.15)", border: "1px solid rgba(106,247,184,0.3)", color: "var(--accent-3)", fontSize: 9, fontWeight: 800, borderRadius: "var(--btn-radius, 10px)", padding: "3px 8px" }}>HOT DEAL</div>
@@ -312,7 +312,7 @@ export default function LaptopCard({ laptop, onSelect, onHistory, isAdmin, onMov
             {hasDiscount && (
               <div style={{ marginTop: 5 }}>
                 <div style={{ fontSize: 12, color: "var(--text-dim)", textDecoration: "line-through", opacity: 0.6 }}>{fmt(retail, currency, cadToUsd)}</div>
-                <div style={{ fontSize: 12, color: "#f7c26a", fontWeight: 700, marginTop: 2 }}>Save {fmt(retail - price, currency, cadToUsd)}</div>
+                <div style={{ display: "inline-block", fontSize: 11.5, color: "#1a1200", fontWeight: 800, marginTop: 4, background: "linear-gradient(135deg, #f7c26a, #f4a830)", borderRadius: 6, padding: "2px 8px" }}>Save {fmt(retail - price, currency, cadToUsd)}</div>
               </div>
             )}
           </div>
@@ -350,6 +350,12 @@ export default function LaptopCard({ laptop, onSelect, onHistory, isAdmin, onMov
       </div>
 
       {showWarning && renderWarning()}
+      <style>{`
+        @keyframes lc-badge-glow {
+          0%, 100% { box-shadow: 0 3px 10px rgba(247,194,106,0.4); }
+          50% { box-shadow: 0 3px 16px rgba(247,194,106,0.7); }
+        }
+      `}</style>
     </>
   );
 }
