@@ -94,14 +94,14 @@ export default function Controls({
         </div>
 
         {/* Brand */}
-        <select value={brandFilter} onChange={(e) => onBrandFilter(e.target.value)}
+        <select value={brandFilter} onChange={(e) => onBrandFilter(e.target.value)} className="lc-select"
           style={{ ...selectStyle, borderColor: brandFilter ? "var(--accent)" : "var(--border)" }}>
           <option value="">All Brands</option>
           {brands.map((b) => <option key={b} value={b}>{b}</option>)}
         </select>
 
         {/* Sort */}
-        <select value={sortBy} onChange={(e) => onSort(e.target.value)} style={{ ...selectStyle, minWidth: 170 }}>
+        <select value={sortBy} onChange={(e) => onSort(e.target.value)} className="lc-select" style={{ ...selectStyle, minWidth: 170 }}>
           <option value="newest">Newest First</option>
           <option value="priceAsc">Price: Low → High</option>
           <option value="priceDesc">Price: High → Low</option>
@@ -110,24 +110,25 @@ export default function Controls({
         {/* Filter toggle */}
         <button
           onClick={() => setShowFilters(f => !f)}
+          className="lc-filter-toggle"
           style={{ padding: "10px 16px", borderRadius: 10, border: `1px solid ${showFilters || activeCount > 0 ? "var(--accent)" : "var(--border)"}`, background: showFilters || activeCount > 0 ? "rgba(139,179,245,0.10)" : "var(--surface)", color: showFilters || activeCount > 0 ? "var(--accent)" : "var(--text-muted)", fontSize: 13, cursor: "pointer", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
           ⚙ Filters
           {activeCount > 0 && (
-            <span style={{ background: "var(--accent)", color: "#fff", borderRadius: 99, fontSize: 10, padding: "1px 6px", fontWeight: 700, lineHeight: 1.4 }}>{activeCount}</span>
+            <span style={{ background: "var(--accent)", color: "#fff", borderRadius: 99, fontSize: 10, padding: "1px 6px", fontWeight: 700, lineHeight: 1.4, animation: "lc-badge-pop 0.25s ease" }}>{activeCount}</span>
           )}
         </button>
       </div>
 
       {/* Expanded filter panel */}
       {showFilters && (
-        <div style={{ marginTop: 12, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 18 }}>
+        <div style={{ marginTop: 12, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 18, animation: "lc-filter-panel-in 0.22s cubic-bezier(0.16,1,0.3,1) both", transformOrigin: "top" }}>
 
           {/* Good For */}
           <div>
             <p style={sectionLabel}>Good For</p>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {GOOD_FOR_OPTIONS.map(o => (
-                <button key={o.key} onClick={() => onGoodForFilter(goodForFilter === o.key ? "" : o.key)} style={pill(goodForFilter === o.key)}>{o.label}</button>
+                <button key={o.key} className="lc-pill" onClick={() => onGoodForFilter(goodForFilter === o.key ? "" : o.key)} style={pill(goodForFilter === o.key)}>{o.label}</button>
               ))}
             </div>
           </div>
@@ -137,7 +138,7 @@ export default function Controls({
             <p style={sectionLabel}>Screen Size</p>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {SCREEN_OPTIONS.map(o => (
-                <button key={o.key} onClick={() => onScreenFilter(screenFilter === o.key ? "" : o.key)} style={pill(screenFilter === o.key)}>{o.label}</button>
+                <button key={o.key} className="lc-pill" onClick={() => onScreenFilter(screenFilter === o.key ? "" : o.key)} style={pill(screenFilter === o.key)}>{o.label}</button>
               ))}
             </div>
           </div>
@@ -147,7 +148,7 @@ export default function Controls({
             <p style={sectionLabel}>Weight</p>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {WEIGHT_OPTIONS.map(o => (
-                <button key={o.key} onClick={() => onWeightFilter(weightFilter === o.key ? "" : o.key)} style={pill(weightFilter === o.key)}>{o.label}</button>
+                <button key={o.key} className="lc-pill" onClick={() => onWeightFilter(weightFilter === o.key ? "" : o.key)} style={pill(weightFilter === o.key)}>{o.label}</button>
               ))}
             </div>
           </div>
@@ -156,9 +157,9 @@ export default function Controls({
           <div>
             <p style={sectionLabel}>Price Range (CAD)</p>
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <input type="number" placeholder="Min $" value={priceMin} onChange={e => onPriceMin(e.target.value)} style={numInput} />
+              <input type="number" placeholder="Min $" value={priceMin} onChange={e => onPriceMin(e.target.value)} className="lc-num-input" style={numInput} />
               <span style={{ color: "var(--text-muted)", fontSize: 13 }}>–</span>
-              <input type="number" placeholder="Max $" value={priceMax} onChange={e => onPriceMax(e.target.value)} style={numInput} />
+              <input type="number" placeholder="Max $" value={priceMax} onChange={e => onPriceMax(e.target.value)} className="lc-num-input" style={numInput} />
             </div>
           </div>
 
@@ -174,6 +175,25 @@ export default function Controls({
           )}
         </div>
       )}
+
+      <style>{`
+        @keyframes lc-filter-panel-in {
+          from { opacity: 0; transform: translateY(-6px) scaleY(0.96); }
+          to { opacity: 1; transform: translateY(0) scaleY(1); }
+        }
+        @keyframes lc-badge-pop {
+          0% { transform: scale(0.5); }
+          60% { transform: scale(1.15); }
+          100% { transform: scale(1); }
+        }
+        .lc-pill:hover { transform: translateY(-1px); border-color: var(--accent); }
+        .lc-filter-toggle:hover { transform: translateY(-1px); }
+        .lc-select:hover { border-color: var(--accent); }
+        .lc-num-input:focus { border-color: var(--accent); }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation: none !important; transition: none !important; }
+        }
+      `}</style>
     </div>
   );
 }

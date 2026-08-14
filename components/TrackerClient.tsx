@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import type { Laptop } from "@/lib/supabase";
 import { addLaptop, addPriceEntry, deleteLaptop, supabase } from "@/lib/supabase";
 import Header from "./Header";
@@ -165,6 +165,15 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     setCurrentPage(1);
   }, [search, brandFilter, sortBy, goodForFilter, screenFilter, weightFilter, priceMin, priceMax, perPage]);
 
+  // Scrolling pages without moving back to the top left users staring at an
+  // empty area below the fold — scroll the grid back into view on page change.
+  const gridTopRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (gridTopRef.current) {
+      gridTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [currentPage]);
+
   useEffect(() => {
     async function loadRecs() {
       try {
@@ -306,19 +315,29 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     finally { setLoading(false); }
   };
 
+  const [updatePriceLaptop, setUpdatePriceLaptop] = useState<Laptop | null>(null);
+  const [updatePriceInput, setUpdatePriceInput] = useState("");
+
   const handleUpdatePrice = async (laptopId: number) => {
-    const input = prompt("Enter new price ($):");
-    if (!input) return;
-    const price = parseFloat(input);
+    const laptop = laptops.find((l) => l.id === laptopId);
+    if (!laptop) return;
+    setUpdatePriceInput(String(laptop.current_price ?? ""));
+    setUpdatePriceLaptop(laptop);
+  };
+
+  const submitUpdatePrice = async () => {
+    if (!updatePriceLaptop) return;
+    const price = parseFloat(updatePriceInput);
     if (isNaN(price) || price < 0) { showToast("❌ Invalid price", "error"); return; }
     try {
-      await addPriceEntry(laptopId, price);
+      await addPriceEntry(updatePriceLaptop.id, price);
       setLaptops((prev) => prev.map((l) => {
-        if (l.id !== laptopId) return l;
-        const newEntry = { id: Date.now(), laptop_id: laptopId, price, recorded_at: new Date().toISOString().split("T")[0] };
+        if (l.id !== updatePriceLaptop.id) return l;
+        const newEntry = { id: Date.now(), laptop_id: updatePriceLaptop.id, price, recorded_at: new Date().toISOString().split("T")[0] };
         return { ...l, price_history: [...(l.price_history ?? []), newEntry], current_price: price };
       }));
       showToast("✅ Price updated!");
+      setUpdatePriceLaptop(null);
     } catch { showToast("❌ Failed to update price", "error"); }
   };
 
@@ -401,7 +420,7 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
           onPriceMin={setPriceMin} onPriceMax={setPriceMax}
         />
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
+        <div ref={gridTopRef} style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
           <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Show</span>
           <select
             value={perPage}
@@ -482,6 +501,30 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
               <button onClick={() => setShowAuthModal(false)} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 9, border: "1px solid var(--border)", background: "transparent", color: "inherit", cursor: "pointer" }}>Cancel</button>
               <button onClick={submitAuth} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 9, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Unlock</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {updatePriceLaptop && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)", animation: "lc-overlay-in 0.2s ease both" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setUpdatePriceLaptop(null); }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "1.75rem", width: "100%", maxWidth: 380, margin: "1rem", boxShadow: "var(--shadow-lg)", animation: "lc-modal-in 0.25s cubic-bezier(0.16,1,0.3,1) both" }}>
+            <p style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>💲 Update price</p>
+            <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 18 }}>{updatePriceLaptop.brand} {updatePriceLaptop.model}</p>
+            <div style={{ position: "relative" }}>
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--text-muted)" }}>$</span>
+              <input
+                type="number" placeholder="0.00" value={updatePriceInput} min={0} step="0.01"
+                onChange={(e) => setUpdatePriceInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submitUpdatePrice()} autoFocus
+                style={{ width: "100%", padding: "10px 12px 10px 26px", fontSize: 14, fontWeight: 600, border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface-2)", color: "inherit", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 18 }}>
+              <button onClick={() => setUpdatePriceLaptop(null)} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 9, border: "1px solid var(--border)", background: "transparent", color: "inherit", cursor: "pointer" }}>Cancel</button>
+              <button onClick={submitUpdatePrice} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 9, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Save</button>
             </div>
           </div>
         </div>

@@ -588,14 +588,40 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer style={{ position: "relative", zIndex: 1, borderTop: `1px solid ${border}`, padding: "32px", background: surface }}>
-        <div style={{ maxWidth: 1040, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-          <span style={{ fontSize: 13, color: textMuted }}>© 2026 LaptopCore</span>
-          <span style={{ fontSize: 13, color: textMuted }}>Prices may not reflect current store listings.</span>
+      <footer style={{ position: "relative", zIndex: 1, borderTop: `1px solid ${border}`, padding: "48px 32px 28px", background: surface }}>
+        <div style={{ maxWidth: 1040, margin: "0 auto" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 40, justifyContent: "space-between", marginBottom: 32 }}>
+            <div style={{ maxWidth: 280 }}>
+              <div style={{ fontWeight: 800, fontSize: 16, color: text, marginBottom: 8, letterSpacing: "-0.01em" }}>LaptopCore</div>
+              <p style={{ fontSize: 13, color: textMuted, lineHeight: 1.6 }}>Tracking Canadian laptop prices so you know a real deal when you see one.</p>
+            </div>
+            <div style={{ display: "flex", gap: 48, flexWrap: "wrap" }}>
+              {[
+                { heading: "Product", links: [{ label: "Browse laptops", href: "/tracker" }, { label: "Deals", href: "/deals" }, { label: "Best Picks", href: "/best-picks" }] },
+                { heading: "More", links: [{ label: "Articles", href: "/articles" }, { label: "Home", href: "/" }] },
+              ].map((col) => (
+                <div key={col.heading}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: textMuted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>{col.heading}</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                    {col.links.map((l) => (
+                      <button key={l.label} onClick={() => router.push(l.href)} className="lc-footer-link"
+                        style={{ background: "none", border: "none", color: textMuted, fontSize: 13, cursor: "pointer", padding: 0, textAlign: "left" }}
+                      >{l.label}</button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ borderTop: `1px solid ${border}`, paddingTop: 20, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+            <span style={{ fontSize: 12.5, color: textMuted }}>© 2026 LaptopCore</span>
+            <span style={{ fontSize: 12.5, color: textMuted }}>Prices may not reflect current store listings.</span>
+          </div>
         </div>
       </footer>
 
       <style>{`
+        .lc-footer-link:hover { color: ${text} !important; }
         @keyframes lc-pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.4; transform: scale(1.3); }
