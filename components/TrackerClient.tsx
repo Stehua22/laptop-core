@@ -434,38 +434,6 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
           currency={currency} onCurrencyToggle={toggleCurrency} cadToUsd={cadToUsd}
         />
 
-        {/* Market stats strip */}
-        {laptops.length > 0 && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-              gap: 12,
-              marginBottom: 24,
-            }}
-          >
-            {[
-              { label: "Tracked", value: stats.count.toLocaleString("en-CA") },
-              { label: "Average price", value: formatPrice(stats.avg, currency, cadToUsd) },
-              { label: "Lowest price", value: formatPrice(stats.min, currency, cadToUsd) },
-              { label: "Highest price", value: formatPrice(stats.max, currency, cadToUsd) },
-            ].map((s) => (
-              <div
-                key={s.label}
-                style={{
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 12,
-                  padding: "14px 16px",
-                }}
-              >
-                <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600, letterSpacing: 0.2 }}>{s.label}</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text)" }}>{s.value}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
         <Controls
           search={search} onSearch={setSearch}
           brands={brands} brandFilter={brandFilter} onBrandFilter={setBrandFilter}
