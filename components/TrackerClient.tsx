@@ -409,6 +409,8 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
           currency={currency} onCurrencyToggle={toggleCurrency} cadToUsd={cadToUsd}
         />
 
+        <StatsBar stats={stats} currency={currency} cadToUsd={cadToUsd} />
+
         <Controls
           search={search} onSearch={setSearch}
           brands={brands} brandFilter={brandFilter} onBrandFilter={setBrandFilter}
