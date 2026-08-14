@@ -75,12 +75,25 @@ export default function DealsPage() {
       });
   }, []);
 
+  const hasValidDeal = (l: Laptop) =>
+    typeof l.retail_price === "number" &&
+    typeof l.current_price === "number" &&
+    l.retail_price > l.current_price &&
+    l.current_price > 0;
+
   const deals = laptops
-    .filter(l => (l as any).is_deal || (l.retail_price && l.current_price && l.retail_price > l.current_price))
+    .filter(hasValidDeal)
     .sort((a, b) => {
-      if (sortBy === "discount") return ((b.retail_price! - b.current_price!) / b.retail_price!) - ((a.retail_price! - a.current_price!) / a.retail_price!);
-      if (sortBy === "savings") return (b.retail_price! - b.current_price!) - (a.retail_price! - a.current_price!);
-      return (a.current_price ?? 0) - (b.current_price ?? 0);
+      let diff = 0;
+      if (sortBy === "discount") {
+        diff = ((b.retail_price! - b.current_price!) / b.retail_price!) - ((a.retail_price! - a.current_price!) / a.retail_price!);
+      } else if (sortBy === "savings") {
+        diff = (b.retail_price! - b.current_price!) - (a.retail_price! - a.current_price!);
+      } else {
+        diff = (a.current_price ?? 0) - (b.current_price ?? 0);
+      }
+      // Stable tiebreaker so equal-ranked deals don't reorder between renders/reloads
+      return diff !== 0 ? diff : a.id - b.id;
     });
 
   const submitAuth = () => {
