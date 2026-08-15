@@ -40,6 +40,19 @@
   display: none;
 }
 
+.sectionLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  padding: 0 12px 8px;
+}
+
+.sidebar.collapsed .sectionLabel {
+  display: none;
+}
+
 .nav {
   display: flex;
   flex-direction: column;
@@ -47,13 +60,21 @@
   flex: 1;
 }
 
+.navGroup {
+  margin-top: 16px;
+}
+
+.navGroup:first-child {
+  margin-top: 0;
+}
+
 .navItem {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 11px 12px;
+  padding: 10px 12px;
   border-radius: 10px;
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
@@ -106,12 +127,25 @@
   flex: 1;
 }
 
+.badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--accent-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
 .sidebar.collapsed .navItem {
   justify-content: center;
   padding: 11px;
 }
 
-.sidebar.collapsed .navItem .label {
+.sidebar.collapsed .navItem .label,
+.sidebar.collapsed .navItem .badge {
   display: none;
 }
 
@@ -235,6 +269,33 @@
   justify-content: center;
 }
 
+/* Account panel — visually groups Split View / Referrals / Premium / auth
+   as a distinct block, separate from primary navigation */
+.accountPanel {
+  margin-top: 16px;
+  padding: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar.collapsed .accountPanel {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.accountPanel .navItem {
+  border-radius: 8px;
+}
+
+.accountPanel .navItem::before {
+  display: none;
+}
+
 /* Brands section */
 .brandsSection {
   margin-top: 4px;
@@ -248,7 +309,7 @@
   gap: 12px;
   padding: 11px 12px;
   border-radius: 10px;
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
@@ -326,4 +387,9 @@
 
 .sidebar.collapsed .brandsSection {
   border-top: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

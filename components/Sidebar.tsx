@@ -183,14 +183,14 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
           <path
             d="M4 17h16M6 17V8a2 2 0 012-2h8a2 2 0 012 2v9"
-            stroke="#2f7de0"
+            stroke="var(--accent)"
             strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
           <path
             d="M3 17l1.5 3h15L21 17"
-            stroke="#2f7de0"
+            stroke="var(--accent)"
             strokeWidth="1.8"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -203,8 +203,8 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
 
       <nav className={styles.nav} style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
         {NAV_GROUPS.map((group) => (
-          <div key={group.label} style={{ marginTop: 14 }}>
-            {!collapsed && <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.55, padding: "0 12px 8px" }}>{group.label}</div>}
+          <div key={group.label} className={styles.navGroup}>
+            <div className={styles.sectionLabel}>{group.label}</div>
             {group.items.map((item) => (
               <a
                 key={item.key}
@@ -220,8 +220,8 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
 
         {/* Brands section */}
         {brands.length > 0 && (
-          <div style={{ marginTop: 14 }}>
-            {!collapsed && <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.55, padding: "0 12px 8px" }}>Brands</div>}
+          <div className={styles.navGroup}>
+            <div className={styles.sectionLabel}>Brands</div>
             <div className={styles.brandsSection}>
               <button
                 className={styles.brandsSectionToggle}
@@ -259,81 +259,81 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
           </div>
         )}
 
-        {/* Account section */}
-        <div style={{ marginTop: 14, borderTop: "1px solid var(--border-color, #e5e5e5)", paddingTop: 10 }}>
-          {!collapsed && <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.55, padding: "0 12px 8px" }}>Account</div>}
-
-          <a
-            href="/compare/split"
-            className={`${styles.navItem} ${activeKey === "split-view" ? styles.active : ""}`}
-            style={{ color: "#9333ea" }}
-          >
-            <span className={styles.icon}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="4" width="8" height="16" rx="1" />
-                <rect x="13" y="4" width="8" height="16" rx="1" />
-              </svg>
-            </span>
-            <span className={styles.label}>Split View</span>
-          </a>
-
-          <a
-            href="/account/referrals"
-            className={`${styles.navItem} ${activeKey === "referrals" ? styles.active : ""}`}
-          >
-            <span className={styles.icon}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M20 12v9H4v-9M2 7h20v5H2V7zM12 22V7M12 7c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3zM12 7c1.7 0 3-1.3 3-3s-1.3-3-3-3-3 1.3-3 3 1.3 3 3 3z" />
-              </svg>
-            </span>
-            <span className={styles.label}>Refer & Earn</span>
-          </a>
-
-          <a
-            href="/premium"
-            className={`${styles.navItem} ${activeKey === "premium" ? styles.active : ""}`}
-            style={{ color: "#d97706" }}
-          >
-            <span className={styles.icon}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 14.3 7.2 16.9l.9-5.4L4.2 7.7l5.4-.8L12 2z" />
-              </svg>
-            </span>
-            <span className={styles.label}>Premium</span>
-          </a>
-
-          {loggedIn === false && (
-            <>
-              <a href="/login" className={styles.navItem}>
-                <span className={styles.icon}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" />
-                  </svg>
-                </span>
-                <span className={styles.label}>Log In</span>
-              </a>
-              <a href="/signup" className={styles.navItem}>
-                <span className={styles.icon}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
-                  </svg>
-                </span>
-                <span className={styles.label}>Sign Up</span>
-              </a>
-            </>
-          )}
-
-          {loggedIn === true && (
-            <button className={styles.navItem} onClick={handleLogout} type="button" style={{ width: "100%", textAlign: "left" }}>
+        {/* Account panel — grouped visually as a distinct block */}
+        <div className={styles.navGroup}>
+          {!collapsed && <div className={styles.sectionLabel}>Account</div>}
+          <div className={styles.accountPanel}>
+            <a
+              href="/compare/split"
+              className={`${styles.navItem} ${activeKey === "split-view" ? styles.active : ""}`}
+            >
               <span className={styles.icon}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                  <rect x="3" y="4" width="8" height="16" rx="1" />
+                  <rect x="13" y="4" width="8" height="16" rx="1" />
                 </svg>
               </span>
-              <span className={styles.label}>Log Out</span>
-            </button>
-          )}
+              <span className={styles.label}>Split View</span>
+            </a>
+
+            <a
+              href="/account/referrals"
+              className={`${styles.navItem} ${activeKey === "referrals" ? styles.active : ""}`}
+            >
+              <span className={styles.icon}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 12v9H4v-9M2 7h20v5H2V7zM12 22V7M12 7c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3zM12 7c1.7 0 3-1.3 3-3s-1.3-3-3-3-3 1.3-3 3 1.3 3 3 3z" />
+                </svg>
+              </span>
+              <span className={styles.label}>Refer & Earn</span>
+            </a>
+
+            <a
+              href="/premium"
+              className={`${styles.navItem} ${activeKey === "premium" ? styles.active : ""}`}
+            >
+              <span className={styles.icon}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 14.3 7.2 16.9l.9-5.4L4.2 7.7l5.4-.8L12 2z" />
+                </svg>
+              </span>
+              <span className={styles.label}>Premium</span>
+              <span className={styles.badge}>PRO</span>
+            </a>
+
+            {loggedIn === false && (
+              <>
+                <a href="/login" className={styles.navItem}>
+                  <span className={styles.icon}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" />
+                    </svg>
+                  </span>
+                  <span className={styles.label}>Log In</span>
+                </a>
+                <a href="/signup" className={styles.navItem}>
+                  <span className={styles.icon}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="8" r="4" />
+                      <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
+                    </svg>
+                  </span>
+                  <span className={styles.label}>Sign Up</span>
+                </a>
+              </>
+            )}
+
+            {loggedIn === true && (
+              <button className={styles.navItem} onClick={handleLogout} type="button" style={{ width: "100%", textAlign: "left" }}>
+                <span className={styles.icon}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                  </svg>
+                </span>
+                <span className={styles.label}>Log Out</span>
+              </button>
+            )}
+          </div>
         </div>
       </nav>
 
