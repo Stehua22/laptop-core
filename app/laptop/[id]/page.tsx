@@ -156,6 +156,21 @@ export default function LaptopPage() {
     boxSizing: "border-box", resize: "vertical" as const,
   };
 
+  const badgeStyle: React.CSSProperties = {
+    fontSize: 11, color: "var(--text-muted)", background: "var(--surface-2)",
+    border: "1px solid var(--border)", borderRadius: 6, padding: "3px 10px",
+  };
+
+  const accentBadgeStyle: React.CSSProperties = {
+    fontSize: 11, fontWeight: 600, color: "var(--accent)", background: "var(--surface-2)",
+    border: "1px solid var(--border)", borderRadius: 6, padding: "3px 10px",
+  };
+
+  const editBtnStyle: React.CSSProperties = {
+    fontSize: 11, padding: "3px 10px", borderRadius: 6, border: "1px solid var(--border)",
+    background: "transparent", color: "var(--text-muted)", cursor: "pointer",
+  };
+
   const specIcons: Record<string, string> = {
     "intel": "🔵", "amd": "🔴", "apple": "🍎", "ryzen": "🔴",
     "ram": "🧠", "gb ram": "🧠", "ssd": "💾", "tb ssd": "💾", "gb ssd": "💾",
@@ -178,19 +193,19 @@ export default function LaptopPage() {
       <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
 
         {/* Top nav */}
-        <div style={{ borderBottom: "1px solid var(--border)", background: "rgba(var(--bg-rgb, 10,12,18),0.8)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 100 }}>
+        <div style={{ borderBottom: "1px solid var(--border)", background: "var(--bg)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 100 }}>
           <div style={{ maxWidth: 1100, margin: "0 auto", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <button onClick={() => router.push("/")} style={{ background: "transparent", border: "1px solid var(--border)", borderRadius: 8, padding: "7px 16px", cursor: "pointer", color: "var(--text-muted)", fontSize: 13 }}>← Back</button>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {hasDiscount && (
-                <span style={{ background: "linear-gradient(135deg,#f7c26a,#f4a830)", color: "#1a1200", fontSize: 10, fontWeight: 900, borderRadius: 6, padding: "3px 10px", letterSpacing: "0.06em" }}>
-                  -{discountPct}% OFF
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--accent-2)", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 6, padding: "3px 10px" }}>
+                  -{discountPct}% off
                 </span>
               )}
               <button
                 onClick={() => unlocked ? null : setShowAuth(true)}
                 style={{ background: "transparent", border: `1px solid ${unlocked ? "var(--accent-3)" : "var(--border)"}`, borderRadius: 8, padding: "7px 14px", cursor: "pointer", color: unlocked ? "var(--accent-3)" : "var(--text-muted)", fontSize: 12 }}
-              >{unlocked ? "✏ Admin Mode" : "🔒 Admin"}</button>
+              >{unlocked ? "Admin mode" : "Admin"}</button>
             </div>
           </div>
         </div>
@@ -201,19 +216,18 @@ export default function LaptopPage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 32, alignItems: "start", marginBottom: 48 }}>
 
             {/* Image */}
-            <div style={{ background: "linear-gradient(135deg, rgba(139,179,245,0.07) 0%, rgba(106,247,184,0.04) 100%)", border: "1px solid var(--border)", borderRadius: 20, padding: "48px 40px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 340, position: "relative", overflow: "hidden" }}>
-              <div style={{ position: "absolute", width: 200, height: 200, borderRadius: "50%", background: "rgba(139,179,245,0.08)", filter: "blur(60px)", pointerEvents: "none" }} />
+            <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 20, padding: "48px 40px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 340 }}>
               {laptop.image_url && !imgError ? (
-                <img src={laptop.image_url} alt={laptop.model} onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} style={{ maxWidth: "100%", maxHeight: 280, objectFit: "contain", opacity: imgLoaded ? 1 : 0, transition: "opacity 0.4s", position: "relative", zIndex: 1 }} />
+                <img src={laptop.image_url} alt={laptop.model} onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} style={{ maxWidth: "100%", maxHeight: 280, objectFit: "contain", opacity: imgLoaded ? 1 : 0, transition: "opacity 0.4s" }} />
               ) : (
-                <div style={{ fontSize: 80, opacity: 0.2 }}>💻</div>
+                <div style={{ fontSize: 80, opacity: 0.15 }}>▭</div>
               )}
             </div>
 
             {/* Purchase panel */}
             <div style={{ display: "flex", flexDirection: "column" }}>
               <div style={{ fontSize: 10, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.2em", fontWeight: 700, marginBottom: 10 }}>{laptop.brand}</div>
-              <h1 style={{ fontSize: "clamp(1.6rem, 3vw, 2.2rem)", fontWeight: 900, letterSpacing: "-0.04em", marginBottom: 6, lineHeight: 1.15 }}>{laptop.model}</h1>
+              <h1 style={{ fontSize: "clamp(1.6rem, 3vw, 2.2rem)", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 6, lineHeight: 1.15 }}>{laptop.model}</h1>
               <div style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 16 }}>
                 {laptop.store && <span>{laptop.store}</span>}
                 {laptop.store && (laptop.release_year || laptop.date_added) && <span style={{ margin: "0 6px", opacity: 0.4 }}>·</span>}
@@ -223,62 +237,60 @@ export default function LaptopPage() {
               {/* Good-for tags */}
               {goodForTags.length > 0 && (
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
-                  {goodForTags.map(tag => (
-                    <span key={tag} style={{ fontSize: 11, color: "var(--accent)", fontWeight: 600, background: "rgba(139,179,245,0.1)", border: "1px solid rgba(139,179,245,0.2)", borderRadius: 6, padding: "3px 10px" }}>{tag}</span>
-                  ))}
-                  {laptop.screen_size && <span style={{ fontSize: 11, color: "var(--text-muted)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, padding: "3px 10px" }}>{laptop.screen_size}" display</span>}
-                  {laptop.weight_kg && <span style={{ fontSize: 11, color: "var(--text-muted)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 6, padding: "3px 10px" }}>{laptop.weight_kg} kg</span>}
+                  {goodForTags.map(tag => <span key={tag} style={accentBadgeStyle}>{tag}</span>)}
+                  {laptop.screen_size && <span style={badgeStyle}>{laptop.screen_size}" display</span>}
+                  {laptop.weight_kg && <span style={badgeStyle}>{laptop.weight_kg} kg</span>}
                 </div>
               )}
 
               {/* Price */}
               <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "20px 22px", marginBottom: 16 }}>
-                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Current Price</div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Current price</div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: "2.4rem", fontWeight: 900, letterSpacing: "-0.04em", color: "var(--accent-3)", lineHeight: 1 }}>{fmt(price)}</span>
-                  {hasDiscount && <span style={{ fontSize: 16, color: "var(--text-dim)", textDecoration: "line-through", opacity: 0.6 }}>{fmt(retail)}</span>}
+                  <span style={{ fontSize: "2.4rem", fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text)", lineHeight: 1 }}>{fmt(price)}</span>
+                  {hasDiscount && <span style={{ fontSize: 16, color: "var(--text-dim)", textDecoration: "line-through" }}>{fmt(retail)}</span>}
                 </div>
                 {hasDiscount && (
                   <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 12, color: "#f7c26a", fontWeight: 700 }}>You save {fmt(savings)}</span>
-                    <span style={{ fontSize: 10, background: "rgba(247,194,106,0.15)", color: "#f7c26a", borderRadius: 5, padding: "2px 7px", fontWeight: 700 }}>-{discountPct}%</span>
+                    <span style={{ fontSize: 12, color: "var(--accent-2)", fontWeight: 700 }}>You save {fmt(savings)}</span>
+                    <span style={{ fontSize: 10, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--accent-2)", borderRadius: 5, padding: "2px 7px", fontWeight: 700 }}>-{discountPct}%</span>
                   </div>
                 )}
               </div>
 
               <button
                 onClick={() => setShowWarning(true)}
-                style={{ background: "linear-gradient(135deg, var(--accent), #6ab4f5)", color: "#fff", border: "none", borderRadius: 12, padding: "15px 32px", fontWeight: 800, fontSize: 15, cursor: "pointer", width: "100%", marginBottom: 10, boxShadow: "0 6px 24px rgba(139,179,245,0.3)", transition: "opacity 0.15s, transform 0.15s" }}
-                onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}
-              >🛒 Buy Now</button>
+                style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 12, padding: "15px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", width: "100%", marginBottom: 10, transition: "opacity 0.15s" }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+              >Buy now</button>
 
               <button
                 onClick={() => router.push(`/?history=${laptop.id}`)}
-                style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: 12, padding: "13px 32px", fontWeight: 600, fontSize: 14, cursor: "pointer", width: "100%", transition: "all 0.15s" }}
-                onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = "var(--accent)"; el.style.color = "var(--accent)"; el.style.background = "rgba(139,179,245,0.06)"; }}
-                onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = "var(--border)"; el.style.color = "var(--text-muted)"; el.style.background = "transparent"; }}
-              >📈 View Price History</button>
+                style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: 12, padding: "13px 32px", fontWeight: 600, fontSize: 14, cursor: "pointer", width: "100%", transition: "border-color 0.15s, color 0.15s" }}
+                onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = "var(--border-hover)"; el.style.color = "var(--text)"; }}
+                onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = "var(--border)"; el.style.color = "var(--text-muted)"; }}
+              >View price history</button>
             </div>
           </div>
 
           {/* Pros & Cons */}
           <div style={{ marginBottom: 40 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <h2 style={{ fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.02em", margin: 0 }}>Pros & Cons</h2>
+              <h2 style={{ fontSize: "1.1rem", fontWeight: 700, letterSpacing: "-0.01em", margin: 0 }}>Pros & cons</h2>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                {aiError && <span style={{ fontSize: 11, color: "#f76a6a" }}>{aiError}</span>}
+                {aiError && <span style={{ fontSize: 11, color: "var(--accent-red)" }}>{aiError}</span>}
                 {unlocked && (
                   <button
                     onClick={generateAI}
                     disabled={generatingAI}
-                    style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(139,179,245,0.3)", background: "rgba(139,179,245,0.08)", color: "var(--accent)", cursor: generatingAI ? "not-allowed" : "pointer", fontWeight: 600, display: "flex", alignItems: "center", gap: 6, opacity: generatingAI ? 0.6 : 1 }}
+                    style={{ fontSize: 12, padding: "6px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--accent)", cursor: generatingAI ? "not-allowed" : "pointer", fontWeight: 600, display: "flex", alignItems: "center", gap: 6, opacity: generatingAI ? 0.6 : 1 }}
                   >
                     {generatingAI ? (
                       <>
                         <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⟳</span> Generating...
                       </>
-                    ) : "✨ Generate with AI"}
+                    ) : "Generate with AI"}
                   </button>
                 )}
               </div>
@@ -286,23 +298,19 @@ export default function LaptopPage() {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
               {/* Pros */}
-              <div style={{ background: "linear-gradient(135deg, rgba(106,247,184,0.05) 0%, transparent 100%)", border: "1px solid rgba(106,247,184,0.15)", borderRadius: 16, padding: "22px 24px" }}>
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "22px 24px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
-                    <span style={{ width: 22, height: 22, borderRadius: 6, background: "rgba(106,247,184,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>✓</span>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, margin: 0, color: "var(--accent-3)" }}>
                     Pros
                   </h3>
                   {unlocked && (
-                    <button onClick={() => { setEditingPros(!editingPros); setProsInput((laptop.pros ?? []).join("\n")); }}
-                      style={{ fontSize: 11, padding: "3px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", cursor: "pointer" }}>
-                      {editingPros ? "Cancel" : "✏ Edit"}
+                    <button onClick={() => { setEditingPros(!editingPros); setProsInput((laptop.pros ?? []).join("\n")); }} style={editBtnStyle}>
+                      {editingPros ? "Cancel" : "Edit"}
                     </button>
                   )}
                 </div>
                 {generatingAI ? (
-                  <div style={{ fontSize: 13, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 8 }}>
-                    <span>✨ AI is thinking...</span>
-                  </div>
+                  <div style={{ fontSize: 13, color: "var(--text-muted)" }}>AI is thinking...</div>
                 ) : editingPros ? (
                   <>
                     <textarea value={prosInput} onChange={e => setProsInput(e.target.value)} placeholder="One pro per line..." rows={5} style={inputStyle} />
@@ -326,25 +334,23 @@ export default function LaptopPage() {
               </div>
 
               {/* Cons */}
-              <div style={{ background: "linear-gradient(135deg, rgba(247,106,106,0.05) 0%, transparent 100%)", border: "1px solid rgba(247,106,106,0.15)", borderRadius: 16, padding: "22px 24px" }}>
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "22px 24px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, margin: 0 }}>
-                    <span style={{ width: 22, height: 22, borderRadius: 6, background: "rgba(247,106,106,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>✕</span>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, margin: 0, color: "var(--accent-red)" }}>
                     Cons
                   </h3>
                   {unlocked && (
-                    <button onClick={() => { setEditingCons(!editingCons); setConsInput((laptop.cons ?? []).join("\n")); }}
-                      style={{ fontSize: 11, padding: "3px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", cursor: "pointer" }}>
-                      {editingCons ? "Cancel" : "✏ Edit"}
+                    <button onClick={() => { setEditingCons(!editingCons); setConsInput((laptop.cons ?? []).join("\n")); }} style={editBtnStyle}>
+                      {editingCons ? "Cancel" : "Edit"}
                     </button>
                   )}
                 </div>
                 {generatingAI ? (
-                  <div style={{ fontSize: 13, color: "var(--text-muted)" }}>✨ AI is thinking...</div>
+                  <div style={{ fontSize: 13, color: "var(--text-muted)" }}>AI is thinking...</div>
                 ) : editingCons ? (
                   <>
                     <textarea value={consInput} onChange={e => setConsInput(e.target.value)} placeholder="One con per line..." rows={5} style={inputStyle} />
-                    <button onClick={saveCons} disabled={saving} style={{ marginTop: 10, fontSize: 13, padding: "7px 16px", borderRadius: 8, border: "none", background: "#f76a6a", color: "#fff", cursor: "pointer", fontWeight: 700 }}>
+                    <button onClick={saveCons} disabled={saving} style={{ marginTop: 10, fontSize: 13, padding: "7px 16px", borderRadius: 8, border: "none", background: "var(--accent-red)", color: "#fff", cursor: "pointer", fontWeight: 700 }}>
                       {saving ? "Saving..." : "Save"}
                     </button>
                   </>
@@ -352,7 +358,7 @@ export default function LaptopPage() {
                   <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
                     {laptop.cons.map((con, i) => (
                       <li key={i} style={{ display: "flex", gap: 10, fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5, alignItems: "flex-start" }}>
-                        <span style={{ color: "#f76a6a", flexShrink: 0, fontWeight: 700, marginTop: 1 }}>−</span>{con}
+                        <span style={{ color: "var(--accent-red)", flexShrink: 0, fontWeight: 700, marginTop: 1 }}>−</span>{con}
                       </li>
                     ))}
                   </ul>
@@ -368,11 +374,10 @@ export default function LaptopPage() {
           {/* Specs */}
           <div style={{ marginBottom: 40 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-              <h2 style={{ fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.02em", margin: 0 }}>Specifications</h2>
+              <h2 style={{ fontSize: "1.1rem", fontWeight: 700, letterSpacing: "-0.01em", margin: 0 }}>Specifications</h2>
               {unlocked && (
-                <button onClick={() => { setEditingSpecs(!editingSpecs); setSpecsInput(laptop.specs ?? ""); }}
-                  style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", cursor: "pointer" }}>
-                  {editingSpecs ? "Cancel" : "✏ Edit"}
+                <button onClick={() => { setEditingSpecs(!editingSpecs); setSpecsInput(laptop.specs ?? ""); }} style={editBtnStyle}>
+                  {editingSpecs ? "Cancel" : "Edit"}
                 </button>
               )}
             </div>
@@ -387,7 +392,7 @@ export default function LaptopPage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
                 {specLines.map((spec, i) => (
                   <div key={i} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px", fontSize: 13, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 10, transition: "border-color 0.15s" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(139,179,245,0.3)"; }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-hover)"; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
                   >
                     <span style={{ fontSize: 16, flexShrink: 0 }}>{getSpecIcon(spec)}</span>
@@ -400,7 +405,7 @@ export default function LaptopPage() {
 
           {/* Details table */}
           <div style={{ marginBottom: 40 }}>
-            <h2 style={{ fontSize: "1.1rem", fontWeight: 800, marginBottom: 16, letterSpacing: "-0.02em" }}>Details</h2>
+            <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 16, letterSpacing: "-0.01em" }}>Details</h2>
             <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden" }}>
               {[
                 ["Brand", laptop.brand],
@@ -413,12 +418,9 @@ export default function LaptopPage() {
                 ["Retail Price", fmt(retail)],
                 ...(hasDiscount ? [["Discount", `-${discountPct}% · Save ${fmt(savings)}`]] : []),
               ].map(([label, value], i, arr) => (
-                <div key={label} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none", transition: "background 0.12s" }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.02)"; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-                >
+                <div key={label} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none" }}>
                   <span style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", width: "38%", flexShrink: 0 }}>{label}</span>
-                  <span style={{ fontWeight: 600, fontSize: 14, color: label === "Current Price" ? "var(--accent-3)" : label === "Discount" ? "#f7c26a" : "var(--text)" }}>{value}</span>
+                  <span style={{ fontWeight: 600, fontSize: 14, color: label === "Discount" ? "var(--accent-2)" : "var(--text)" }}>{value}</span>
                 </div>
               ))}
             </div>
@@ -428,7 +430,7 @@ export default function LaptopPage() {
           {similarLaptops.length > 0 && (
             <div style={{ marginBottom: 40 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <h2 style={{ fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-0.02em", margin: 0 }}>Similar Laptops</h2>
+                <h2 style={{ fontSize: "1.1rem", fontWeight: 700, letterSpacing: "-0.01em", margin: 0 }}>Similar laptops</h2>
                 {!isUltra && (
                   <Link href="/premium" style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", textDecoration: "none" }}>
                     Unlock {SIMILAR_ULTRA_LIMIT} matches with Ultra →
@@ -443,20 +445,20 @@ export default function LaptopPage() {
                   return (
                     <div key={l.id} onClick={() => router.push(`/laptop/${l.id}`)}
                       style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: 16, cursor: "pointer", transition: "border-color 0.15s, transform 0.15s", display: "flex", flexDirection: "column" }}
-                      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "rgba(139,179,245,0.4)"; el.style.transform = "translateY(-2px)"; }}
+                      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border-hover)"; el.style.transform = "translateY(-2px)"; }}
                       onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border)"; el.style.transform = "translateY(0)"; }}
                     >
                       <div style={{ height: 100, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, background: "var(--surface-2)", borderRadius: 10 }}>
                         {l.image_url ? (
                           <img src={l.image_url} alt={l.model} style={{ maxWidth: "80%", maxHeight: "80%", objectFit: "contain" }} />
                         ) : (
-                          <span style={{ fontSize: 32, opacity: 0.25 }}>💻</span>
+                          <span style={{ fontSize: 32, opacity: 0.2 }}>▭</span>
                         )}
                       </div>
                       <div style={{ fontSize: 10, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.14em", fontWeight: 700, marginBottom: 4 }}>{l.brand}</div>
                       <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, lineHeight: 1.3, flex: 1 }}>{l.model}</div>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                        <span style={{ fontSize: 15, fontWeight: 800, color: "var(--accent-3)" }}>{fmt(lPrice)}</span>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: "var(--text)" }}>{fmt(lPrice)}</span>
                         {lHasDiscount && <span style={{ fontSize: 11, color: "var(--text-dim)", textDecoration: "line-through" }}>{fmt(lRetail)}</span>}
                       </div>
                     </div>
@@ -476,12 +478,11 @@ export default function LaptopPage() {
         {showAuth && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)" }} onClick={() => setShowAuth(false)}>
             <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "1.75rem", maxWidth: 380, width: "100%", margin: "1rem" }} onClick={e => e.stopPropagation()}>
-              <div style={{ height: 3, background: "linear-gradient(90deg,var(--accent),var(--accent-3))", borderRadius: 99, marginBottom: 20, marginLeft: -28, marginRight: -28, marginTop: -28 }} />
-              <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>🔒 Admin access</p>
+              <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Admin access</p>
               <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>Enter password to edit content.</p>
               <input type="password" placeholder="Password…" value={authInput} onChange={e => { setAuthInput(e.target.value); setAuthError(""); }} onKeyDown={e => e.key === "Enter" && submitAuth()} autoFocus
                 style={{ width: "100%", padding: "10px 12px", fontSize: 13, border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface-2)", color: "inherit", outline: "none", marginBottom: 6, boxSizing: "border-box" }} />
-              {authError && <p style={{ fontSize: 12, color: "#f76a6a", marginBottom: 8 }}>{authError}</p>}
+              {authError && <p style={{ fontSize: 12, color: "var(--accent-red)", marginBottom: 8 }}>{authError}</p>}
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
                 <button onClick={() => setShowAuth(false)} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 9, border: "1px solid var(--border)", background: "transparent", color: "inherit", cursor: "pointer" }}>Cancel</button>
                 <button onClick={submitAuth} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 9, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Unlock</button>
@@ -494,11 +495,11 @@ export default function LaptopPage() {
         {showWarning && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)" }} onClick={() => setShowWarning(false)}>
             <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "1.5rem", maxWidth: 360, margin: "1rem" }} onClick={e => e.stopPropagation()}>
-              <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>⚠️ Price Warning</p>
+              <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Price notice</p>
               <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20, lineHeight: 1.6 }}>Prices may not be accurate. The price shown may differ from what's currently on the store website.</p>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <button onClick={() => setShowWarning(false)} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "inherit", cursor: "pointer" }}>Cancel</button>
-                <button onClick={() => { window.open(laptop.url || `https://www.google.com/search?q=${encodeURIComponent(laptop.brand + " " + laptop.model)}`, "_blank"); setShowWarning(false); }} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Continue →</button>
+                <button onClick={() => { window.open(laptop.url || `https://www.google.com/search?q=${encodeURIComponent(laptop.brand + " " + laptop.model)}`, "_blank"); setShowWarning(false); }} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 8, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Continue</button>
               </div>
             </div>
           </div>
