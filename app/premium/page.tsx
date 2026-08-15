@@ -11,14 +11,13 @@ const FEATURES: { label: string; free: string; premium: string; ultra: string }[
   { label: 'Lapi AI chats',       free: '5/day',      premium: 'Unlimited', ultra: 'Unlimited' },
   { label: 'Laptop comparisons',  free: 'Up to 3',     premium: 'Up to 6',   ultra: 'Up to 6' },
   { label: 'Comparison insights', free: 'Basic specs', premium: 'Value score + price-per-spec', ultra: 'Value score + price-per-spec' },
-  { label: 'Split View (2-laptop side-by-side)', free: '❌', premium: '❌', ultra: 'Included' },
-  { label: '3D Model Viewer',     free: '❌',           premium: 'Included', ultra: 'Included' },
+  { label: 'Split View (2-laptop side-by-side)', free: '—', premium: '—', ultra: 'Included' },
+  { label: '3D Model Viewer',     free: '—',           premium: 'Included', ultra: 'Included' },
   { label: 'Similar Laptops results', free: '4', premium: '4', ultra: '12' },
   { label: 'Deal scanner',        free: 'Standard',    premium: 'Priority',  ultra: 'Priority / expanded sources' },
-  { label: 'Deal scanner â€” Best Buy results', free: '155', premium: '250', ultra: '350' },
   { label: 'Articles',            free: '5/week',      premium: 'Unlimited', ultra: 'Unlimited' },
   { label: 'Support',             free: 'Standard',    premium: 'Priority',  ultra: 'Priority' },
-  { label: 'Referral rewards',    free: '❌',           premium: '1 free month per referral', ultra: '1 free month per referral' },
+  { label: 'Referral rewards',    free: '—',           premium: '1 free month per referral', ultra: '1 free month per referral' },
 ];
 
 const PLAN_PRICE: Record<PlanKey, string> = {
@@ -93,17 +92,17 @@ export default function PremiumPage() {
       <div
         style={{
           width: '100%',
-          maxWidth: 680,
-          background: 'var(--bg-primary, #fff)',
-          color: 'var(--text-primary, #111)',
-          border: '1px solid var(--border-color, #e5e5e5)',
-          borderRadius: 14,
-          padding: 28,
+          maxWidth: 720,
+          background: 'var(--surface)',
+          color: 'var(--text)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--card-radius, 18px)',
+          padding: 32,
         }}
       >
-        <div style={{ fontSize: 32, marginBottom: 8 }}>â­</div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>LaptopCore Premium & Ultra</h1>
-        <p style={{ fontSize: 13, color: '#888', marginBottom: 24 }}>
+        <div style={{ fontSize: 32, marginBottom: 8, color: 'var(--accent-2)' }}>⭐</div>
+        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>LaptopCore Premium &amp; Ultra</h1>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24 }}>
           Unlock unlimited chats, advanced comparisons, and more.
         </p>
 
@@ -111,8 +110,8 @@ export default function PremiumPage() {
         <div
           style={{
             textAlign: 'left',
-            border: '1px solid var(--border-color, #e5e5e5)',
-            borderRadius: 10,
+            border: '1px solid var(--border)',
+            borderRadius: 12,
             overflow: 'hidden',
             marginBottom: 24,
           }}
@@ -121,16 +120,18 @@ export default function PremiumPage() {
             style={{
               display: 'grid',
               gridTemplateColumns: '1.3fr 0.9fr 0.9fr 0.9fr',
-              background: 'var(--bg-secondary, #f7f7f7)',
-              fontSize: 12,
+              background: 'var(--surface-2)',
+              fontSize: 11.5,
               fontWeight: 700,
               padding: '10px 14px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
             }}
           >
             <div>Feature</div>
-            <div style={{ textAlign: 'center' }}>Free</div>
-            <div style={{ textAlign: 'center', color: 'var(--accent-color, #2563eb)' }}>Premium</div>
-            <div style={{ textAlign: 'center', color: '#9333ea' }}>Ultra</div>
+            <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Free</div>
+            <div style={{ textAlign: 'center', color: 'var(--accent)' }}>Premium</div>
+            <div style={{ textAlign: 'center', color: 'var(--accent-2)' }}>Ultra</div>
           </div>
           {FEATURES.map((f, i) => (
             <div
@@ -138,30 +139,30 @@ export default function PremiumPage() {
               style={{
                 display: 'grid',
                 gridTemplateColumns: '1.3fr 0.9fr 0.9fr 0.9fr',
-                fontSize: 12,
+                fontSize: 12.5,
                 padding: '10px 14px',
-                borderTop: '1px solid var(--border-color, #e5e5e5)',
-                background: i % 2 === 1 ? 'rgba(0,0,0,0.015)' : 'transparent',
+                borderTop: '1px solid var(--border)',
+                background: i % 2 === 1 ? 'var(--surface-2)' : 'transparent',
               }}
             >
               <div style={{ fontWeight: 600 }}>{f.label}</div>
-              <div style={{ textAlign: 'center', color: '#888' }}>{f.free}</div>
-              <div style={{ textAlign: 'center', fontWeight: 700, color: 'var(--accent-color, #2563eb)' }}>{f.premium}</div>
-              <div style={{ textAlign: 'center', fontWeight: 700, color: '#9333ea' }}>{f.ultra}</div>
+              <div style={{ textAlign: 'center', color: 'var(--text-dim)' }}>{f.free}</div>
+              <div style={{ textAlign: 'center', fontWeight: 700, color: 'var(--accent)' }}>{f.premium}</div>
+              <div style={{ textAlign: 'center', fontWeight: 700, color: 'var(--accent-2)' }}>{f.ultra}</div>
             </div>
           ))}
         </div>
 
         {checking ? (
-          <p style={{ fontSize: 14 }}>Loadingâ€¦</p>
+          <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>Loading…</p>
         ) : !user ? (
-          <p style={{ fontSize: 14 }}>
+          <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>
             You need an account first.{' '}
-            <Link href="/signup" style={{ color: 'var(--accent-color, #2563eb)' }}>
+            <Link href="/signup" style={{ color: 'var(--accent)' }}>
               Sign up
             </Link>{' '}
             or{' '}
-            <Link href="/login" style={{ color: 'var(--accent-color, #2563eb)' }}>
+            <Link href="/login" style={{ color: 'var(--accent)' }}>
               log in
             </Link>
             .
@@ -171,7 +172,7 @@ export default function PremiumPage() {
             <PlanButton
               label="Premium"
               price={PLAN_PRICE.premium}
-              color="#2563eb"
+              accentVar="var(--accent)"
               active={currentPlan === 'premium'}
               disabled={currentPlan === 'ultra'}
               loading={loadingPlan === 'premium'}
@@ -180,7 +181,7 @@ export default function PremiumPage() {
             <PlanButton
               label="Ultra"
               price={PLAN_PRICE.ultra}
-              color="#9333ea"
+              accentVar="var(--accent-2)"
               active={currentPlan === 'ultra'}
               disabled={false}
               loading={loadingPlan === 'ultra'}
@@ -189,12 +190,12 @@ export default function PremiumPage() {
           </div>
         )}
 
-        {error && <p style={{ color: '#dc2626', fontSize: 13, marginTop: 12 }}>{error}</p>}
+        {error && <p style={{ color: 'var(--accent-red)', fontSize: 13, marginTop: 12 }}>{error}</p>}
 
         {user && (
-          <p style={{ fontSize: 12, color: '#888', marginTop: 20 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 20 }}>
             Refer friends and earn a free month for every one who subscribes.{' '}
-            <Link href="/account/referrals" style={{ color: 'var(--accent-color,rgb(123, 165, 255))' }}>
+            <Link href="/account/referrals" style={{ color: 'var(--accent)' }}>
               Get your referral link
             </Link>
           </p>
@@ -207,7 +208,7 @@ export default function PremiumPage() {
 function PlanButton({
   label,
   price,
-  color,
+  accentVar,
   active,
   disabled,
   loading,
@@ -215,7 +216,7 @@ function PlanButton({
 }: {
   label: string;
   price: string;
-  color: string;
+  accentVar: string;
   active: boolean;
   disabled: boolean;
   loading: boolean;
@@ -225,34 +226,36 @@ function PlanButton({
     <div
       style={{
         flex: '1 1 200px',
-        border: `1px solid ${active ? color : 'var(--border-color, #e5e5e5)'}`,
-        borderRadius: 10,
-        padding: '16px 18px',
+        border: `1px solid ${active ? accentVar : 'var(--border)'}`,
+        borderRadius: 12,
+        padding: '18px 20px',
         textAlign: 'center',
+        background: 'var(--surface-2)',
       }}
     >
-      <div style={{ fontWeight: 700, fontSize: 14, color, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>{price}</div>
+      <div style={{ fontWeight: 700, fontSize: 14, color: accentVar, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>{price}</div>
       {active ? (
-        <p style={{ fontSize: 13, fontWeight: 600, color: '#16a34a' }}>Your current plan ðŸŽ‰</p>
+        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-3)' }}>Your current plan 🎉</p>
       ) : (
         <button
           onClick={onClick}
           disabled={disabled || loading}
           style={{
             width: '100%',
-            padding: '9px 0',
-            borderRadius: 8,
+            padding: '10px 0',
+            borderRadius: 9,
             border: 'none',
-            background: color,
+            background: accentVar,
             color: '#fff',
             fontWeight: 600,
             fontSize: 13,
             cursor: disabled || loading ? 'default' : 'pointer',
             opacity: disabled || loading ? 0.6 : 1,
+            transition: 'opacity 0.15s',
           }}
         >
-          {loading ? 'Redirectingâ€¦' : disabled ? 'Included in Ultra' : `Upgrade to ${label}`}
+          {loading ? 'Redirecting…' : disabled ? 'Included in Ultra' : `Upgrade to ${label}`}
         </button>
       )}
     </div>

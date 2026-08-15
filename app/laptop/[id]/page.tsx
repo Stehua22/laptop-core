@@ -216,7 +216,7 @@ export default function LaptopPage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 32, alignItems: "start", marginBottom: 48 }}>
 
             {/* Image */}
-            <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 20, padding: "48px 40px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 340 }}>
+            <div style={{ background: "var(--card-bg, var(--surface-2))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 20px)", boxShadow: "var(--card-shadow, none)", backdropFilter: "blur(var(--card-blur, 0px))", padding: "48px 40px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 340 }}>
               {laptop.image_url && !imgError ? (
                 <img src={laptop.image_url} alt={laptop.model} onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} style={{ maxWidth: "100%", maxHeight: 280, objectFit: "contain", opacity: imgLoaded ? 1 : 0, transition: "opacity 0.4s" }} />
               ) : (
@@ -244,7 +244,7 @@ export default function LaptopPage() {
               )}
 
               {/* Price */}
-              <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "20px 22px", marginBottom: 16 }}>
+              <div style={{ background: "var(--card-bg, var(--surface))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 16px)", boxShadow: "var(--card-shadow, none)", padding: "20px 22px", marginBottom: 16 }}>
                 <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Current price</div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
                   <span style={{ fontSize: "2.4rem", fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text)", lineHeight: 1 }}>{fmt(price)}</span>
@@ -260,14 +260,14 @@ export default function LaptopPage() {
 
               <button
                 onClick={() => setShowWarning(true)}
-                style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 12, padding: "15px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", width: "100%", marginBottom: 10, transition: "opacity 0.15s" }}
+                style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: "var(--btn-radius, 12px)", padding: "15px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer", width: "100%", marginBottom: 10, transition: "opacity 0.15s" }}
                 onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
                 onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
               >Buy now</button>
 
               <button
                 onClick={() => router.push(`/?history=${laptop.id}`)}
-                style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: 12, padding: "13px 32px", fontWeight: 600, fontSize: 14, cursor: "pointer", width: "100%", transition: "border-color 0.15s, color 0.15s" }}
+                style={{ background: "transparent", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: "var(--btn-radius, 12px)", padding: "13px 32px", fontWeight: 600, fontSize: 14, cursor: "pointer", width: "100%", transition: "border-color 0.15s, color 0.15s" }}
                 onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = "var(--border-hover)"; el.style.color = "var(--text)"; }}
                 onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = "var(--border)"; el.style.color = "var(--text-muted)"; }}
               >View price history</button>
@@ -298,7 +298,7 @@ export default function LaptopPage() {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
               {/* Pros */}
-              <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "22px 24px" }}>
+              <div style={{ background: "var(--card-bg, var(--surface))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 16px)", boxShadow: "var(--card-shadow, none)", padding: "22px 24px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                   <h3 style={{ fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, margin: 0, color: "var(--accent-3)" }}>
                     Pros
@@ -334,7 +334,7 @@ export default function LaptopPage() {
               </div>
 
               {/* Cons */}
-              <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "22px 24px" }}>
+              <div style={{ background: "var(--card-bg, var(--surface))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 16px)", boxShadow: "var(--card-shadow, none)", padding: "22px 24px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                   <h3 style={{ fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, margin: 0, color: "var(--accent-red)" }}>
                     Cons
@@ -391,9 +391,9 @@ export default function LaptopPage() {
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10 }}>
                 {specLines.map((spec, i) => (
-                  <div key={i} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px", fontSize: 13, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 10, transition: "border-color 0.15s" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border-hover)"; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
+                  <div key={i} style={{ background: "var(--card-bg, var(--surface))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 12px)", padding: "14px 16px", fontSize: 13, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 10, transition: "border-color 0.15s, transform 0.15s" }}
+                    onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border-hover)"; el.style.transform = "translateY(-1px)"; }}
+                    onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--card-border, var(--border))"; el.style.transform = "translateY(0)"; }}
                   >
                     <span style={{ fontSize: 16, flexShrink: 0 }}>{getSpecIcon(spec)}</span>
                     <span>{spec}</span>
@@ -406,7 +406,7 @@ export default function LaptopPage() {
           {/* Details table */}
           <div style={{ marginBottom: 40 }}>
             <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 16, letterSpacing: "-0.01em" }}>Details</h2>
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, overflow: "hidden" }}>
+            <div style={{ background: "var(--card-bg, var(--surface))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 16px)", boxShadow: "var(--card-shadow, none)", overflow: "hidden" }}>
               {[
                 ["Brand", laptop.brand],
                 ["Model", laptop.model],
@@ -444,9 +444,9 @@ export default function LaptopPage() {
                   const lHasDiscount = lRetail > lPrice && lPrice > 0;
                   return (
                     <div key={l.id} onClick={() => router.push(`/laptop/${l.id}`)}
-                      style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: 16, cursor: "pointer", transition: "border-color 0.15s, transform 0.15s", display: "flex", flexDirection: "column" }}
-                      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border-hover)"; el.style.transform = "translateY(-2px)"; }}
-                      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border)"; el.style.transform = "translateY(0)"; }}
+                      style={{ background: "var(--card-bg, var(--surface))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 14px)", boxShadow: "var(--card-shadow, none)", padding: 16, cursor: "pointer", transition: "border-color 0.15s, transform 0.2s ease, box-shadow 0.2s ease", display: "flex", flexDirection: "column" }}
+                      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--border-hover)"; el.style.transform = `translateY(var(--card-hover-y, -2px))`; el.style.boxShadow = "var(--card-hover-shadow)"; }}
+                      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = "var(--card-border, var(--border))"; el.style.transform = "translateY(0)"; el.style.boxShadow = "var(--card-shadow, none)"; }}
                     >
                       <div style={{ height: 100, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, background: "var(--surface-2)", borderRadius: 10 }}>
                         {l.image_url ? (
@@ -477,7 +477,7 @@ export default function LaptopPage() {
         {/* Auth modal */}
         {showAuth && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)" }} onClick={() => setShowAuth(false)}>
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "1.75rem", maxWidth: 380, width: "100%", margin: "1rem" }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--modal-radius, 16px)", padding: "1.75rem", maxWidth: 380, width: "100%", margin: "1rem" }} onClick={e => e.stopPropagation()}>
               <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Admin access</p>
               <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>Enter password to edit content.</p>
               <input type="password" placeholder="Password…" value={authInput} onChange={e => { setAuthInput(e.target.value); setAuthError(""); }} onKeyDown={e => e.key === "Enter" && submitAuth()} autoFocus
@@ -494,7 +494,7 @@ export default function LaptopPage() {
         {/* Price warning modal */}
         {showWarning && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)" }} onClick={() => setShowWarning(false)}>
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "1.5rem", maxWidth: 360, margin: "1rem" }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--modal-radius, 16px)", padding: "1.5rem", maxWidth: 360, margin: "1rem" }} onClick={e => e.stopPropagation()}>
               <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Price notice</p>
               <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20, lineHeight: 1.6 }}>Prices may not be accurate. The price shown may differ from what's currently on the store website.</p>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
