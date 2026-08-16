@@ -15,7 +15,7 @@ function formatDbError(e: unknown): string {
   return `Could not connect to database: ${msg}`;
 }
 
-export default async function Home() {
+export default async function TrackerPage() {
   let laptops: Laptop[] = [];
   let error: string | null = getSupabaseConfigError();
 
