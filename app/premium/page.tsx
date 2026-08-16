@@ -20,9 +20,15 @@ const FEATURES: { label: string; free: string; premium: string; ultra: string }[
   { label: 'Referral rewards',    free: '—',           premium: '1 free month per referral', ultra: '1 free month per referral' },
 ];
 
+const HEADLINES: Record<'free' | PlanKey, string[]> = {
+  free: ['5 Lapi AI chats/day', 'Compare up to 3 laptops', '4 similar-laptop matches', 'Standard deal scanner'],
+  premium: ['Unlimited Lapi AI chats', 'Compare up to 6 laptops', '3D Model Viewer', 'Priority deal scanner'],
+  ultra: ['Everything in Premium', 'Split View comparisons', '12 similar-laptop matches', 'Priority + expanded deal sources'],
+};
+
 const PLAN_PRICE: Record<PlanKey, string> = {
-  premium: '$3.99 CAD / month',
-  ultra: '$7.99 CAD / month',
+  premium: '$3.99',
+  ultra: '$7.99',
 };
 
 export default function PremiumPage() {
@@ -80,40 +86,87 @@ export default function PremiumPage() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: '80vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 720,
-          background: 'var(--surface)',
-          color: 'var(--text)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--card-radius, 18px)',
-          padding: 32,
-        }}
-      >
-        <div style={{ fontSize: 32, marginBottom: 8, color: 'var(--accent-2)' }}>⭐</div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>LaptopCore Premium &amp; Ultra</h1>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 24 }}>
-          Unlock unlimited chats, advanced comparisons, and more.
-        </p>
+    <div style={{ minHeight: '100vh', padding: '56px 24px', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ width: '100%', maxWidth: 980 }}>
 
-        {/* Free vs Premium vs Ultra table */}
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <div style={{ fontSize: 36, marginBottom: 10, color: 'var(--accent-2)' }}>⭐</div>
+          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 8, color: 'var(--text)' }}>
+            LaptopCore Premium &amp; Ultra
+          </h1>
+          <p style={{ fontSize: 14, color: 'var(--text-muted)', maxWidth: 440, margin: '0 auto' }}>
+            Unlock unlimited chats, richer comparisons, and priority deal scanning.
+          </p>
+        </div>
+
+        {/* Tier cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 40, alignItems: 'stretch' }}>
+          <TierCard
+            label="Free"
+            price="$0"
+            accentVar="var(--text-muted)"
+            highlights={HEADLINES.free}
+            footer={currentPlan === 'free' ? <CurrentPlanNote /> : <p style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'center' }}>Your starting plan</p>}
+          />
+          <TierCard
+            label="Premium"
+            price={`${PLAN_PRICE.premium} CAD/mo`}
+            accentVar="var(--accent)"
+            featured
+            highlights={HEADLINES.premium}
+            footer={
+              checking ? null : !user ? (
+                <SignInPrompt />
+              ) : (
+                <PlanButton
+                  label="Premium"
+                  accentVar="var(--accent)"
+                  active={currentPlan === 'premium'}
+                  disabled={currentPlan === 'ultra'}
+                  loading={loadingPlan === 'premium'}
+                  onClick={() => handleUpgrade('premium')}
+                />
+              )
+            }
+          />
+          <TierCard
+            label="Ultra"
+            price={`${PLAN_PRICE.ultra} CAD/mo`}
+            accentVar="var(--accent-2)"
+            highlights={HEADLINES.ultra}
+            footer={
+              checking ? null : !user ? (
+                <SignInPrompt />
+              ) : (
+                <PlanButton
+                  label="Ultra"
+                  accentVar="var(--accent-2)"
+                  active={currentPlan === 'ultra'}
+                  disabled={false}
+                  loading={loadingPlan === 'ultra'}
+                  onClick={() => handleUpgrade('ultra')}
+                />
+              )
+            }
+          />
+        </div>
+
+        {error && <p style={{ color: 'var(--accent-red)', fontSize: 13, textAlign: 'center', marginBottom: 20 }}>{error}</p>}
+
+        {/* Full comparison table */}
+        <div style={{ marginBottom: 8 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14, color: 'var(--text)' }}>Full feature comparison</h2>
+        </div>
         <div
           style={{
             textAlign: 'left',
             border: '1px solid var(--border)',
-            borderRadius: 12,
+            borderRadius: 'var(--card-radius, 14px)',
             overflow: 'hidden',
-            marginBottom: 24,
+            marginBottom: 28,
+            background: 'var(--card-bg, var(--surface))',
+            boxShadow: 'var(--card-shadow, none)',
           }}
         >
           <div
@@ -153,47 +206,8 @@ export default function PremiumPage() {
           ))}
         </div>
 
-        {checking ? (
-          <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>Loading…</p>
-        ) : !user ? (
-          <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>
-            You need an account first.{' '}
-            <Link href="/signup" style={{ color: 'var(--accent)' }}>
-              Sign up
-            </Link>{' '}
-            or{' '}
-            <Link href="/login" style={{ color: 'var(--accent)' }}>
-              log in
-            </Link>
-            .
-          </p>
-        ) : (
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <PlanButton
-              label="Premium"
-              price={PLAN_PRICE.premium}
-              accentVar="var(--accent)"
-              active={currentPlan === 'premium'}
-              disabled={currentPlan === 'ultra'}
-              loading={loadingPlan === 'premium'}
-              onClick={() => handleUpgrade('premium')}
-            />
-            <PlanButton
-              label="Ultra"
-              price={PLAN_PRICE.ultra}
-              accentVar="var(--accent-2)"
-              active={currentPlan === 'ultra'}
-              disabled={false}
-              loading={loadingPlan === 'ultra'}
-              onClick={() => handleUpgrade('ultra')}
-            />
-          </div>
-        )}
-
-        {error && <p style={{ color: 'var(--accent-red)', fontSize: 13, marginTop: 12 }}>{error}</p>}
-
         {user && (
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 20 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
             Refer friends and earn a free month for every one who subscribes.{' '}
             <Link href="/account/referrals" style={{ color: 'var(--accent)' }}>
               Get your referral link
@@ -205,9 +219,76 @@ export default function PremiumPage() {
   );
 }
 
-function PlanButton({
+function TierCard({
   label,
   price,
+  accentVar,
+  highlights,
+  footer,
+  featured = false,
+}: {
+  label: string;
+  price: string;
+  accentVar: string;
+  highlights: string[];
+  footer: React.ReactNode;
+  featured?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        position: 'relative',
+        background: 'var(--card-bg, var(--surface))',
+        border: `1px solid ${featured ? accentVar : 'var(--card-border, var(--border))'}`,
+        borderRadius: 'var(--card-radius, 16px)',
+        boxShadow: featured ? 'var(--card-hover-shadow)' : 'var(--card-shadow, none)',
+        padding: '24px 20px',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      {featured && (
+        <div
+          style={{
+            position: 'absolute', top: -11, left: '50%', transform: 'translateX(-50%)',
+            fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+            color: '#fff', background: accentVar, borderRadius: 6, padding: '3px 10px',
+          }}
+        >
+          Most popular
+        </div>
+      )}
+      <div style={{ fontSize: 13, fontWeight: 700, color: accentVar, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: 16 }}>{price}</div>
+      <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px 0', display: 'flex', flexDirection: 'column', gap: 9, flex: 1 }}>
+        {highlights.map((h) => (
+          <li key={h} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-muted)', alignItems: 'flex-start', lineHeight: 1.4 }}>
+            <span style={{ color: accentVar, fontWeight: 700, flexShrink: 0 }}>✓</span>{h}
+          </li>
+        ))}
+      </ul>
+      <div>{footer}</div>
+    </div>
+  );
+}
+
+function SignInPrompt() {
+  return (
+    <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
+      <Link href="/signup" style={{ color: 'var(--accent)' }}>Sign up</Link>
+      {' '}or{' '}
+      <Link href="/login" style={{ color: 'var(--accent)' }}>log in</Link>
+      {' '}to subscribe.
+    </p>
+  );
+}
+
+function CurrentPlanNote() {
+  return <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-3)', textAlign: 'center' }}>Your current plan 🎉</p>;
+}
+
+function PlanButton({
+  label,
   accentVar,
   active,
   disabled,
@@ -215,49 +296,32 @@ function PlanButton({
   onClick,
 }: {
   label: string;
-  price: string;
   accentVar: string;
   active: boolean;
   disabled: boolean;
   loading: boolean;
   onClick: () => void;
 }) {
+  if (active) return <CurrentPlanNote />;
   return (
-    <div
+    <button
+      onClick={onClick}
+      disabled={disabled || loading}
       style={{
-        flex: '1 1 200px',
-        border: `1px solid ${active ? accentVar : 'var(--border)'}`,
-        borderRadius: 12,
-        padding: '18px 20px',
-        textAlign: 'center',
-        background: 'var(--surface-2)',
+        width: '100%',
+        padding: '10px 0',
+        borderRadius: 'var(--btn-radius, 9px)',
+        border: 'none',
+        background: accentVar,
+        color: '#fff',
+        fontWeight: 600,
+        fontSize: 13,
+        cursor: disabled || loading ? 'default' : 'pointer',
+        opacity: disabled || loading ? 0.6 : 1,
+        transition: 'opacity 0.15s',
       }}
     >
-      <div style={{ fontWeight: 700, fontSize: 14, color: accentVar, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>{price}</div>
-      {active ? (
-        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-3)' }}>Your current plan 🎉</p>
-      ) : (
-        <button
-          onClick={onClick}
-          disabled={disabled || loading}
-          style={{
-            width: '100%',
-            padding: '10px 0',
-            borderRadius: 9,
-            border: 'none',
-            background: accentVar,
-            color: '#fff',
-            fontWeight: 600,
-            fontSize: 13,
-            cursor: disabled || loading ? 'default' : 'pointer',
-            opacity: disabled || loading ? 0.6 : 1,
-            transition: 'opacity 0.15s',
-          }}
-        >
-          {loading ? 'Redirecting…' : disabled ? 'Included in Ultra' : `Upgrade to ${label}`}
-        </button>
-      )}
-    </div>
+      {loading ? 'Redirecting…' : disabled ? 'Included in Ultra' : `Upgrade to ${label}`}
+    </button>
   );
 }

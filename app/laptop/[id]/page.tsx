@@ -120,6 +120,12 @@ export default function LaptopPage() {
   const specLines = laptop.specs?.split(/[,·\n]/).map(s => s.trim()).filter(Boolean) ?? [];
   const goodForTags = laptop.good_for ? laptop.good_for.split(",").map(s => s.trim()).filter(Boolean) : [];
 
+  const priceHistory = (laptop as any).price_history as { price: number; recorded_at: string }[] | undefined;
+  const lowestEver = priceHistory && priceHistory.length > 0
+    ? Math.min(...priceHistory.map(p => p.price), price)
+    : null;
+  const isAtLowest = lowestEver !== null && price <= lowestEver;
+
   const similarLimit = isUltra ? SIMILAR_ULTRA_LIMIT : SIMILAR_FREE_LIMIT;
 
   const similarLaptopsScored = allLaptops
@@ -195,7 +201,16 @@ export default function LaptopPage() {
         {/* Top nav */}
         <div style={{ borderBottom: "1px solid var(--border)", background: "var(--bg)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 100 }}>
           <div style={{ maxWidth: 1100, margin: "0 auto", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <button onClick={() => router.push("/")} style={{ background: "transparent", border: "1px solid var(--border)", borderRadius: 8, padding: "7px 16px", cursor: "pointer", color: "var(--text-muted)", fontSize: 13 }}>← Back</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <button onClick={() => router.push("/")} style={{ background: "transparent", border: "1px solid var(--border)", borderRadius: 8, padding: "7px 16px", cursor: "pointer", color: "var(--text-muted)", fontSize: 13 }}>← Back</button>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-dim)" }}>
+                <Link href="/" style={{ color: "var(--text-dim)", textDecoration: "none" }}>Home</Link>
+                <span>/</span>
+                <Link href={`/brand/${encodeURIComponent(laptop.brand.toLowerCase())}`} style={{ color: "var(--text-dim)", textDecoration: "none" }}>{laptop.brand}</Link>
+                <span>/</span>
+                <span style={{ color: "var(--text-muted)" }}>{laptop.model}</span>
+              </div>
+            </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {hasDiscount && (
                 <span style={{ fontSize: 11, fontWeight: 700, color: "var(--accent-2)", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 6, padding: "3px 10px" }}>
@@ -216,17 +231,23 @@ export default function LaptopPage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 32, alignItems: "start", marginBottom: 48 }}>
 
             {/* Image */}
-            <div style={{ background: "var(--card-bg, var(--surface-2))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 20px)", boxShadow: "var(--card-shadow, none)", backdropFilter: "blur(var(--card-blur, 0px))", padding: "48px 40px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 340 }}>
+            <div style={{ position: "relative", background: "var(--card-bg, var(--surface-2))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 20px)", boxShadow: "var(--card-shadow, none)", backdropFilter: "blur(var(--card-blur, 0px))", padding: "48px 40px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 340, overflow: "hidden" }}>
+              <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 40%, var(--glow), transparent 65%)", pointerEvents: "none" }} />
+              {hasDiscount && (
+                <div style={{ position: "absolute", top: 16, left: 16, fontSize: 11, fontWeight: 800, color: "var(--accent-2)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--btn-radius, 8px)", padding: "4px 10px", zIndex: 1 }}>
+                  -{discountPct}%
+                </div>
+              )}
               {laptop.image_url && !imgError ? (
-                <img src={laptop.image_url} alt={laptop.model} onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} style={{ maxWidth: "100%", maxHeight: 280, objectFit: "contain", opacity: imgLoaded ? 1 : 0, transition: "opacity 0.4s" }} />
+                <img src={laptop.image_url} alt={laptop.model} onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)} style={{ maxWidth: "100%", maxHeight: 280, objectFit: "contain", opacity: imgLoaded ? 1 : 0, transition: "opacity 0.4s", position: "relative", zIndex: 1 }} />
               ) : (
-                <div style={{ fontSize: 80, opacity: 0.15 }}>▭</div>
+                <div style={{ fontSize: 80, opacity: 0.15, position: "relative", zIndex: 1 }}>▭</div>
               )}
             </div>
 
             {/* Purchase panel */}
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <div style={{ fontSize: 10, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.2em", fontWeight: 700, marginBottom: 10 }}>{laptop.brand}</div>
+              <div style={{ fontSize: 10, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.2em", fontWeight: 700, marginBottom: 10, fontFamily: "monospace" }}>// {laptop.brand}</div>
               <h1 style={{ fontSize: "clamp(1.6rem, 3vw, 2.2rem)", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 6, lineHeight: 1.15 }}>{laptop.model}</h1>
               <div style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 16 }}>
                 {laptop.store && <span>{laptop.store}</span>}
@@ -244,7 +265,8 @@ export default function LaptopPage() {
               )}
 
               {/* Price */}
-              <div style={{ background: "var(--card-bg, var(--surface))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 16px)", boxShadow: "var(--card-shadow, none)", padding: "20px 22px", marginBottom: 16 }}>
+              <div style={{ position: "relative", background: "var(--card-bg, var(--surface))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 16px)", boxShadow: "var(--card-shadow, none)", padding: "20px 22px 20px 25px", marginBottom: 16, overflow: "hidden" }}>
+                <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: "var(--accent)" }} />
                 <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Current price</div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
                   <span style={{ fontSize: "2.4rem", fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text)", lineHeight: 1 }}>{fmt(price)}</span>
@@ -254,6 +276,14 @@ export default function LaptopPage() {
                   <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 12, color: "var(--accent-2)", fontWeight: 700 }}>You save {fmt(savings)}</span>
                     <span style={{ fontSize: 10, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--accent-2)", borderRadius: 5, padding: "2px 7px", fontWeight: 700 }}>-{discountPct}%</span>
+                  </div>
+                )}
+                {lowestEver !== null && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Lowest ever tracked</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: isAtLowest ? "var(--accent-3)" : "var(--text)" }}>
+                      {fmt(lowestEver)}{isAtLowest && " · this is it!"}
+                    </span>
                   </div>
                 )}
               </div>
@@ -277,7 +307,10 @@ export default function LaptopPage() {
           {/* Pros & Cons */}
           <div style={{ marginBottom: 40 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <h2 style={{ fontSize: "1.1rem", fontWeight: 700, letterSpacing: "-0.01em", margin: 0 }}>Pros & cons</h2>
+              <h2 style={{ fontSize: "1.1rem", fontWeight: 700, letterSpacing: "-0.01em", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--accent)", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 5, padding: "2px 6px" }}>01</span>
+                Pros & cons
+              </h2>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 {aiError && <span style={{ fontSize: 11, color: "var(--accent-red)" }}>{aiError}</span>}
                 {unlocked && (
@@ -296,11 +329,12 @@ export default function LaptopPage() {
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            <div style={{ background: "var(--card-bg, var(--surface))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 16px)", boxShadow: "var(--card-shadow, none)", display: "grid", gridTemplateColumns: "1fr 1fr", overflow: "hidden" }}>
               {/* Pros */}
-              <div style={{ background: "var(--card-bg, var(--surface))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 16px)", boxShadow: "var(--card-shadow, none)", padding: "22px 24px" }}>
+              <div style={{ padding: "22px 24px", borderRight: "1px solid var(--card-border, var(--border))" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, margin: 0, color: "var(--accent-3)" }}>
+                  <h3 style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 8, margin: 0, color: "var(--accent-3)" }}>
+                    <span style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--surface-2)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>✓</span>
                     Pros
                   </h3>
                   {unlocked && (
@@ -334,9 +368,10 @@ export default function LaptopPage() {
               </div>
 
               {/* Cons */}
-              <div style={{ background: "var(--card-bg, var(--surface))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 16px)", boxShadow: "var(--card-shadow, none)", padding: "22px 24px" }}>
+              <div style={{ padding: "22px 24px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, margin: 0, color: "var(--accent-red)" }}>
+                  <h3 style={{ fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 8, margin: 0, color: "var(--accent-red)" }}>
+                    <span style={{ width: 22, height: 22, borderRadius: "50%", background: "var(--surface-2)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>✕</span>
                     Cons
                   </h3>
                   {unlocked && (
@@ -374,7 +409,10 @@ export default function LaptopPage() {
           {/* Specs */}
           <div style={{ marginBottom: 40 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-              <h2 style={{ fontSize: "1.1rem", fontWeight: 700, letterSpacing: "-0.01em", margin: 0 }}>Specifications</h2>
+              <h2 style={{ fontSize: "1.1rem", fontWeight: 700, letterSpacing: "-0.01em", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--accent)", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 5, padding: "2px 6px" }}>02</span>
+                Specifications
+              </h2>
               {unlocked && (
                 <button onClick={() => { setEditingSpecs(!editingSpecs); setSpecsInput(laptop.specs ?? ""); }} style={editBtnStyle}>
                   {editingSpecs ? "Cancel" : "Edit"}
@@ -405,7 +443,10 @@ export default function LaptopPage() {
 
           {/* Details table */}
           <div style={{ marginBottom: 40 }}>
-            <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 16, letterSpacing: "-0.01em" }}>Details</h2>
+            <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 16, letterSpacing: "-0.01em", display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--accent)", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 5, padding: "2px 6px" }}>03</span>
+              Details
+            </h2>
             <div style={{ background: "var(--card-bg, var(--surface))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 16px)", boxShadow: "var(--card-shadow, none)", overflow: "hidden" }}>
               {[
                 ["Brand", laptop.brand],
@@ -430,7 +471,10 @@ export default function LaptopPage() {
           {similarLaptops.length > 0 && (
             <div style={{ marginBottom: 40 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <h2 style={{ fontSize: "1.1rem", fontWeight: 700, letterSpacing: "-0.01em", margin: 0 }}>Similar laptops</h2>
+                <h2 style={{ fontSize: "1.1rem", fontWeight: 700, letterSpacing: "-0.01em", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 10, fontFamily: "monospace", color: "var(--accent)", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 5, padding: "2px 6px" }}>04</span>
+                  Similar laptops
+                </h2>
                 {!isUltra && (
                   <Link href="/premium" style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", textDecoration: "none" }}>
                     Unlock {SIMILAR_ULTRA_LIMIT} matches with Ultra →
