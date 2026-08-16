@@ -72,6 +72,14 @@ type EditForm = {
   screen_size: string; weight_kg: string; good_for: string;
 };
 
+type FaqRow = {
+  id: number | null; // null = not yet saved
+  group_label: string;
+  question: string;
+  answer: string;
+  sort_order: number;
+};
+
 export default function AdminPage() {
   const router = useRouter();
   const [laptops, setLaptops] = useState<Laptop[]>([]);
@@ -86,7 +94,7 @@ export default function AdminPage() {
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
-  const [tab, setTab] = useState<"laptops" | "add" | "picks" | "images">("laptops");
+  const [tab, setTab] = useState<"laptops" | "add" | "picks" | "images" | "support">("laptops");
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
   const [imageMsg, setImageMsg] = useState("");
   const [imageVersion, setImageVersion] = useState(0); // bump to bust cached preview after upload
@@ -120,6 +128,15 @@ export default function AdminPage() {
   const [picksMsg, setPicksMsg] = useState("");
   const [picksSearch, setPicksSearch] = useState("");
 
+  // Support & FAQ state
+  const [supportEmail, setSupportEmail] = useState("");
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [emailMsg, setEmailMsg] = useState("");
+  const [faqs, setFaqs] = useState<FaqRow[]>([]);
+  const [faqsLoading, setFaqsLoading] = useState(true);
+  const [faqsSaving, setFaqsSaving] = useState(false);
+  const [faqsMsg, setFaqsMsg] = useState("");
+
   useEffect(() => {
     fetchLaptops().then((data) => { setLaptops(data); setLoading(false); });
   }, []);
@@ -134,6 +151,27 @@ export default function AdminPage() {
       }
     }
     loadRecs();
+  }, []);
+
+  async function loadSupportData() {
+    setFaqsLoading(true);
+    const [{ data: faqData }, { data: settingData }] = await Promise.all([
+      supabase.from("faqs").select("*").order("sort_order", { ascending: true }),
+      supabase.from("site_settings").select("value").eq("key", "support_email").maybeSingle(),
+    ]);
+    if (faqData) {
+      setFaqs(faqData.map((f: any) => ({
+        id: f.id, group_label: f.group_label ?? "General",
+        question: f.question ?? "", answer: f.answer ?? "",
+        sort_order: f.sort_order ?? 0,
+      })));
+    }
+    if (settingData?.value) setSupportEmail(settingData.value);
+    setFaqsLoading(false);
+  }
+
+  useEffect(() => {
+    loadSupportData();
   }, []);
 
   const submitAuth = () => {
@@ -266,6 +304,54 @@ export default function AdminPage() {
     setEditForm(prev => prev ? { ...prev, good_for: next.join(", ") } : prev);
   };
 
+  // ── Support & FAQ handlers ──
+  const saveSupportEmail = async () => {
+    setEmailSaving(true); setEmailMsg("");
+    try {
+      await supabase.from("site_settings").upsert({ key: "support_email", value: supportEmail.trim() }, { onConflict: "key" });
+      setEmailMsg("✅ Saved!");
+    } catch { setEmailMsg("❌ Failed to save"); }
+    finally { setEmailSaving(false); setTimeout(() => setEmailMsg(""), 3000); }
+  };
+
+  const addFaqRow = () => {
+    setFaqs(prev => [...prev, { id: null, group_label: prev[prev.length - 1]?.group_label ?? "General", question: "", answer: "", sort_order: prev.length }]);
+  };
+
+  const updateFaqRow = (index: number, patch: Partial<FaqRow>) => {
+    setFaqs(prev => prev.map((f, i) => i === index ? { ...f, ...patch } : f));
+  };
+
+  const deleteFaqRow = async (index: number) => {
+    const row = faqs[index];
+    if (row.id !== null) {
+      await supabase.from("faqs").delete().eq("id", row.id);
+    }
+    setFaqs(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const saveFaqs = async () => {
+    setFaqsSaving(true); setFaqsMsg("");
+    try {
+      const withOrder = faqs.map((f, i) => ({ ...f, sort_order: i }));
+      const toInsert = withOrder.filter(f => f.id === null).map(({ id, ...rest }) => rest);
+      const toUpdate = withOrder.filter(f => f.id !== null);
+
+      if (toInsert.length > 0) {
+        await supabase.from("faqs").insert(toInsert);
+      }
+      for (const row of toUpdate) {
+        await supabase.from("faqs").update({
+          group_label: row.group_label, question: row.question,
+          answer: row.answer, sort_order: row.sort_order,
+        }).eq("id", row.id);
+      }
+      await loadSupportData();
+      setFaqsMsg("✅ Saved!");
+    } catch { setFaqsMsg("❌ Failed to save"); }
+    finally { setFaqsSaving(false); setTimeout(() => setFaqsMsg(""), 3000); }
+  };
+
   const currentPickIds = recommendationIds[picksCategory] ?? [];
   const picksFiltered  = laptops.filter(l => {
     const t = picksSearch.toLowerCase();
@@ -309,13 +395,85 @@ export default function AdminPage() {
             <p style={{ color: "var(--text-muted)", fontSize: 13, marginTop: 4 }}>{laptops.length} laptops · {laptops.filter((l: any) => l.is_deal).length} deals</p>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {(["laptops", "picks", "add", "images"] as const).map(t => (
+            {(["laptops", "picks", "add", "images", "support"] as const).map(t => (
               <button key={t} onClick={() => setTab(t)} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 99, border: `1px solid ${tab === t ? "var(--accent)" : "var(--border)"}`, background: tab === t ? "var(--accent)" : "transparent", color: tab === t ? "#fff" : "var(--text-muted)", cursor: "pointer", fontWeight: 600 }}>
-                {t === "laptops" ? "📋 All Laptops" : t === "picks" ? "🎓 Best Picks" : t === "images" ? "🖼️ Site Images" : "+ Add New"}
+                {t === "laptops" ? "📋 All Laptops" : t === "picks" ? "🎓 Best Picks" : t === "images" ? "🖼️ Site Images" : t === "support" ? "💬 Support & FAQ" : "+ Add New"}
               </button>
             ))}
           </div>
         </div>
+
+        {/* ── SUPPORT & FAQ TAB ── */}
+        {tab === "support" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+            {/* Support email */}
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 24 }}>
+              <h2 style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Support email</h2>
+              <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginBottom: 16 }}>
+                Shown on the public Support &amp; FAQ page's contact cards.
+              </p>
+              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                <input
+                  value={supportEmail}
+                  onChange={(e) => setSupportEmail(e.target.value)}
+                  placeholder="support@laptopcore.app"
+                  style={{ ...inputStyle, maxWidth: 320 }}
+                />
+                <button onClick={saveSupportEmail} disabled={emailSaving} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 9, border: "none", background: "var(--accent)", color: "#fff", cursor: emailSaving ? "not-allowed" : "pointer", fontWeight: 700, opacity: emailSaving ? 0.6 : 1 }}>
+                  {emailSaving ? "Saving…" : "💾 Save"}
+                </button>
+                {emailMsg && <span style={{ fontSize: 12, color: emailMsg.startsWith("✅") ? "var(--accent-3)" : "var(--accent-red)" }}>{emailMsg}</span>}
+              </div>
+            </div>
+
+            {/* FAQ editor */}
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6, flexWrap: "wrap", gap: 10 }}>
+                <h2 style={{ fontWeight: 700, fontSize: 16, margin: 0 }}>Frequently asked questions</h2>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  {faqsMsg && <span style={{ fontSize: 12, color: faqsMsg.startsWith("✅") ? "var(--accent-3)" : "var(--accent-red)" }}>{faqsMsg}</span>}
+                  <button onClick={saveFaqs} disabled={faqsSaving} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 9, border: "none", background: "var(--accent)", color: "#fff", cursor: faqsSaving ? "not-allowed" : "pointer", fontWeight: 700, opacity: faqsSaving ? 0.6 : 1 }}>
+                    {faqsSaving ? "Saving…" : "💾 Save FAQs"}
+                  </button>
+                </div>
+              </div>
+              <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginBottom: 18 }}>
+                Group is the section heading shown on the public page (e.g. "Pricing", "Account"). Items with the same group stick together.
+              </p>
+
+              {faqsLoading ? (
+                <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Loading…</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {faqs.map((row, i) => (
+                    <div key={row.id ?? `new-${i}`} style={{ border: "1px solid var(--border)", borderRadius: 12, padding: 14, background: "var(--surface-2)" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "160px 1fr auto", gap: 10, marginBottom: 8, alignItems: "end" }}>
+                        <div>
+                          <label style={labelStyle}>Group</label>
+                          <input value={row.group_label} onChange={(e) => updateFaqRow(i, { group_label: e.target.value })} style={inputStyle} placeholder="e.g. Pricing" />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Question</label>
+                          <input value={row.question} onChange={(e) => updateFaqRow(i, { question: e.target.value })} style={inputStyle} placeholder="e.g. Can I cancel anytime?" />
+                        </div>
+                        <button onClick={() => deleteFaqRow(i)} style={{ fontSize: 12, padding: "7px 12px", borderRadius: 8, border: "1px solid rgba(247,106,106,0.3)", background: "rgba(247,106,106,0.08)", color: "var(--accent-red)", cursor: "pointer", height: 34 }}>🗑</button>
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Answer</label>
+                        <textarea value={row.answer} onChange={(e) => updateFaqRow(i, { answer: e.target.value })} rows={2} style={{ ...inputStyle, resize: "vertical" }} placeholder="Answer shown when expanded..." />
+                      </div>
+                    </div>
+                  ))}
+
+                  <button onClick={addFaqRow} style={{ fontSize: 13, padding: "10px", borderRadius: 10, border: "1px dashed var(--border)", background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontWeight: 600 }}>
+                    + Add question
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ── BEST PICKS TAB ── */}
         {tab === "picks" && (
