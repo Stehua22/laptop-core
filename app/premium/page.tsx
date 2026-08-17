@@ -87,21 +87,28 @@ export default function PremiumPage() {
 
   return (
     <div style={{ minHeight: '100vh', padding: '56px 24px', display: 'flex', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: 980 }}>
+      <div style={{ width: '100%', maxWidth: 1040 }}>
 
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <div style={{ fontSize: 36, marginBottom: 10, color: 'var(--accent-2)' }}>⭐</div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 8, color: 'var(--text)' }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: '50%', margin: '0 auto 16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 26, background: 'var(--surface)', border: '1px solid var(--border)',
+            boxShadow: '0 0 0 8px var(--glow)',
+          }}>
+            <span style={{ color: 'var(--accent-2)' }}>⭐</span>
+          </div>
+          <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.4rem)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 10, color: 'var(--text)' }}>
             LaptopCore Premium &amp; Ultra
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--text-muted)', maxWidth: 440, margin: '0 auto' }}>
+          <p style={{ fontSize: 15, color: 'var(--text-muted)', maxWidth: 460, margin: '0 auto' }}>
             Unlock unlimited chats, richer comparisons, and priority deal scanning.
           </p>
         </div>
 
         {/* Tier cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 40, alignItems: 'stretch' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 48, alignItems: 'stretch' }}>
           <TierCard
             label="Free"
             price="$0"
@@ -242,27 +249,28 @@ function TierCard({
         border: `1px solid ${featured ? accentVar : 'var(--card-border, var(--border))'}`,
         borderRadius: 'var(--card-radius, 16px)',
         boxShadow: featured ? 'var(--card-hover-shadow)' : 'var(--card-shadow, none)',
-        padding: '24px 20px',
+        padding: '30px 24px',
         display: 'flex',
         flexDirection: 'column',
+        transform: featured ? 'scale(1.03)' : 'scale(1)',
       }}
     >
       {featured && (
         <div
           style={{
-            position: 'absolute', top: -11, left: '50%', transform: 'translateX(-50%)',
-            fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-            color: '#fff', background: accentVar, borderRadius: 6, padding: '3px 10px',
+            position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
+            fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+            color: '#fff', background: accentVar, borderRadius: 7, padding: '4px 12px',
           }}
         >
           Most popular
         </div>
       )}
-      <div style={{ fontSize: 13, fontWeight: 700, color: accentVar, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: 16 }}>{price}</div>
-      <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px 0', display: 'flex', flexDirection: 'column', gap: 9, flex: 1 }}>
+      <div style={{ fontSize: 13.5, fontWeight: 700, color: accentVar, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text)', marginBottom: 20 }}>{price}</div>
+      <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 22px 0', display: 'flex', flexDirection: 'column', gap: 11, flex: 1 }}>
         {highlights.map((h) => (
-          <li key={h} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--text-muted)', alignItems: 'flex-start', lineHeight: 1.4 }}>
+          <li key={h} style={{ display: 'flex', gap: 8, fontSize: 13, color: 'var(--text-muted)', alignItems: 'flex-start', lineHeight: 1.5 }}>
             <span style={{ color: accentVar, fontWeight: 700, flexShrink: 0 }}>✓</span>{h}
           </li>
         ))}

@@ -449,13 +449,14 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
           ref={gridTopRef}
           style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
-            gap: 8, marginBottom: 16, paddingTop: 4,
+            gap: 8, marginBottom: 20, padding: "12px 16px",
+            background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--card-radius, 12px)",
           }}
         >
           <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
             {filtered.length === 0
               ? "No results"
-              : `Showing ${rangeStart}–${rangeEnd} of ${filtered.length}`}
+              : <>Showing <strong style={{ color: "var(--text)", fontWeight: 700 }}>{rangeStart}–{rangeEnd}</strong> of <strong style={{ color: "var(--text)", fontWeight: 700 }}>{filtered.length}</strong></>}
             {hasActiveFilters && (
               <button
                 onClick={clearAllFilters}
@@ -514,7 +515,7 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
         )}
 
         {perPage !== "all" && totalPages > 1 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 28, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 28, padding: "14px", flexWrap: "wrap", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--card-radius, 12px)" }}>
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
