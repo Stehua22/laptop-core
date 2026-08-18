@@ -56,25 +56,77 @@ export default function LaptopCard({ laptop, onSelect, onHistory, isAdmin, onMov
   const hasDiscount = retail > price && price > 0;
   const discountPct = hasDiscount ? Math.round(((retail - price) / retail) * 100) : 0;
   const [showWarning, setShowWarning] = useState(false);
+  const [showStorePicker, setShowStorePicker] = useState(false);
   const [pendingUrl, setPendingUrl]   = useState("");
+  const [pendingStore, setPendingStore] = useState("");
   const [imgError, setImgError]       = useState(false);
   const [imgLoaded, setImgLoaded]     = useState(false);
   const [hovered, setHovered]         = useState(false);
 
   const specParts   = laptop.specs ? laptop.specs.split(",").map(s => s.trim()).filter(Boolean) : [];
   const goodForTags = laptop.good_for ? laptop.good_for.split(",").map(s => s.trim()).filter(Boolean).slice(0, 3) : [];
+  const links        = laptop.links ?? [];
   const visitUrl    = laptop.url || `https://www.google.com/search?q=${encodeURIComponent(laptop.brand + " " + laptop.model)}`;
+
+  function handleVisitClick(e?: React.MouseEvent) {
+    e?.stopPropagation();
+    if (links.length > 1) {
+      setShowStorePicker(true);
+    } else {
+      setPendingUrl(links[0]?.url ?? visitUrl);
+      setPendingStore(links[0]?.store ?? "");
+      setShowWarning(true);
+    }
+  }
+
+  function pickStore(url: string, store: string) {
+    setShowStorePicker(false);
+    setPendingUrl(url);
+    setPendingStore(store);
+    setShowWarning(true);
+  }
 
   function renderWarning() {
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)" }} onClick={() => setShowWarning(false)}>
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--modal-radius, 16px)", padding: "1.5rem", maxWidth: 360, margin: "1rem" }} onClick={e => e.stopPropagation()}>
-          <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Price notice</p>
+          <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>{pendingStore ? `Continue to ${pendingStore}` : "Price notice"}</p>
           <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20, lineHeight: 1.6 }}>Prices may not be accurate. The price shown may differ from what's currently on the store website.</p>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             <button onClick={() => setShowWarning(false)} style={{ fontSize: 13, padding: "8px 18px", borderRadius: "var(--btn-radius, 10px)", border: "1px solid var(--border)", background: "transparent", color: "inherit", cursor: "pointer" }}>Cancel</button>
             <button onClick={() => { window.open(pendingUrl, "_blank"); setShowWarning(false); }} style={{ fontSize: 13, padding: "8px 18px", borderRadius: "var(--btn-radius, 10px)", border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Continue</button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderStorePicker() {
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)" }} onClick={() => setShowStorePicker(false)}>
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--modal-radius, 16px)", padding: "1.5rem", maxWidth: 380, width: "100%", margin: "1rem" }} onClick={e => e.stopPropagation()}>
+          <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{links.length} places to buy</p>
+          <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginBottom: 16 }}>{laptop.brand} {laptop.model}</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {links.map((link, i) => (
+              <button
+                key={link.id}
+                onClick={() => pickStore(link.url, link.store)}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: i === 0 ? "var(--accent)" : "var(--surface-2)",
+                  color: i === 0 ? "#fff" : "var(--text)",
+                  border: i === 0 ? "none" : "1px solid var(--border)",
+                  borderRadius: "var(--btn-radius, 10px)", padding: "11px 16px",
+                  fontWeight: 700, fontSize: 13, cursor: "pointer", width: "100%",
+                }}
+              >
+                <span>{link.store}</span>
+                <span>{link.price != null ? fmt(link.price, currency, cadToUsd) : "Visit"}</span>
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setShowStorePicker(false)} style={{ marginTop: 14, fontSize: 13, padding: "8px 18px", borderRadius: "var(--btn-radius, 10px)", border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", cursor: "pointer", width: "100%" }}>Cancel</button>
         </div>
       </div>
     );
@@ -132,6 +184,7 @@ export default function LaptopCard({ laptop, onSelect, onHistory, isAdmin, onMov
         </div>
 
         {showWarning && renderWarning()}
+        {showStorePicker && renderStorePicker()}
       </>
     );
   }
@@ -208,12 +261,13 @@ export default function LaptopCard({ laptop, onSelect, onHistory, isAdmin, onMov
             </div>
             <div style={{ display: "flex", gap: 6 }}>
               <button onClick={() => onHistory(laptop)} aria-label="Price history" style={{ ...ghostBtnStyle, padding: "6px 10px" }}>History</button>
-              <button onClick={() => { setPendingUrl(visitUrl); setShowWarning(true); }} aria-label="Visit store" style={{ ...ghostBtnStyle, padding: "6px 10px" }}>Visit</button>
+              <button onClick={handleVisitClick} aria-label="Visit store" style={{ ...ghostBtnStyle, padding: "6px 10px" }}>Visit</button>
             </div>
           </div>
         </div>
 
         {showWarning && renderWarning()}
+        {showStorePicker && renderStorePicker()}
       </>
     );
   }
@@ -327,7 +381,7 @@ export default function LaptopCard({ laptop, onSelect, onHistory, isAdmin, onMov
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-muted)"; }}
               >History</button>
               <button
-                onClick={() => { setPendingUrl(visitUrl); setShowWarning(true); }}
+                onClick={handleVisitClick}
                 style={{ ...ghostBtnStyle, flex: 1 }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-hover)"; e.currentTarget.style.color = "var(--text)"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-muted)"; }}
@@ -354,6 +408,7 @@ export default function LaptopCard({ laptop, onSelect, onHistory, isAdmin, onMov
       </div>
 
       {showWarning && renderWarning()}
+        {showStorePicker && renderStorePicker()}
     </>
   );
 }
