@@ -42,12 +42,42 @@ function siteImageUrl(path: string) {
 const CAD_TO_USD = 0.73;
 
 const FEATURES = [
-  { icon: "📈", title: "Track prices", desc: "Monitor laptop prices over time. See when a listing actually drops." },
-  { icon: "🔍", title: "Deal scanner", desc: "Find discounted listings from Apple, Lenovo, Dell, ASUS and more." },
-  { icon: "🎯", title: "Best picks", desc: "Recommendations for students, home users, and business use." },
-  { icon: "⚖️", title: "Compare specs", desc: "Browse the catalog and compare specs and prices side by side." },
-  { icon: "📊", title: "Price history", desc: "Charts showing how a laptop's price has moved over time." },
-  { icon: "💱", title: "CAD and USD", desc: "Switch currency anywhere on the site." },
+  {
+    icon: "📈",
+    title: "Track prices",
+    desc: "Every laptop we list gets checked regularly, not just once. We log the price every time it changes, so you're seeing real movement instead of a single snapshot.",
+    detail: "e.g. \"$2,449 → $2,199 over 6 weeks\"",
+  },
+  {
+    icon: "🔍",
+    title: "Deal scanner",
+    desc: "Runs in the background across Apple, Lenovo, Dell, ASUS and more, comparing today's price against what a laptop has actually sold for before — not just the sticker \"was\" price.",
+    detail: "Flags drops of 10%+ below tracked average",
+  },
+  {
+    icon: "🎯",
+    title: "Best picks",
+    desc: "A short set of questions about what you'll use the laptop for — school, home, or business — narrows the catalog down to a handful of laptops that actually fit, instead of scrolling everything.",
+    detail: "Takes about 30 seconds",
+  },
+  {
+    icon: "⚖️",
+    title: "Compare specs",
+    desc: "Pick a few laptops from the catalog and see their specs and prices lined up in one table, so trade-offs like RAM vs. price are obvious at a glance.",
+    detail: "Compare up to 3 laptops free, more with Premium",
+  },
+  {
+    icon: "📊",
+    title: "Price history",
+    desc: "Every laptop page has a chart of where its price has actually been over time, so you can tell whether today's number is a genuine low or just this week's price.",
+    detail: "Shows lowest price ever tracked",
+  },
+  {
+    icon: "💱",
+    title: "CAD and USD",
+    desc: "Every price on the site — cards, comparisons, deal scanner — converts instantly using a live exchange rate, so you're never doing the math yourself.",
+    detail: "Rate updates automatically",
+  },
 ];
 
 const BRANDS = ["Apple", "Lenovo", "Dell", "HP", "ASUS", "Acer", "Microsoft", "Samsung"];
@@ -520,17 +550,18 @@ export default function LandingPage() {
           }}
         >
           <h2 style={{ fontSize: 27, fontWeight: 800, marginBottom: 10, color: text, letterSpacing: "-0.02em" }}>What LaptopCore does</h2>
-          <p style={{ fontSize: 14.5, color: textMuted }}>Built for people who want to shop smarter, not harder.</p>
+          <p style={{ fontSize: 14.5, color: textMuted }}>Six tools, each solving one part of buying a laptop without overpaying.</p>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(310px, 1fr))", gap: 16 }}>
           {FEATURES.map((f, i) => (
             <div
               key={f.title}
               onMouseEnter={() => setHoveredCard(f.title)}
               onMouseLeave={() => setHoveredCard(null)}
               style={{
-                background: surface, border: `1px solid ${hoveredCard === f.title ? accent : border}`, borderRadius: cardRadius, padding: "26px",
+                background: surface, border: `1px solid ${hoveredCard === f.title ? accent : border}`, borderRadius: cardRadius, padding: "28px",
+                display: "flex", flexDirection: "column",
                 transform: hoveredCard === f.title ? "translateY(-5px) scale(1.02)" : "translateY(0) scale(1)",
                 boxShadow: hoveredCard === f.title ? `var(--card-hover-shadow, 0 14px 32px ${glow})` : "none",
                 transition: "transform 0.18s, box-shadow 0.18s, border-color 0.18s",
@@ -539,14 +570,21 @@ export default function LandingPage() {
               }}
             >
               <div style={{
-                fontSize: 22, marginBottom: 10, display: "inline-block",
+                fontSize: 24, marginBottom: 12, display: "inline-block",
                 transform: hoveredCard === f.title ? "scale(1.25) rotate(-6deg)" : "scale(1) rotate(0deg)",
                 transition: "transform 0.2s",
                 animation: hoveredCard === f.title ? "none" : "lc-icon-bob 3s ease-in-out infinite",
                 animationDelay: `${i * 0.15}s`,
               }}>{f.icon}</div>
-              <h3 style={{ fontWeight: 600, fontSize: 15, marginBottom: 8, color: text }}>{f.title}</h3>
-              <p style={{ fontSize: 13.5, color: textMuted, lineHeight: 1.65 }}>{f.desc}</p>
+              <h3 style={{ fontWeight: 700, fontSize: 15.5, marginBottom: 10, color: text, letterSpacing: "-0.01em" }}>{f.title}</h3>
+              <p style={{ fontSize: 13.5, color: textMuted, lineHeight: 1.65, marginBottom: 14, flex: 1 }}>{f.desc}</p>
+              <div style={{
+                fontSize: 11.5, color: accent, fontWeight: 600, background: glow,
+                border: `1px solid ${accent}33`, borderRadius: 7, padding: "6px 11px",
+                display: "inline-flex", alignItems: "center", gap: 6, width: "fit-content",
+              }}>
+                <span style={{ opacity: 0.7 }}>›</span>{f.detail}
+              </div>
             </div>
           ))}
         </div>
