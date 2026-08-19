@@ -17,6 +17,16 @@ export const supabase = createClient(
   supabaseUrl || "https://placeholder.supabase.co",
   supabaseAnonKey || "placeholder"
 );
+
+export type LaptopLink = {
+  id: number;
+  laptop_id: number;
+  store: string;
+  url: string;
+  price: number | null;
+  sort_order: number;
+};
+
 export type Laptop = {
   id: number;
   brand: string;
@@ -37,6 +47,7 @@ export type Laptop = {
   screen_size?: number | null;      // e.g. 13.3, 14, 15.6
   weight_kg?: number | null;        // e.g. 1.2, 1.8
   good_for?: string | null;         // e.g. "gaming,programming"
+  links?: LaptopLink[];             // multiple buy-links, each with its own store/price
 };
 
 export type PriceEntry = {
@@ -49,7 +60,7 @@ export type PriceEntry = {
 export async function fetchLaptops(): Promise<Laptop[]> {
   const { data: laptops, error } = await supabase
     .from("laptops")
-    .select("*, price_history(id, price, recorded_at)")
+    .select("*, price_history(id, price, recorded_at), laptop_links(id, laptop_id, store, url, price, sort_order)")
     .order("created_at", { ascending: false });
 
   if (error) throw error;
@@ -59,16 +70,20 @@ export async function fetchLaptops(): Promise<Laptop[]> {
       (a: PriceEntry, b: PriceEntry) =>
         new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()
     );
+    const links: LaptopLink[] = (l.laptop_links ?? []).sort(
+      (a: LaptopLink, b: LaptopLink) => a.sort_order - b.sort_order
+    );
     return {
       ...l,
       price_history: history,
       current_price: history[history.length - 1]?.price ?? l.retail_price ?? 0,
+      links,
     };
   });
 }
 
 export async function addLaptop(
-  laptop: Omit<Laptop, "id" | "created_at" | "price_history" | "current_price">,
+  laptop: Omit<Laptop, "id" | "created_at" | "price_history" | "current_price" | "links">,
   initialPrice: number
 ) {
   const { data, error } = await supabase.from("laptops").insert(laptop).select().single();
@@ -92,6 +107,34 @@ export async function addPriceEntry(laptopId: number, price: number) {
 
 export async function deleteLaptop(id: number) {
   const { error } = await supabase.from("laptops").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ---- Laptop buy-links (multiple stores per laptop) ----
+
+export async function fetchLaptopLinks(laptopId: number): Promise<LaptopLink[]> {
+  const { data, error } = await supabase
+    .from("laptop_links")
+    .select("*")
+    .eq("laptop_id", laptopId)
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function addLaptopLink(link: Omit<LaptopLink, "id">) {
+  const { data, error } = await supabase.from("laptop_links").insert(link).select().single();
+  if (error) throw error;
+  return data as LaptopLink;
+}
+
+export async function updateLaptopLink(id: number, patch: Partial<Omit<LaptopLink, "id" | "laptop_id">>) {
+  const { error } = await supabase.from("laptop_links").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteLaptopLink(id: number) {
+  const { error } = await supabase.from("laptop_links").delete().eq("id", id);
   if (error) throw error;
 }
 
