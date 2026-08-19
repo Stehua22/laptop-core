@@ -270,19 +270,35 @@ export default function ArticlesPage() {
 
   return (
     <div style={{ position: "relative", zIndex: 1, display: "flex" }}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes lc-art-orb { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(28px,-20px) scale(1.1); } }
+        @keyframes lc-art-sheen { 0% { background-position: -120% 0; } 100% { background-position: 220% 0; } }
+        @keyframes lc-art-dot { 0%,100% { opacity: 0.9; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7); } }
+        .lc-art-orb { position: absolute; top: -90px; left: -60px; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(circle, var(--accent) 0%, transparent 70%); opacity: 0.15; filter: blur(40px); pointer-events: none; z-index: 0; animation: lc-art-orb 10s ease-in-out infinite; }
+        .lc-art-title { background: linear-gradient(100deg, var(--text) 30%, var(--accent) 45%, var(--text) 60%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: lc-art-sheen 7s linear infinite; }
+        .lc-art-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-3); margin-right: 6px; animation: lc-art-dot 2s ease-in-out infinite; }
+        .lc-art-new-btn { position: relative; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .lc-art-new-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 26px var(--glow); }
+        .lc-art-pill { transition: transform 0.15s ease, border-color 0.15s ease; }
+        .lc-art-pill:hover { transform: translateY(-1px); }
+        .lc-art-card { transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease; }
+        .lc-art-card:hover { transform: translateY(-3px); }
+      `}} />
       <Sidebar activeKey="articles" />
-      <div style={{ flex: 1, maxWidth: 1000, margin: "0 auto", padding: "32px 20px" }}>
+      <div style={{ flex: 1, maxWidth: 1000, margin: "0 auto", padding: "32px 20px", position: "relative" }}>
+        <div className="lc-art-orb" />
 
-        <div className="animate-fade-up" style={{ marginBottom: 40 }}>
-          <div style={{ fontSize: 10, color: "var(--accent)", letterSpacing: "0.25em", textTransform: "uppercase", marginBottom: 10, fontWeight: 600, opacity: 0.8 }}>
-            // knowledge base
+        <div className="animate-fade-up" style={{ marginBottom: 40, position: "relative", zIndex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", fontSize: 10, color: "var(--accent)", letterSpacing: "0.25em", textTransform: "uppercase", marginBottom: 12, fontWeight: 700, opacity: 0.9 }}>
+            <span className="lc-art-dot" />
+            Knowledge base
           </div>
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
             <div>
-              <h1 style={{ fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 800, lineHeight: 1, letterSpacing: "-0.04em", color: "var(--text)", margin: 0 }}>
-                Articles<span style={{ color: "var(--accent)", opacity: 0.9 }}>.</span>
+              <h1 className="lc-art-title" style={{ fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 800, lineHeight: 1, letterSpacing: "-0.04em", margin: 0 }}>
+                Articles<span style={{ color: "var(--accent)", WebkitTextFillColor: "var(--accent)", opacity: 0.9 }}>.</span>
               </h1>
-              <p style={{ marginTop: 10, color: "var(--text-muted)", fontSize: 13 }}>
+              <p style={{ marginTop: 12, color: "var(--text-muted)", fontSize: 13 }}>
                 Guides, reviews, and insights · {articles.length} article{articles.length !== 1 ? "s" : ""}
                 {!checkingLimit && !isPremium && userId && (
                   <span style={{ marginLeft: 8, color: "var(--text-dim)" }}>
@@ -292,9 +308,10 @@ export default function ArticlesPage() {
               </p>
             </div>
             <button
+              className="lc-art-new-btn"
               onClick={() => requireAuth(() => { resetForm(); setShowEditor(true); })}
               style={{
-                background: "var(--accent)", color: "#fff", border: "none",
+                background: "linear-gradient(135deg, var(--accent), var(--accent-3))", color: "#fff", border: "none",
                 borderRadius: "var(--btn-radius, 10px)", padding: "11px 22px",
                 fontWeight: 700, cursor: "pointer", fontSize: 14,
                 display: "flex", alignItems: "center", gap: 6,
@@ -306,7 +323,7 @@ export default function ArticlesPage() {
           </div>
         </div>
 
-        <div className="animate-fade-up" style={{ animationDelay: "0.05s", display: "flex", gap: 10, marginBottom: 28, flexWrap: "wrap" }}>
+        <div className="animate-fade-up" style={{ animationDelay: "0.05s", display: "flex", gap: 10, marginBottom: 28, flexWrap: "wrap", position: "relative", zIndex: 1 }}>
           <input
             type="text"
             placeholder="Search articles..."
@@ -316,25 +333,25 @@ export default function ArticlesPage() {
           />
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <button
+              className="lc-art-pill"
               onClick={() => setCategoryFilter("")}
               style={{
                 padding: "8px 14px", borderRadius: "var(--btn-radius, 10px)", fontSize: 12, fontWeight: 600, cursor: "pointer",
                 border: `1px solid ${!categoryFilter ? "var(--accent)" : "var(--border)"}`,
                 background: !categoryFilter ? "rgba(139,179,245,0.1)" : "var(--surface-2)",
                 color: !categoryFilter ? "var(--accent)" : "var(--text-muted)",
-                transition: "all 0.15s",
               }}
             >All</button>
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
+                className="lc-art-pill"
                 onClick={() => setCategoryFilter(cat)}
                 style={{
                   padding: "8px 14px", borderRadius: "var(--btn-radius, 10px)", fontSize: 12, fontWeight: 600, cursor: "pointer",
                   border: `1px solid ${categoryFilter === cat ? (CATEGORY_COLORS[cat] || "var(--accent)") : "var(--border)"}`,
                   background: categoryFilter === cat ? `${CATEGORY_COLORS[cat] || "var(--accent)"}18` : "var(--surface-2)",
                   color: categoryFilter === cat ? (CATEGORY_COLORS[cat] || "var(--accent)") : "var(--text-muted)",
-                  transition: "all 0.15s",
                 }}
               >{cat}</button>
             ))}
@@ -522,7 +539,7 @@ export default function ArticlesPage() {
             </p>
           </div>
         ) : (
-          <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: 12, position: "relative", zIndex: 1 }}>
             {filtered.map((article) => {
               const isExpanded = expandedId === article.id;
               const catColor = CATEGORY_COLORS[article.category] || "var(--accent)";
@@ -530,7 +547,7 @@ export default function ArticlesPage() {
               return (
                 <div
                   key={article.id}
-                  className="animate-fade-up"
+                  className="animate-fade-up lc-art-card"
                   style={{
                     background: "var(--card-bg, var(--surface))",
                     border: `1px solid ${isExpanded ? catColor + "40" : "var(--card-border, var(--border))"}`,
