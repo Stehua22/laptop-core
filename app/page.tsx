@@ -85,27 +85,45 @@ const BRANDS = ["Apple", "Lenovo", "Dell", "HP", "ASUS", "Acer", "Microsoft", "S
 const TUTORIAL_STEPS = [
   {
     label: "Search & Filter",
+    icon: "🔍",
     title: "Find laptops that fit your needs",
     desc: "Filter by brand, price range, screen size, weight, or what you'll actually use it for — student, home, or business.",
     mock: "filter" as const,
   },
   {
     label: "Track Prices",
+    icon: "📈",
     title: "See where the price has actually been",
     desc: "Every laptop has a price history chart, so you can tell if today's price is a real deal or just marketing.",
     mock: "chart" as const,
   },
   {
     label: "Compare",
+    icon: "⚖️",
     title: "Put laptops side by side",
     desc: "Select a few laptops and compare specs and prices in one view before you decide.",
     mock: "compare" as const,
   },
   {
     label: "Spot Deals",
+    icon: "🔥",
     title: "Catch the real price drops",
     desc: "The Deal Scanner flags genuine discounts across stores, so you don't have to go hunting for them yourself.",
     mock: "deals" as const,
+  },
+  {
+    label: "Best Picks",
+    icon: "🎯",
+    title: "Answer a few questions, get a shortlist",
+    desc: "Tell us what you'll use it for and your budget — Best Picks narrows the whole catalog down to laptops that actually fit.",
+    mock: "quiz" as const,
+  },
+  {
+    label: "Switch Currency",
+    icon: "💱",
+    title: "See it in CAD or USD, instantly",
+    desc: "One toggle converts every price on the site using a live exchange rate — no mental math, no separate tab.",
+    mock: "currency" as const,
   },
 ];
 
@@ -230,6 +248,65 @@ export default function LandingPage() {
               ))}
             </Fragment>
           ))}
+        </div>
+      );
+    }
+
+    if (type === "quiz") {
+      const options = [
+        { label: "Student", picked: false },
+        { label: "Home use", picked: true },
+        { label: "Business", picked: false },
+      ];
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: text }}>What will you use it for?</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {options.map((o) => (
+              <div key={o.label} style={{
+                display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 600,
+                background: o.picked ? `${accent}22` : bg, border: `1.5px solid ${o.picked ? accent : border}`,
+                borderRadius: 8, padding: "8px 12px", color: o.picked ? accent : textMuted,
+              }}>
+                <span style={{
+                  width: 14, height: 14, borderRadius: "50%", border: `2px solid ${o.picked ? accent : border}`,
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  {o.picked && <span style={{ width: 6, height: 6, borderRadius: "50%", background: accent }} />}
+                </span>
+                {o.label}
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4, paddingTop: 10, borderTop: `1px solid ${border}` }}>
+            <span style={{ fontSize: 10.5, color: textMuted }}>3 laptops matched</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: accent, borderRadius: 6, padding: "4px 10px" }}>See picks →</span>
+          </div>
+        </div>
+      );
+    }
+
+    if (type === "currency") {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", gap: 4, background: bg, border: `1px solid ${border}`, borderRadius: 8, padding: 3, width: "fit-content" }}>
+            {["CAD", "USD"].map((c) => (
+              <span key={c} style={{
+                fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 6,
+                background: c === "USD" ? accent : "transparent", color: c === "USD" ? "#fff" : textMuted,
+              }}>{c}</span>
+            ))}
+          </div>
+          {[
+            { model: "MacBook Air M5", cad: 1499 },
+            { model: "ThinkPad X1 Carbon", cad: 2499 },
+          ].map((p) => (
+            <div key={p.model} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: bg, border: `1px solid ${border}`, borderRadius: 8, padding: "9px 12px" }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: text }}>{p.model}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: accent3 }}>${Math.round(p.cad * CAD_TO_USD).toLocaleString()} USD</span>
+            </div>
+          ))}
+          <div style={{ fontSize: 10, color: textMuted }}>Live rate · 1 CAD = {CAD_TO_USD} USD</div>
         </div>
       );
     }
@@ -485,50 +562,69 @@ export default function LandingPage() {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: 28 }}>
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: 32 }}>
           {TUTORIAL_STEPS.map((s, i) => (
             <button
               key={s.label}
               onClick={() => setActiveTutorial(i)}
               style={{
-                fontSize: 12.5, fontWeight: 700, padding: "9px 16px", borderRadius: 20, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 7,
+                fontSize: 12.5, fontWeight: 700, padding: "9px 16px 9px 12px", borderRadius: 20, cursor: "pointer",
                 border: `1px solid ${i === activeTutorial ? accent : border}`,
-                background: i === activeTutorial ? accent : surface,
+                background: i === activeTutorial ? `linear-gradient(135deg, ${accent}, ${accent2})` : surface,
                 color: i === activeTutorial ? "#fff" : textMuted,
+                boxShadow: i === activeTutorial ? `0 6px 18px ${glow}` : "none",
+                transform: i === activeTutorial ? "translateY(-1px)" : "translateY(0)",
                 transition: "all 0.2s ease",
               }}
             >
-              <span style={{ opacity: 0.7, marginRight: 6 }}>{i + 1}</span>{s.label}
+              <span style={{ fontSize: 13 }}>{s.icon}</span>{s.label}
             </button>
           ))}
         </div>
 
         {/* Panel */}
         <div className="lc-tutorial-panel" style={{
+          position: "relative",
           display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0,
           border: `1px solid ${border}`, borderRadius: 18, overflow: "hidden", background: surface,
-          boxShadow: "var(--shadow, 0 1px 3px rgba(0,0,0,0.04))",
+          boxShadow: `var(--card-shadow, 0 12px 32px rgba(0,0,0,0.08))`,
         }}>
-          <div key={`text-${activeTutorial}`} style={{ padding: "36px 32px", display: "flex", flexDirection: "column", justifyContent: "center", animation: "lc-tutorial-in 0.35s ease both" }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: accent, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 10 }}>
-              Step {activeTutorial + 1} of {TUTORIAL_STEPS.length}
-            </span>
+          <div aria-hidden style={{
+            position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none",
+            background: `radial-gradient(circle at 0% 0%, ${glow}, transparent 55%)`, opacity: 0.6,
+          }} />
+          <div key={`text-${activeTutorial}`} style={{ position: "relative", zIndex: 1, padding: "36px 32px", display: "flex", flexDirection: "column", justifyContent: "center", animation: "lc-tutorial-in 0.35s ease both" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <span style={{
+                width: 30, height: 30, borderRadius: 9, background: `${accent}1f`, color: accent,
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0,
+              }}>{TUTORIAL_STEPS[activeTutorial].icon}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: accent, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                Step {activeTutorial + 1} of {TUTORIAL_STEPS.length}
+              </span>
+            </div>
             <h3 style={{ fontSize: 19, fontWeight: 800, color: text, marginBottom: 10, letterSpacing: "-0.01em" }}>{TUTORIAL_STEPS[activeTutorial].title}</h3>
             <p style={{ fontSize: 13.5, color: textMuted, lineHeight: 1.7 }}>{TUTORIAL_STEPS[activeTutorial].desc}</p>
             <div style={{ display: "flex", gap: 5, marginTop: 22 }}>
               {TUTORIAL_STEPS.map((_, i) => (
-                <div key={i} style={{ height: 3, borderRadius: 2, flex: 1, background: i === activeTutorial ? accent : border, transition: "background 0.2s" }} />
+                <button
+                  key={i}
+                  onClick={() => setActiveTutorial(i)}
+                  aria-label={`Go to step ${i + 1}`}
+                  style={{ height: 4, borderRadius: 2, flex: 1, background: i === activeTutorial ? accent : border, transition: "background 0.2s", border: "none", cursor: "pointer", padding: 0 }}
+                />
               ))}
             </div>
           </div>
           <div
             key={`mock-${activeTutorial}`}
             style={{
-              padding: "28px", background: bg, borderLeft: `1px solid ${border}`,
+              position: "relative", zIndex: 1, padding: "28px", background: bg, borderLeft: `1px solid ${border}`,
               display: "flex", alignItems: "center", animation: "lc-tutorial-in 0.35s ease 0.05s both",
             }}
           >
-            <div style={{ width: "100%", background: surface, border: `1px solid ${border}`, borderRadius: 12, padding: 16 }}>
+            <div style={{ width: "100%", background: surface, border: `1px solid ${border}`, borderRadius: 12, padding: 16, boxShadow: "0 8px 20px rgba(0,0,0,0.06)" }}>
               <div style={{ display: "flex", gap: 5, marginBottom: 14 }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f76a6a" }} />
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f7c26a" }} />
