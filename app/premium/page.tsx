@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -86,94 +86,130 @@ export default function PremiumPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', padding: '56px 24px', display: 'flex', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: 1040 }}>
+    <div style={{ minHeight: '100vh', padding: '64px 24px 80px', display: 'flex', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes lc-prem-orb-a { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(40px,-30px) scale(1.15); } }
+        @keyframes lc-prem-orb-b { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-30px,24px) scale(1.1); } }
+        @keyframes lc-prem-badge-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes lc-prem-fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes lc-prem-pop { from { opacity: 0; transform: translateY(20px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .lc-prem-orb-1 { position: absolute; top: -140px; left: -100px; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, var(--accent) 0%, transparent 70%); opacity: 0.16; filter: blur(50px); animation: lc-prem-orb-a 12s ease-in-out infinite; pointer-events: none; }
+        .lc-prem-orb-2 { position: absolute; bottom: -160px; right: -120px; width: 460px; height: 460px; border-radius: 50%; background: radial-gradient(circle, var(--accent-2) 0%, transparent 70%); opacity: 0.14; filter: blur(55px); animation: lc-prem-orb-b 14s ease-in-out infinite; pointer-events: none; }
+        .lc-prem-fadeup { animation: lc-prem-fade-up 0.6s ease both; }
+        .lc-prem-card { animation: lc-prem-pop 0.55s cubic-bezier(0.16,1,0.3,1) both; transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
+        .lc-prem-card:hover { transform: translateY(-6px); }
+        .lc-prem-row { transition: background 0.15s ease; }
+        .lc-prem-row:hover { background: var(--surface-2) !important; }
+        .lc-prem-btn { position: relative; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease; }
+        .lc-prem-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.18); }
+        .lc-prem-badge-ring { animation: lc-prem-badge-spin 18s linear infinite; }
+      `}} />
+
+      <div className="lc-prem-orb-1" />
+      <div className="lc-prem-orb-2" />
+
+      <div style={{ width: '100%', maxWidth: 1080, position: 'relative', zIndex: 1 }}>
 
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+        <div className="lc-prem-fadeup" style={{ textAlign: 'center', marginBottom: 56 }}>
           <div style={{
-            width: 56, height: 56, borderRadius: '50%', margin: '0 auto 16px',
+            position: 'relative', width: 64, height: 64, borderRadius: '50%', margin: '0 auto 20px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 26, background: 'var(--surface)', border: '1px solid var(--border)',
-            boxShadow: '0 0 0 8px var(--glow)',
+            fontSize: 28, background: 'var(--surface)', border: '1px solid var(--border)',
+            boxShadow: '0 0 0 10px var(--glow), 0 8px 28px rgba(0,0,0,0.15)',
           }}>
+            <div className="lc-prem-badge-ring" style={{ position: 'absolute', inset: -3, borderRadius: '50%', border: '1.5px dashed var(--accent-2)', opacity: 0.5 }} />
             <span style={{ color: 'var(--accent-2)' }}>⭐</span>
           </div>
-          <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.4rem)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 10, color: 'var(--text)' }}>
+          <div style={{ fontSize: 10.5, color: 'var(--accent)', letterSpacing: '0.25em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 12, opacity: 0.85 }}>
+            Unlock the full toolkit
+          </div>
+          <h1 style={{ fontSize: 'clamp(2rem, 4.5vw, 2.9rem)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 14, color: 'var(--text)', lineHeight: 1.08 }}>
             LaptopCore Premium &amp; Ultra
           </h1>
-          <p style={{ fontSize: 15, color: 'var(--text-muted)', maxWidth: 460, margin: '0 auto' }}>
-            Unlock unlimited chats, richer comparisons, and priority deal scanning.
+          <p style={{ fontSize: 15.5, color: 'var(--text-muted)', maxWidth: 480, margin: '0 auto', lineHeight: 1.6 }}>
+            Unlimited chats with Lapi, richer comparisons, and priority deal scanning — pick the tier that fits how you shop.
           </p>
         </div>
 
         {/* Tier cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 48, alignItems: 'stretch' }}>
-          <TierCard
-            label="Free"
-            price="$0"
-            accentVar="var(--text-muted)"
-            highlights={HEADLINES.free}
-            footer={currentPlan === 'free' ? <CurrentPlanNote /> : <p style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'center' }}>Your starting plan</p>}
-          />
-          <TierCard
-            label="Premium"
-            price={`${PLAN_PRICE.premium} CAD/mo`}
-            accentVar="var(--accent)"
-            featured
-            highlights={HEADLINES.premium}
-            footer={
-              checking ? null : !user ? (
-                <SignInPrompt />
-              ) : (
-                <PlanButton
-                  label="Premium"
-                  accentVar="var(--accent)"
-                  active={currentPlan === 'premium'}
-                  disabled={currentPlan === 'ultra'}
-                  loading={loadingPlan === 'premium'}
-                  onClick={() => handleUpgrade('premium')}
-                />
-              )
-            }
-          />
-          <TierCard
-            label="Ultra"
-            price={`${PLAN_PRICE.ultra} CAD/mo`}
-            accentVar="var(--accent-2)"
-            highlights={HEADLINES.ultra}
-            footer={
-              checking ? null : !user ? (
-                <SignInPrompt />
-              ) : (
-                <PlanButton
-                  label="Ultra"
-                  accentVar="var(--accent-2)"
-                  active={currentPlan === 'ultra'}
-                  disabled={false}
-                  loading={loadingPlan === 'ultra'}
-                  onClick={() => handleUpgrade('ultra')}
-                />
-              )
-            }
-          />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 22, marginBottom: 56, alignItems: 'stretch' }}>
+          <div className="lc-prem-card" style={{ animationDelay: '0s' }}>
+            <TierCard
+              label="Free"
+              price="$0"
+              sub="forever"
+              accentVar="var(--text-muted)"
+              highlights={HEADLINES.free}
+              footer={currentPlan === 'free' ? <CurrentPlanNote /> : <p style={{ fontSize: 12, color: 'var(--text-dim)', textAlign: 'center' }}>Your starting plan</p>}
+            />
+          </div>
+          <div className="lc-prem-card" style={{ animationDelay: '0.08s' }}>
+            <TierCard
+              label="Premium"
+              price={PLAN_PRICE.premium}
+              sub="CAD / month"
+              accentVar="var(--accent)"
+              featured
+              highlights={HEADLINES.premium}
+              footer={
+                checking ? null : !user ? (
+                  <SignInPrompt />
+                ) : (
+                  <PlanButton
+                    label="Premium"
+                    accentVar="var(--accent)"
+                    active={currentPlan === 'premium'}
+                    disabled={currentPlan === 'ultra'}
+                    loading={loadingPlan === 'premium'}
+                    onClick={() => handleUpgrade('premium')}
+                  />
+                )
+              }
+            />
+          </div>
+          <div className="lc-prem-card" style={{ animationDelay: '0.16s' }}>
+            <TierCard
+              label="Ultra"
+              price={PLAN_PRICE.ultra}
+              sub="CAD / month"
+              accentVar="var(--accent-2)"
+              highlights={HEADLINES.ultra}
+              footer={
+                checking ? null : !user ? (
+                  <SignInPrompt />
+                ) : (
+                  <PlanButton
+                    label="Ultra"
+                    accentVar="var(--accent-2)"
+                    active={currentPlan === 'ultra'}
+                    disabled={false}
+                    loading={loadingPlan === 'ultra'}
+                    onClick={() => handleUpgrade('ultra')}
+                  />
+                )
+              }
+            />
+          </div>
         </div>
 
         {error && <p style={{ color: 'var(--accent-red)', fontSize: 13, textAlign: 'center', marginBottom: 20 }}>{error}</p>}
 
         {/* Full comparison table */}
-        <div style={{ marginBottom: 8 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14, color: 'var(--text)' }}>Full feature comparison</h2>
+        <div className="lc-prem-fadeup" style={{ marginBottom: 16, display: 'flex', alignItems: 'baseline', gap: 10 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Full feature comparison</h2>
+          <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>every plan, side by side</span>
         </div>
         <div
+          className="lc-prem-fadeup"
           style={{
             textAlign: 'left',
             border: '1px solid var(--border)',
-            borderRadius: 'var(--card-radius, 14px)',
+            borderRadius: 'var(--card-radius, 16px)',
             overflow: 'hidden',
-            marginBottom: 28,
+            marginBottom: 32,
             background: 'var(--card-bg, var(--surface))',
-            boxShadow: 'var(--card-shadow, none)',
+            boxShadow: 'var(--card-shadow, 0 8px 24px rgba(0,0,0,0.08))',
           }}
         >
           <div
@@ -183,9 +219,10 @@ export default function PremiumPage() {
               background: 'var(--surface-2)',
               fontSize: 11.5,
               fontWeight: 700,
-              padding: '10px 14px',
+              padding: '14px 18px',
               textTransform: 'uppercase',
               letterSpacing: '0.04em',
+              borderBottom: '1px solid var(--border)',
             }}
           >
             <div>Feature</div>
@@ -196,12 +233,13 @@ export default function PremiumPage() {
           {FEATURES.map((f, i) => (
             <div
               key={f.label}
+              className="lc-prem-row"
               style={{
                 display: 'grid',
                 gridTemplateColumns: '1.3fr 0.9fr 0.9fr 0.9fr',
                 fontSize: 12.5,
-                padding: '10px 14px',
-                borderTop: '1px solid var(--border)',
+                padding: '13px 18px',
+                borderTop: i === 0 ? 'none' : '1px solid var(--border)',
                 background: i % 2 === 1 ? 'var(--surface-2)' : 'transparent',
               }}
             >
@@ -214,10 +252,10 @@ export default function PremiumPage() {
         </div>
 
         {user && (
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
+          <p className="lc-prem-fadeup" style={{ fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'center' }}>
             Refer friends and earn a free month for every one who subscribes.{' '}
-            <Link href="/account/referrals" style={{ color: 'var(--accent)' }}>
-              Get your referral link
+            <Link href="/account/referrals" style={{ color: 'var(--accent)', fontWeight: 600 }}>
+              Get your referral link →
             </Link>
           </p>
         )}
@@ -229,6 +267,7 @@ export default function PremiumPage() {
 function TierCard({
   label,
   price,
+  sub,
   accentVar,
   highlights,
   footer,
@@ -236,6 +275,7 @@ function TierCard({
 }: {
   label: string;
   price: string;
+  sub?: string;
   accentVar: string;
   highlights: string[];
   footer: React.ReactNode;
@@ -245,33 +285,45 @@ function TierCard({
     <div
       style={{
         position: 'relative',
-        background: 'var(--card-bg, var(--surface))',
-        border: `1px solid ${featured ? accentVar : 'var(--card-border, var(--border))'}`,
-        borderRadius: 'var(--card-radius, 16px)',
-        boxShadow: featured ? 'var(--card-hover-shadow)' : 'var(--card-shadow, none)',
-        padding: '30px 24px',
+        height: '100%',
+        background: featured
+          ? `linear-gradient(180deg, var(--card-bg, var(--surface)) 0%, var(--card-bg, var(--surface)) 100%)`
+          : 'var(--card-bg, var(--surface))',
+        border: `1.5px solid ${featured ? accentVar : 'var(--card-border, var(--border))'}`,
+        borderRadius: 'var(--card-radius, 18px)',
+        boxShadow: featured ? `0 16px 40px -12px ${accentVar}55, var(--card-shadow, none)` : 'var(--card-shadow, 0 4px 16px rgba(0,0,0,0.06))',
+        padding: '32px 26px',
         display: 'flex',
         flexDirection: 'column',
-        transform: featured ? 'scale(1.03)' : 'scale(1)',
+        transform: featured ? 'scale(1.035)' : 'scale(1)',
       }}
     >
       {featured && (
         <div
           style={{
-            position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
+            position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)',
             fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-            color: '#fff', background: accentVar, borderRadius: 7, padding: '4px 12px',
+            color: '#fff', background: `linear-gradient(135deg, ${accentVar}, var(--accent-3))`, borderRadius: 20, padding: '5px 14px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
           }}
         >
-          Most popular
+          ✦ Most popular
         </div>
       )}
-      <div style={{ fontSize: 13.5, fontWeight: 700, color: accentVar, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text)', marginBottom: 20 }}>{price}</div>
-      <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 22px 0', display: 'flex', flexDirection: 'column', gap: 11, flex: 1 }}>
+      <div style={{ fontSize: 13.5, fontWeight: 700, color: accentVar, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 24 }}>
+        <span style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text)' }}>{price}</span>
+        {sub && <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>{sub}</span>}
+      </div>
+      <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px 0', display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
         {highlights.map((h) => (
-          <li key={h} style={{ display: 'flex', gap: 8, fontSize: 13, color: 'var(--text-muted)', alignItems: 'flex-start', lineHeight: 1.5 }}>
-            <span style={{ color: accentVar, fontWeight: 700, flexShrink: 0 }}>✓</span>{h}
+          <li key={h} style={{ display: 'flex', gap: 9, fontSize: 13, color: 'var(--text-muted)', alignItems: 'flex-start', lineHeight: 1.5 }}>
+            <span style={{
+              flexShrink: 0, width: 16, height: 16, borderRadius: '50%',
+              background: `${accentVar}22`, color: accentVar, fontWeight: 800, fontSize: 9.5,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2,
+            }}>✓</span>
+            {h}
           </li>
         ))}
       </ul>
@@ -283,9 +335,9 @@ function TierCard({
 function SignInPrompt() {
   return (
     <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
-      <Link href="/signup" style={{ color: 'var(--accent)' }}>Sign up</Link>
+      <Link href="/signup" style={{ color: 'var(--accent)', fontWeight: 600 }}>Sign up</Link>
       {' '}or{' '}
-      <Link href="/login" style={{ color: 'var(--accent)' }}>log in</Link>
+      <Link href="/login" style={{ color: 'var(--accent)', fontWeight: 600 }}>log in</Link>
       {' '}to subscribe.
     </p>
   );
@@ -313,20 +365,20 @@ function PlanButton({
   if (active) return <CurrentPlanNote />;
   return (
     <button
+      className="lc-prem-btn"
       onClick={onClick}
       disabled={disabled || loading}
       style={{
         width: '100%',
-        padding: '10px 0',
-        borderRadius: 'var(--btn-radius, 9px)',
+        padding: '12px 0',
+        borderRadius: 'var(--btn-radius, 10px)',
         border: 'none',
-        background: accentVar,
+        background: `linear-gradient(135deg, ${accentVar}, var(--accent-3))`,
         color: '#fff',
-        fontWeight: 600,
-        fontSize: 13,
+        fontWeight: 700,
+        fontSize: 13.5,
         cursor: disabled || loading ? 'default' : 'pointer',
         opacity: disabled || loading ? 0.6 : 1,
-        transition: 'opacity 0.15s',
       }}
     >
       {loading ? 'Redirecting…' : disabled ? 'Included in Ultra' : `Upgrade to ${label}`}

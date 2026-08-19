@@ -199,10 +199,24 @@ export default function LaptopPage() {
 
   return (
     <PageTransition>
-      <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
+      <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", position: "relative", overflow: "hidden" }}>
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes lc-det-orb { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px,-24px) scale(1.12); } }
+          @keyframes lc-det-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+          @keyframes lc-det-fade { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes lc-det-shine { 0% { background-position: -150% 0; } 100% { background-position: 250% 0; } }
+          .lc-det-orb { position: absolute; top: -180px; right: -140px; width: 480px; height: 480px; border-radius: 50%; background: radial-gradient(circle, var(--accent) 0%, transparent 70%); opacity: 0.14; filter: blur(60px); pointer-events: none; animation: lc-det-orb 13s ease-in-out infinite; z-index: 0; }
+          .lc-det-image-wrap img { animation: lc-det-float 5s ease-in-out infinite; }
+          .lc-det-fadein { animation: lc-det-fade 0.5s ease both; }
+          .lc-det-buy-primary { position: relative; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+          .lc-det-buy-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0,0,0,0.22); }
+          .lc-det-buy-secondary { transition: transform 0.15s ease, border-color 0.15s ease; }
+          .lc-det-buy-secondary:hover { transform: translateY(-2px); }
+        `}} />
+        <div className="lc-det-orb" />
 
         {/* Top nav */}
-        <div style={{ borderBottom: "1px solid var(--border)", background: "var(--bg)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 100 }}>
+        <div style={{ borderBottom: "1px solid var(--border)", background: "var(--bg)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 100, opacity: 1 }}>
           <div style={{ maxWidth: 1100, margin: "0 auto", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <button onClick={() => router.push("/")} style={{ background: "transparent", border: "1px solid var(--border)", borderRadius: 8, padding: "7px 16px", cursor: "pointer", color: "var(--text-muted)", fontSize: 13 }}>← Back</button>
@@ -228,16 +242,16 @@ export default function LaptopPage() {
           </div>
         </div>
 
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 20px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 20px", position: "relative", zIndex: 1 }}>
 
           {/* Hero */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: 40, alignItems: "start", marginBottom: 64 }}>
 
             {/* Image */}
-            <div style={{ position: "relative", background: "var(--card-bg, var(--surface-2))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 20px)", boxShadow: "var(--card-shadow, none)", backdropFilter: "blur(var(--card-blur, 0px))", padding: "56px 40px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 420, overflow: "hidden" }}>
+            <div className="lc-det-image-wrap lc-det-fadein" style={{ position: "relative", background: "var(--card-bg, var(--surface-2))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 20px)", boxShadow: "var(--card-shadow, 0 12px 32px rgba(0,0,0,0.1))", backdropFilter: "blur(var(--card-blur, 0px))", padding: "56px 40px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 420, overflow: "hidden" }}>
               <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 40%, var(--glow), transparent 65%)", pointerEvents: "none" }} />
               {hasDiscount && (
-                <div style={{ position: "absolute", top: 18, left: 18, fontSize: 12, fontWeight: 800, color: "var(--accent-2)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--btn-radius, 8px)", padding: "5px 12px", zIndex: 1 }}>
+                <div style={{ position: "absolute", top: 18, left: 18, fontSize: 12, fontWeight: 800, color: "var(--accent-2)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--btn-radius, 8px)", padding: "5px 12px", zIndex: 1, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
                   -{discountPct}%
                 </div>
               )}
@@ -268,8 +282,8 @@ export default function LaptopPage() {
               )}
 
               {/* Price */}
-              <div style={{ position: "relative", background: "var(--card-bg, var(--surface))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 16px)", boxShadow: "var(--card-shadow, none)", padding: "24px 24px 24px 27px", marginBottom: 16, overflow: "hidden" }}>
-                <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: "var(--accent)" }} />
+              <div className="lc-det-fadein" style={{ position: "relative", background: "var(--card-bg, var(--surface))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 16px)", boxShadow: "var(--card-shadow, 0 8px 24px rgba(0,0,0,0.1))", padding: "24px 24px 24px 27px", marginBottom: 16, overflow: "hidden" }}>
+                <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: "linear-gradient(180deg, var(--accent), var(--accent-3))" }} />
                 <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>Current price</div>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
                   <span style={{ fontSize: "2.9rem", fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text)", lineHeight: 1 }}>{fmt(price)}</span>
@@ -300,18 +314,16 @@ export default function LaptopPage() {
                     {links.map((link, i) => (
                       <button
                         key={link.id}
+                        className={i === 0 ? "lc-det-buy-primary" : "lc-det-buy-secondary"}
                         onClick={() => { setPendingUrl(link.url); setPendingStore(link.store); setShowWarning(true); }}
                         style={{
                           display: "flex", alignItems: "center", justifyContent: "space-between",
-                          background: i === 0 ? "var(--accent)" : "var(--surface)",
+                          background: i === 0 ? "linear-gradient(135deg, var(--accent), var(--accent-3))" : "var(--surface)",
                           color: i === 0 ? "#fff" : "var(--text)",
                           border: i === 0 ? "none" : "1px solid var(--border)",
                           borderRadius: "var(--btn-radius, 12px)", padding: "13px 18px",
                           fontWeight: 700, fontSize: 14, cursor: "pointer", width: "100%",
-                          transition: "opacity 0.15s",
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
-                        onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
                       >
                         <span>{link.store}</span>
                         <span>{link.price != null ? fmt(link.price) : "Visit"}</span>
@@ -321,10 +333,9 @@ export default function LaptopPage() {
                 </div>
               ) : (
                 <button
+                  className="lc-det-buy-primary"
                   onClick={() => { setPendingUrl(links[0]?.url ?? laptop.url); setPendingStore(links[0]?.store ?? laptop.store); setShowWarning(true); }}
-                  style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: "var(--btn-radius, 12px)", padding: "16px 32px", fontWeight: 700, fontSize: 15.5, cursor: "pointer", width: "100%", marginBottom: 10, transition: "opacity 0.15s" }}
-                  onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
-                  onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+                  style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-3))", color: "#fff", border: "none", borderRadius: "var(--btn-radius, 12px)", padding: "16px 32px", fontWeight: 700, fontSize: 15.5, cursor: "pointer", width: "100%", marginBottom: 10 }}
                 >Buy now</button>
               )}
 
