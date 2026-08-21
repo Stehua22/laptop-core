@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import type { Laptop } from "@/lib/supabase";
 
@@ -114,6 +115,8 @@ function getBestPrice(laptops: Laptop[]) {
 export default function CompareModal({ laptops, onClose, onRemove, currency = "CAD", cadToUsd = 0.73 }: Props) {
   const [isPremium, setIsPremium] = useState(false);
   const [checkingPremium, setCheckingPremium] = useState(true);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     async function checkPremium() {
@@ -162,7 +165,9 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
     return idx;
   }
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", padding: "20px" }}
       onClick={onClose}
@@ -332,6 +337,7 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

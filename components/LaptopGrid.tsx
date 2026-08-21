@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import type { Laptop } from "@/lib/supabase";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import LaptopCard from "./LaptopCard";
@@ -24,6 +25,9 @@ export default function LaptopGrid({ laptops, onSelect, onHistory, isAdmin, onMo
   const [compareIds, setCompareIds] = useState<number[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     async function checkPremium() {
@@ -110,10 +114,10 @@ export default function LaptopGrid({ laptops, onSelect, onHistory, isAdmin, onMo
         }
       `}</style>
 
-      {/* Sticky compare bar */}
-      {compareIds.length > 0 && (
+      {/* Sticky compare bar — rendered via portal so no ancestor styling can clip or misposition it */}
+      {mounted && compareIds.length > 0 && createPortal(
         <div style={{
-          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 500,
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 99999,
           background: "rgba(10,12,18,0.92)", backdropFilter: "blur(16px)",
           borderTop: "1px solid var(--border)",
           padding: "16px 24px",
@@ -149,7 +153,8 @@ export default function LaptopGrid({ laptops, onSelect, onHistory, isAdmin, onMo
               Compare {compareIds.length}/{limit}
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {showCompare && (
