@@ -214,15 +214,31 @@ export default function BestPicksPage() {
   // ── Results screen ────────────────────────────────────────────────────────────
   if (results !== null) {
     return (
-      <div style={{ minHeight: "100vh", background: bg, color: text, fontFamily: "Inter, sans-serif", transition: "background 0.3s" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "60px 32px" }}>
+      <div style={{ minHeight: "100vh", background: bg, color: text, fontFamily: "Inter, sans-serif", transition: "background 0.3s", position: "relative", overflow: "hidden" }}>
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes lc-bp-orb { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px,-24px) scale(1.12); } }
+          @keyframes lc-bp-fade { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes lc-bp-pop { from { opacity: 0; transform: translateY(18px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+          .lc-bp-orb { position: absolute; top: -160px; right: -120px; width: 460px; height: 460px; border-radius: 50%; background: radial-gradient(circle, ${accent} 0%, transparent 70%); opacity: 0.14; filter: blur(55px); pointer-events: none; animation: lc-bp-orb 12s ease-in-out infinite; z-index: 0; }
+          .lc-bp-fadein { animation: lc-bp-fade 0.5s ease both; }
+          .lc-bp-card { animation: lc-bp-pop 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+        `}} />
+        <div className="lc-bp-orb" />
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "60px 32px", position: "relative", zIndex: 1 }}>
           <button onClick={() => router.push("/")}
             style={{ background: "transparent", border: `1px solid ${border}`, borderRadius: 8, color: textMuted, fontSize: 13, padding: "8px 16px", cursor: "pointer", marginBottom: 48 }}>
             ← Home
           </button>
-          <div style={{ marginBottom: 48 }}>
-            <p style={{ fontSize: 11, color: accent, textTransform: "uppercase", letterSpacing: "0.15em", fontWeight: 600, marginBottom: 12 }}>Your results</p>
-            <h1 style={{ fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 800, letterSpacing: "-0.04em", marginBottom: 10, color: text }}>
+          <div className="lc-bp-fadein" style={{ marginBottom: 48 }}>
+            <p style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, color: accent, textTransform: "uppercase", letterSpacing: "0.15em", fontWeight: 700, marginBottom: 14 }}>
+              <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: accent3 }} />
+              Your results
+            </p>
+            <h1 style={{
+              fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 800, letterSpacing: "-0.04em", marginBottom: 10,
+              background: `linear-gradient(100deg, ${text} 30%, ${accent} 50%, ${text} 70%)`,
+              backgroundSize: "250% 100%", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
+            }}>
               {results.length > 0 ? "Here are your best matches 🎯" : "No exact matches found"}
             </h1>
             <p style={{ color: textMuted, fontSize: 14 }}>
@@ -241,18 +257,29 @@ export default function BestPicksPage() {
           ) : (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16, marginBottom: 40 }}>
-                {results.map((l) => {
+                {results.map((l, idx) => {
                   const hasDiscount = l.retail_price && l.current_price && l.current_price < l.retail_price;
                   const discount = hasDiscount
                     ? Math.round((1 - (l.current_price! / l.retail_price!)) * 100)
                     : null;
                   return (
                     <div key={l.id}
-                      style={{ background: surface, border: `1px solid ${border}`, borderRadius: 18, overflow: "hidden", transition: "all 0.25s", cursor: "pointer" }}
+                      className="lc-bp-card"
+                      style={{ position: "relative", background: surface, border: `1px solid ${idx === 0 ? accent : border}`, borderRadius: 18, overflow: "hidden", transition: "transform 0.25s, box-shadow 0.25s, border-color 0.25s", cursor: "pointer", animationDelay: `${idx * 0.06}s`, boxShadow: idx === 0 ? `0 0 0 1px ${accent}33, 0 10px 28px ${accent}22` : "none" }}
                       onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = borderHover; el.style.transform = "translateY(-4px)"; el.style.boxShadow = isDark ? "0 16px 40px rgba(0,0,0,0.35)" : "0 16px 40px rgba(0,0,0,0.1)"; }}
-                      onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = border; el.style.transform = "translateY(0)"; el.style.boxShadow = "none"; }}
+                      onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = idx === 0 ? accent : border; el.style.transform = "translateY(0)"; el.style.boxShadow = idx === 0 ? `0 0 0 1px ${accent}33, 0 10px 28px ${accent}22` : "none"; }}
                       onClick={() => router.push("/tracker")}
                     >
+                      {idx === 0 && (
+                        <div style={{
+                          position: "absolute", top: 14, right: 14, zIndex: 2,
+                          fontSize: 10.5, fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase",
+                          color: "#fff", background: `linear-gradient(135deg, ${accent}, ${accent3})`, borderRadius: 20, padding: "5px 12px",
+                          boxShadow: `0 4px 12px ${accent}55`,
+                        }}>
+                          ✦ Top pick
+                        </div>
+                      )}
                       {/* Top accent line */}
                       <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}, ${accent3})` }} />
 
@@ -319,20 +346,45 @@ export default function BestPicksPage() {
   const isUsecaseStep = currentStep.id === "usecase";
 
   return (
-    <div style={{ minHeight: "100vh", background: bg, color: text, fontFamily: "Inter, sans-serif", transition: "background 0.3s" }}>
+    <div style={{ minHeight: "100vh", background: bg, color: text, fontFamily: "Inter, sans-serif", transition: "background 0.3s", position: "relative", overflow: "hidden" }}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes lc-bp-orb { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px,-24px) scale(1.12); } }
+        @keyframes lc-bp-fade { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes lc-bp-opt-in { from { opacity: 0; transform: translateY(10px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .lc-bp-orb { position: absolute; top: -160px; left: -120px; width: 460px; height: 460px; border-radius: 50%; background: radial-gradient(circle, ${accent} 0%, transparent 70%); opacity: 0.13; filter: blur(55px); pointer-events: none; animation: lc-bp-orb 12s ease-in-out infinite; z-index: 0; }
+        .lc-bp-fadein { animation: lc-bp-fade 0.45s ease both; }
+        .lc-bp-opt { animation: lc-bp-opt-in 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+      `}} />
+      <div className="lc-bp-orb" />
+
       {/* Progress bar */}
       <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 3, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", zIndex: 100 }}>
         <div style={{ height: "100%", width: `${progress + (100 / STEPS.length)}%`, background: `linear-gradient(90deg, ${accent}, ${accent3})`, transition: "width 0.4s ease" }} />
       </div>
 
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "80px 32px 60px", minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        {/* Step counter */}
-        <p style={{ fontSize: 11, color: textMuted, textTransform: "uppercase", letterSpacing: "0.15em", fontWeight: 600, marginBottom: 16, textAlign: "center" }}>
-          Step {step + 1} of {STEPS.length}
-        </p>
+      <div key={step} style={{ maxWidth: 860, margin: "0 auto", padding: "80px 32px 60px", minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", position: "relative", zIndex: 1 }}>
+        {/* Step counter + dots */}
+        <div className="lc-bp-fadein" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <p style={{ fontSize: 11, color: textMuted, textTransform: "uppercase", letterSpacing: "0.15em", fontWeight: 600, textAlign: "center" }}>
+            Step {step + 1} of {STEPS.length}
+          </p>
+          <div style={{ display: "flex", gap: 6 }}>
+            {STEPS.map((s, i) => (
+              <span key={s.id} style={{
+                width: i === step ? 20 : 6, height: 6, borderRadius: 3,
+                background: i <= step ? `linear-gradient(90deg, ${accent}, ${accent3})` : border,
+                transition: "all 0.3s ease",
+              }} />
+            ))}
+          </div>
+        </div>
 
         {/* Question */}
-        <h1 style={{ fontSize: "clamp(1.6rem, 4vw, 2.4rem)", fontWeight: 800, letterSpacing: "-0.04em", marginBottom: 40, textAlign: "center", color: text }}>
+        <h1 className="lc-bp-fadein" style={{
+          fontSize: "clamp(1.6rem, 4vw, 2.4rem)", fontWeight: 800, letterSpacing: "-0.04em", marginBottom: 40, textAlign: "center",
+          background: `linear-gradient(100deg, ${text} 30%, ${accent} 50%, ${text} 70%)`,
+          backgroundSize: "250% 100%", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
+        }}>
           {currentStep.question}
         </h1>
 
@@ -347,13 +399,15 @@ export default function BestPicksPage() {
           gap: 12,
           marginBottom: 40,
         }}>
-          {currentStep.options.map((opt) => {
+          {currentStep.options.map((opt, i) => {
             const isSelected = selected === opt.value;
             return (
               <button
                 key={opt.value}
+                className="lc-bp-opt"
                 onClick={() => handleSelect(opt.value)}
                 style={{
+                  animationDelay: `${i * 0.04}s`,
                   background: isSelected
                     ? isDark ? "rgba(139,179,245,0.12)" : "rgba(94,143,232,0.1)"
                     : surface,
@@ -362,7 +416,7 @@ export default function BestPicksPage() {
                   padding: isBudgetStep ? "28px 16px" : isUsecaseStep ? "32px 16px" : "36px 20px",
                   cursor: "pointer",
                   textAlign: "center",
-                  transition: "all 0.18s",
+                  transition: "border-color 0.18s, transform 0.18s, box-shadow 0.18s",
                   boxShadow: isSelected ? `0 0 0 1px ${accent}40, 0 8px 24px ${accent}20` : "none",
                   color: text,
                 }}
@@ -394,7 +448,7 @@ export default function BestPicksPage() {
         </div>
 
         {/* Navigation */}
-        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+        <div className="lc-bp-fadein" style={{ display: "flex", gap: 12, justifyContent: "center" }}>
           <button onClick={handleBack}
             style={{ background: "transparent", border: `1px solid ${border}`, borderRadius: 12, color: textMuted, fontSize: 14, fontWeight: 600, padding: "14px 32px", cursor: "pointer", minWidth: 120, transition: "all 0.15s" }}
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.color = accent; }}
@@ -403,7 +457,14 @@ export default function BestPicksPage() {
             {step === 0 ? "← Home" : "Back"}
           </button>
           <button onClick={handleNext} disabled={!selected}
-            style={{ background: selected ? accent : isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)", border: "none", borderRadius: 12, color: selected ? (isDark ? "#080b12" : "#fff") : textMuted, fontSize: 14, fontWeight: 700, padding: "14px 48px", cursor: selected ? "pointer" : "not-allowed", minWidth: 160, transition: "all 0.2s", boxShadow: selected ? `0 4px 20px ${accent}40` : "none" }}
+            style={{
+              background: selected ? `linear-gradient(135deg, ${accent}, ${accent3})` : isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+              border: "none", borderRadius: 12, color: selected ? "#0a0e18" : textMuted, fontSize: 14, fontWeight: 700, padding: "14px 48px",
+              cursor: selected ? "pointer" : "not-allowed", minWidth: 160, transition: "transform 0.2s, box-shadow 0.2s",
+              boxShadow: selected ? `0 6px 22px ${accent}40` : "none",
+            }}
+            onMouseEnter={(e) => { if (selected) e.currentTarget.style.transform = "translateY(-2px)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}
           >
             {step === STEPS.length - 1 ? (loading ? "Finding..." : "See My Picks →") : "Next →"}
           </button>
