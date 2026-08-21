@@ -54,7 +54,9 @@ const BESTBUY_LIMITS: Record<Plan, number> = {
 const selectStyle: React.CSSProperties = {
   padding: "8px 12px",
   borderRadius: 8,
-  border: "1px solid #d1d5db",
+  border: "1px solid var(--border)",
+  background: "var(--surface)",
+  color: "var(--text)",
 };
 
 const SKELETON_COUNT = 8;
@@ -191,15 +193,33 @@ export default function ScannerClient() {
   const lockedCount = withLocks.length - unlockedCount;
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 20px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
+    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 20px", position: "relative" }}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes lc-scan-orb { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(28px,-22px) scale(1.1); } }
+        @keyframes lc-scan-sheen { 0% { background-position: -120% 0; } 100% { background-position: 220% 0; } }
+        @keyframes lc-scan-btn-glow { 0%,100% { box-shadow: 0 4px 16px var(--glow); } 50% { box-shadow: 0 4px 24px var(--glow); } }
+        .lc-scan-orb { position: absolute; top: -140px; right: -100px; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, var(--accent) 0%, transparent 70%); opacity: 0.13; filter: blur(50px); pointer-events: none; z-index: 0; animation: lc-scan-orb 11s ease-in-out infinite; }
+        .lc-scan-title { background: linear-gradient(100deg, var(--text) 30%, var(--accent) 45%, var(--text) 60%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: lc-scan-sheen 7s linear infinite; }
+        .lc-scan-btn { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .lc-scan-btn:not(:disabled):hover { transform: translateY(-2px); }
+        .lc-scan-btn:not(:disabled) { animation: lc-scan-btn-glow 2.4s ease-in-out infinite; }
+        .lc-scan-select { transition: border-color 0.15s; }
+        .lc-scan-select:hover { border-color: var(--accent) !important; }
+        .lc-scan-card { transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease; }
+        .lc-scan-card:hover { transform: translateY(-4px); border-color: var(--accent) !important; box-shadow: 0 14px 32px rgba(0,0,0,0.15); }
+        .lc-scan-upgrade:hover { transform: translateY(-1px); box-shadow: 0 6px 18px var(--glow); }
+        .lc-scan-shimmer { background-image: linear-gradient(90deg, var(--surface) 0px, var(--surface-2) 40px, var(--surface) 80px); background-size: 400px 100%; animation: shimmerMove 1.4s linear infinite; }
+      `}} />
+      <div className="lc-scan-orb" />
+
+      <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
         <span style={{ position: "relative", width: 10, height: 10, display: "inline-block" }}>
           <span
             style={{
               position: "absolute",
               inset: 0,
               borderRadius: "50%",
-              background: scanning ? "#22c55e" : "#9ca3af",
+              background: scanning ? "#22c55e" : "var(--text-dim)",
             }}
           />
           {scanning && (
@@ -214,9 +234,9 @@ export default function ScannerClient() {
             />
           )}
         </span>
-        <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>Deal Scanner</h1>
+        <h1 className="lc-scan-title" style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Deal Scanner</h1>
       </div>
-      <p style={{ color: "#6b7280", marginBottom: 12 }}>
+      <p style={{ position: "relative", zIndex: 1, color: "var(--text-muted)", marginBottom: 12, fontSize: 13.5 }}>
         Refurbished Lenovo, Dell, HP &amp; more — scanned from eBay, Best Buy, and Facebook
         Marketplace. Best Buy results: {bestbuyLimit} on your plan.
         {lastScan && ` Last manual scan: ${lastScan.toLocaleTimeString()}.`}
@@ -225,31 +245,34 @@ export default function ScannerClient() {
       {lockedCount > 0 && (
         <div
           style={{
+            position: "relative", zIndex: 1,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             gap: 12,
             padding: "12px 18px",
             borderRadius: 10,
-            background: "rgba(147,51,234,0.08)",
-            border: "1px solid rgba(147,51,234,0.25)",
+            background: "var(--glow)",
+            border: "1px solid var(--accent-2)",
             marginBottom: 16,
             flexWrap: "wrap",
           }}
         >
-          <span style={{ fontSize: 13, color: "#9333ea", fontWeight: 600 }}>
+          <span style={{ fontSize: 13, color: "var(--accent-2)", fontWeight: 700 }}>
             🔒 {lockedCount} more deal{lockedCount !== 1 ? "s" : ""} available with {plan === "free" ? "Premium or Ultra" : "Ultra"}
           </span>
           <Link
             href="/premium"
+            className="lc-scan-upgrade"
             style={{
               fontSize: 12,
               padding: "7px 16px",
               borderRadius: 8,
-              background: "#9333ea",
+              background: "linear-gradient(135deg, var(--accent-2), var(--accent))",
               color: "#fff",
               fontWeight: 700,
               textDecoration: "none",
+              transition: "transform 0.15s ease, box-shadow 0.15s ease",
             }}
           >
             Upgrade
@@ -258,39 +281,41 @@ export default function ScannerClient() {
       )}
 
       {scanning && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ height: 6, borderRadius: 99, background: "#e5e7eb", overflow: "hidden" }}>
+        <div style={{ position: "relative", zIndex: 1, marginBottom: 20 }}>
+          <div style={{ height: 6, borderRadius: 99, background: "var(--surface-2)", overflow: "hidden" }}>
             <div
               style={{
                 height: "100%",
                 width: `${scanProgress}%`,
-                background: "linear-gradient(90deg, #3b82f6, #22c55e)",
+                background: "linear-gradient(90deg, var(--accent), var(--accent-3))",
                 borderRadius: 99,
                 transition: "width 0.15s linear",
               }}
             />
           </div>
-          <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 6, fontFamily: "monospace" }}>
+          <p style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 6, fontFamily: "monospace" }}>
             Scanning eBay, Best Buy &amp; Facebook Marketplace…
           </p>
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+      <div style={{ position: "relative", zIndex: 1, display: "flex", gap: 12, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
         <button
+          className="lc-scan-btn"
           onClick={triggerScan}
           disabled={scanning}
           style={{
-            padding: "10px 18px",
-            borderRadius: 8,
+            padding: "10px 20px",
+            borderRadius: 10,
             border: "none",
-            background: scanning ? "#9ca3af" : "#111827",
-            color: "white",
-            fontWeight: 600,
+            background: scanning ? "var(--text-dim)" : "linear-gradient(135deg, var(--accent), var(--accent-3))",
+            color: "#fff",
+            fontWeight: 700,
             cursor: scanning ? "default" : "pointer",
             display: "flex",
             alignItems: "center",
             gap: 8,
+            fontSize: 14,
           }}
         >
           {scanning && (
@@ -309,21 +334,21 @@ export default function ScannerClient() {
           {scanning ? "Scanning…" : "Scan now"}
         </button>
 
-        <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} style={selectStyle}>
+        <select className="lc-scan-select" value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} style={selectStyle}>
           <option value="all">All sources</option>
           <option value="ebay">eBay</option>
           <option value="bestbuy">Best Buy</option>
           <option value="facebook">Facebook Marketplace</option>
         </select>
 
-        <select value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)} style={selectStyle}>
+        <select className="lc-scan-select" value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)} style={selectStyle}>
           <option value="all">All brands</option>
           {brandOptions.map((b) => (
             <option key={b} value={b}>{b.charAt(0).toUpperCase() + b.slice(1)}</option>
           ))}
         </select>
 
-        <select value={conditionFilter} onChange={(e) => setConditionFilter(e.target.value)} style={selectStyle}>
+        <select className="lc-scan-select" value={conditionFilter} onChange={(e) => setConditionFilter(e.target.value)} style={selectStyle}>
           <option value="all">All conditions</option>
           {conditionOptions.map((c) => (
             <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
@@ -335,10 +360,11 @@ export default function ScannerClient() {
           placeholder="Max price ($)"
           value={maxPrice}
           onChange={(e) => setMaxPrice(e.target.value)}
+          className="lc-scan-select"
           style={{ ...selectStyle, width: 130 }}
         />
 
-        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "#374151" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "var(--text-muted)" }}>
           Min deal score: {minScore}
           <input
             type="range"
@@ -352,43 +378,44 @@ export default function ScannerClient() {
         {(sourceFilter !== "all" || brandFilter !== "all" || conditionFilter !== "all" || maxPrice !== "" || minScore !== 0) && (
           <button
             onClick={() => { setSourceFilter("all"); setBrandFilter("all"); setConditionFilter("all"); setMaxPrice(""); setMinScore(0); }}
-            style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #d1d5db", background: "transparent", color: "#6b7280", cursor: "pointer", fontSize: 13 }}
+            style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontSize: 13 }}
           >
             Clear filters
           </button>
         )}
       </div>
 
-      <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: 16 }}>
+      <p style={{ position: "relative", zIndex: 1, fontSize: 13, color: "var(--text-dim)", marginBottom: 16 }}>
         {filtered.length} of {deals.length} deals shown
       </p>
 
       {loading || (scanning && deals.length === 0) ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
+        <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
           {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
             <div
               key={i}
               style={{
-                border: "1px solid #e5e7eb",
+                border: "1px solid var(--border)",
                 borderRadius: 12,
                 padding: 14,
                 display: "flex",
                 flexDirection: "column",
                 gap: 8,
+                background: "var(--surface)",
               }}
             >
-              <div className="shimmer" style={{ height: 140, borderRadius: 8, background: "#f3f4f6" }} />
-              <div className="shimmer" style={{ height: 14, width: "80%", borderRadius: 4, background: "#f3f4f6" }} />
-              <div className="shimmer" style={{ height: 18, width: "50%", borderRadius: 4, background: "#f3f4f6" }} />
+              <div className="lc-scan-shimmer" style={{ height: 140, borderRadius: 8 }} />
+              <div className="lc-scan-shimmer" style={{ height: 14, width: "80%", borderRadius: 4 }} />
+              <div className="lc-scan-shimmer" style={{ height: 18, width: "50%", borderRadius: 4 }} />
             </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <p style={{ color: "#6b7280" }}>
+        <p style={{ position: "relative", zIndex: 1, color: "var(--text-muted)" }}>
           No deals matching your filters yet. Try lowering the min score, clearing filters, or hit &quot;Scan now&quot;.
         </p>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
+        <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
           {withLocks.map(({ deal, locked }, i) => {
             if (locked) {
               return (
@@ -396,7 +423,7 @@ export default function ScannerClient() {
                   key={deal.id}
                   className="deal-card-in"
                   style={{
-                    border: "1px solid rgba(147,51,234,0.3)",
+                    border: "1px solid var(--accent-2)",
                     borderRadius: 12,
                     padding: 14,
                     display: "flex",
@@ -404,23 +431,23 @@ export default function ScannerClient() {
                     gap: 8,
                     position: "relative",
                     animationDelay: `${Math.min(i, 20) * 0.03}s`,
-                    background: "rgba(147,51,234,0.03)",
+                    background: "var(--glow)",
                   }}
                 >
                   <div style={{ filter: "blur(6px)", pointerEvents: "none", userSelect: "none" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-muted)" }}>
                       <span>{SOURCE_LABEL[deal.source] ?? deal.source}</span>
-                      <span style={{ fontWeight: 700, color: "#6b7280" }}>{deal.deal_score}/100</span>
+                      <span style={{ fontWeight: 700, color: "var(--text-muted)" }}>{deal.deal_score}/100</span>
                     </div>
                     {deal.image_url && (
                       <img
                         src={deal.image_url}
                         alt=""
-                        style={{ width: "100%", height: 140, objectFit: "contain", background: "#f9fafb", borderRadius: 8, marginTop: 8 }}
+                        style={{ width: "100%", height: 140, objectFit: "contain", background: "var(--surface-2)", borderRadius: 8, marginTop: 8 }}
                       />
                     )}
-                    <div style={{ fontSize: 14, fontWeight: 600, marginTop: 8 }}>{deal.title}</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginTop: 8, color: "var(--text)" }}>{deal.title}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4, color: "var(--text)" }}>
                       ${deal.price.toFixed(0)} {deal.currency}
                     </div>
                   </div>
@@ -433,24 +460,26 @@ export default function ScannerClient() {
                       alignItems: "center",
                       justifyContent: "center",
                       gap: 8,
-                      background: "rgba(255,255,255,0.4)",
+                      background: "rgba(10,14,24,0.5)",
                       borderRadius: 12,
                     }}
                   >
                     <span style={{ fontSize: 22 }}>🔒</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "#9333ea" }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--accent-2)" }}>
                       {deal.source === "bestbuy" ? "More results with a higher plan" : "Premium deal"}
                     </span>
                     <Link
                       href="/premium"
+                      className="lc-scan-upgrade"
                       style={{
                         fontSize: 12,
                         padding: "6px 14px",
                         borderRadius: 8,
-                        background: "#9333ea",
+                        background: "linear-gradient(135deg, var(--accent-2), var(--accent))",
                         color: "#fff",
                         fontWeight: 700,
                         textDecoration: "none",
+                        transition: "transform 0.15s ease, box-shadow 0.15s ease",
                       }}
                     >
                       Upgrade to unlock
@@ -466,9 +495,9 @@ export default function ScannerClient() {
                 href={deal.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="deal-card-in"
+                className="deal-card-in lc-scan-card"
                 style={{
-                  border: "1px solid #e5e7eb",
+                  border: "1px solid var(--border)",
                   borderRadius: 12,
                   padding: 14,
                   textDecoration: "none",
@@ -477,16 +506,17 @@ export default function ScannerClient() {
                   flexDirection: "column",
                   gap: 8,
                   animationDelay: `${Math.min(i, 20) * 0.03}s`,
+                  background: "var(--surface)",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text-muted)" }}>
                   <span>{SOURCE_LABEL[deal.source] ?? deal.source}</span>
                   {deal.deal_score !== null && (
                     <span
                       style={{
                         fontWeight: 700,
                         color:
-                          deal.deal_score >= 70 ? "#16a34a" : deal.deal_score >= 40 ? "#ca8a04" : "#6b7280",
+                          deal.deal_score >= 70 ? "var(--accent-3)" : deal.deal_score >= 40 ? "var(--accent-2)" : "var(--text-muted)",
                       }}
                     >
                       {deal.deal_score}/100
@@ -498,21 +528,21 @@ export default function ScannerClient() {
                   <img
                     src={deal.image_url}
                     alt={deal.title}
-                    style={{ width: "100%", height: 140, objectFit: "contain", background: "#f9fafb", borderRadius: 8 }}
+                    style={{ width: "100%", height: 140, objectFit: "contain", background: "var(--surface-2)", borderRadius: 8 }}
                   />
                 )}
-                <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3 }}>{deal.title}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3, color: "var(--text)" }}>{deal.title}</div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                  <span style={{ fontSize: 18, fontWeight: 700 }}>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: "var(--text)" }}>
                     ${deal.price.toFixed(0)} {deal.currency}
                   </span>
                   {deal.market_price && (
-                    <span style={{ fontSize: 12, color: "#9ca3af", textDecoration: "line-through" }}>
+                    <span style={{ fontSize: 12, color: "var(--text-dim)", textDecoration: "line-through" }}>
                       ${deal.market_price.toFixed(0)}
                     </span>
                   )}
                 </div>
-                {deal.condition && <span style={{ fontSize: 12, color: "#6b7280" }}>{deal.condition}</span>}
+                {deal.condition && <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{deal.condition}</span>}
               </a>
             );
           })}
@@ -534,11 +564,6 @@ export default function ScannerClient() {
         @keyframes shimmerMove {
           0% { background-position: -400px 0; }
           100% { background-position: 400px 0; }
-        }
-        .shimmer {
-          background-image: linear-gradient(90deg, #f3f4f6 0px, #e5e7eb 40px, #f3f4f6 80px);
-          background-size: 400px 100%;
-          animation: shimmerMove 1.4s linear infinite;
         }
         @keyframes dealCardIn {
           from { opacity: 0; transform: translateY(8px); }
