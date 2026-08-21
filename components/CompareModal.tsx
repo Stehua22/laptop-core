@@ -116,6 +116,7 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
   const [isPremium, setIsPremium] = useState(false);
   const [checkingPremium, setCheckingPremium] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [diffOnly, setDiffOnly] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
@@ -140,7 +141,11 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
 
   const visibleRows = COMPARE_ROWS.filter(row =>
     laptops.some(l => row.getValue(l, currency, cadToUsd) !== null)
-  );
+  ).filter(row => {
+    if (!diffOnly) return true;
+    const vals = laptops.map(l => row.getValue(l, currency, cadToUsd));
+    return new Set(vals).size > 1;
+  });
 
   const visibleAdvancedRows = isPremium
     ? ADVANCED_ROWS.filter(row => laptops.some(l => row.getValue(l, currency, cadToUsd) !== null))
@@ -169,27 +174,68 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
 
   return createPortal(
     <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", padding: "20px" }}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", padding: "20px", animation: "lc-cmp-overlay 0.2s ease both" }}
       onClick={onClose}
     >
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes lc-cmp-overlay { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes lc-cmp-pop { from { opacity: 0; transform: translateY(16px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes lc-cmp-orb { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(20px,-16px) scale(1.1); } }
+        @keyframes lc-cmp-bar { from { width: 0; } }
+        @keyframes lc-cmp-row-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+        .lc-cmp-modal { animation: lc-cmp-pop 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+        .lc-cmp-orb { position: absolute; top: -100px; right: -80px; width: 280px; height: 280px; border-radius: 50%; background: radial-gradient(circle, var(--accent) 0%, transparent 70%); opacity: 0.12; filter: blur(40px); pointer-events: none; animation: lc-cmp-orb 8s ease-in-out infinite; }
+        .lc-cmp-close:hover { border-color: var(--accent) !important; color: var(--accent) !important; transform: rotate(90deg); }
+        .lc-cmp-toggle:hover { border-color: var(--accent) !important; }
+        .lc-cmp-remove:hover { background: rgba(247,106,106,0.16) !important; transform: translateY(-1px); }
+        .lc-cmp-details:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(139,179,245,0.35); }
+        .lc-cmp-row { animation: lc-cmp-row-in 0.3s ease both; }
+        .lc-cmp-bar-fill { animation: lc-cmp-bar 0.6s cubic-bezier(0.16,1,0.3,1) both; }
+      `}} />
       <div
-        style={{ background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 20, width: "100%", maxWidth: 960, maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 80px rgba(0,0,0,0.5)" }}
+        className="lc-cmp-modal"
+        style={{ position: "relative", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 20, width: "100%", maxWidth: 960, maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 80px rgba(0,0,0,0.5)" }}
         onClick={e => e.stopPropagation()}
       >
+        <div className="lc-cmp-orb" />
+
         {/* Header */}
-        <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <div style={{ position: "relative", zIndex: 1, padding: "20px 24px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, gap: 16, flexWrap: "wrap" }}>
           <div>
-            <div style={{ fontSize: 10, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.16em", fontWeight: 700, marginBottom: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 10, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.16em", fontWeight: 700, marginBottom: 6 }}>
+              <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "var(--accent-3)" }} />
               Compare {isPremium && <span style={{ color: "var(--accent-3)" }}>· Advanced</span>}
             </div>
-            <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Side-by-Side Comparison</h2>
+            <h2 style={{
+              fontSize: 19, fontWeight: 800, margin: 0, letterSpacing: "-0.02em",
+              background: "linear-gradient(100deg, var(--text) 30%, var(--accent) 50%, var(--text) 70%)",
+              backgroundSize: "250% 100%", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
+            }}>
+              Side-by-Side Comparison
+            </h2>
           </div>
-          <button onClick={onClose} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, padding: "7px 14px", cursor: "pointer", color: "var(--text-muted)", fontSize: 13 }}>✕ Close</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              className="lc-cmp-toggle"
+              onClick={() => setDiffOnly(v => !v)}
+              style={{
+                fontSize: 12, fontWeight: 600, padding: "8px 14px", borderRadius: 9, cursor: "pointer",
+                border: `1px solid ${diffOnly ? "var(--accent)" : "var(--border)"}`,
+                background: diffOnly ? "rgba(139,179,245,0.12)" : "var(--surface)",
+                color: diffOnly ? "var(--accent)" : "var(--text-muted)",
+                transition: "border-color 0.15s",
+                display: "flex", alignItems: "center", gap: 6,
+              }}
+            >
+              <span style={{ fontSize: 13 }}>{diffOnly ? "☑" : "☐"}</span> Differences only
+            </button>
+            <button className="lc-cmp-close" onClick={onClose} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 9, width: 34, height: 34, cursor: "pointer", color: "var(--text-muted)", fontSize: 14, transition: "transform 0.25s, border-color 0.2s, color 0.2s" }}>✕</button>
+          </div>
         </div>
 
         {/* Premium upsell banner for free users */}
         {!checkingPremium && !isPremium && (
-          <div style={{ padding: "10px 24px", background: "rgba(139,179,245,0.08)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+          <div style={{ position: "relative", zIndex: 1, padding: "10px 24px", background: "rgba(139,179,245,0.08)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
             <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
               Free plan compares up to {FREE_COMPARE_LIMIT} laptops. Premium unlocks up to {PREMIUM_COMPARE_LIMIT}, value scores, and price-per-spec breakdowns.
             </span>
@@ -200,17 +246,26 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
         )}
 
         {/* Scrollable content */}
-        <div style={{ overflowY: "auto", flex: 1 }}>
+        <div style={{ position: "relative", zIndex: 1, overflowY: "auto", flex: 1 }}>
           {/* Laptop header cards */}
-          <div style={{ display: "grid", gridTemplateColumns: `180px repeat(${cols}, 1fr)`, borderBottom: "1px solid var(--border)" }}>
+          <div style={{ position: "sticky", top: 0, zIndex: 5, display: "grid", gridTemplateColumns: `180px repeat(${cols}, 1fr)`, borderBottom: "1px solid var(--border)", background: "var(--bg)", backdropFilter: "blur(10px)" }}>
             <div style={{ padding: "20px 16px", borderRight: "1px solid var(--border)" }} />
             {laptops.map(l => {
               const price = l.current_price ?? 0;
               const isBest = price === bestPrice;
               return (
-                <div key={l.id} style={{ padding: "20px 16px", borderRight: "1px solid var(--border)", background: isBest ? "rgba(139,179,245,0.04)" : "transparent", position: "relative" }}>
+                <div key={l.id} style={{
+                  padding: "20px 16px", borderRight: "1px solid var(--border)",
+                  background: isBest && cols > 1 ? "linear-gradient(180deg, rgba(106,247,184,0.07), transparent)" : "transparent",
+                  position: "relative", transition: "background 0.2s",
+                }}>
                   {isBest && cols > 1 && (
-                    <div style={{ position: "absolute", top: 12, right: 12, fontSize: 9, fontWeight: 800, background: "rgba(106,247,184,0.15)", color: "var(--accent-3)", border: "1px solid rgba(106,247,184,0.3)", borderRadius: 5, padding: "2px 7px", letterSpacing: "0.06em" }}>BEST PRICE</div>
+                    <div style={{
+                      position: "absolute", top: 12, right: 12, fontSize: 9, fontWeight: 800,
+                      background: "linear-gradient(135deg, var(--accent-3), #4ade80)", color: "#062915",
+                      borderRadius: 6, padding: "3px 8px", letterSpacing: "0.06em",
+                      boxShadow: "0 3px 10px rgba(106,247,184,0.35)",
+                    }}>★ BEST PRICE</div>
                   )}
                   <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
                     {(l as any).image_url ? (
@@ -222,8 +277,9 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
                   <div style={{ fontSize: 9, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: 4 }}>{l.brand}</div>
                   <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.3, marginBottom: 8 }}>{l.model}</div>
                   <button
+                    className="lc-cmp-remove"
                     onClick={() => onRemove(l.id)}
-                    style={{ fontSize: 10, padding: "3px 8px", borderRadius: 5, border: "1px solid rgba(247,106,106,0.3)", background: "rgba(247,106,106,0.08)", color: "#f76a6a", cursor: "pointer" }}
+                    style={{ fontSize: 10, padding: "3px 8px", borderRadius: 5, border: "1px solid rgba(247,106,106,0.3)", background: "rgba(247,106,106,0.08)", color: "#f76a6a", cursor: "pointer", transition: "background 0.15s, transform 0.15s" }}
                   >✕ Remove</button>
                 </div>
               );
@@ -242,10 +298,10 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
                 const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
                 const isTop = score === maxScore;
                 return (
-                  <div key={l.id} style={{ padding: "14px 16px", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 4, justifyContent: "center" }}>
+                  <div key={l.id} style={{ padding: "14px 16px", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 5, justifyContent: "center" }}>
                     <span style={{ fontSize: 13, fontWeight: 800, color: isTop ? "var(--accent-3)" : "var(--text)" }}>{pct}/100 {isTop && cols > 1 ? "🏆" : ""}</span>
-                    <div style={{ height: 4, borderRadius: 4, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
-                      <div style={{ height: "100%", width: `${pct}%`, background: isTop ? "var(--accent-3)" : "var(--accent)", borderRadius: 4 }} />
+                    <div style={{ height: 5, borderRadius: 4, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                      <div className="lc-cmp-bar-fill" style={{ height: "100%", width: `${pct}%`, background: isTop ? "linear-gradient(90deg, var(--accent-3), #4ade80)" : "linear-gradient(90deg, var(--accent), #6ab4f5)", borderRadius: 4, boxShadow: isTop ? "0 0 8px rgba(106,247,184,0.5)" : "none" }} />
                     </div>
                   </div>
                 );
@@ -254,6 +310,11 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
           )}
 
           {/* Comparison rows */}
+          {visibleRows.length === 0 && (
+            <div style={{ padding: "40px 24px", textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>
+              No differences found across these laptops for the tracked specs.
+            </div>
+          )}
           {visibleRows.map((row, ri) => {
             const values = laptops.map(l => row.getValue(l, currency, cadToUsd));
             const isPrice = row.key === "price";
@@ -261,7 +322,7 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
             const minPriceVal = isPrice ? Math.min(...priceValues) : Infinity;
 
             return (
-              <div key={row.key} style={{ display: "grid", gridTemplateColumns: `180px repeat(${cols}, 1fr)`, borderBottom: "1px solid var(--border)", background: ri % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)" }}>
+              <div key={row.key} className="lc-cmp-row" style={{ animationDelay: `${Math.min(ri * 0.02, 0.3)}s`, display: "grid", gridTemplateColumns: `180px repeat(${cols}, 1fr)`, borderBottom: "1px solid var(--border)", background: ri % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)" }}>
                 <div style={{ padding: "14px 16px", borderRight: "1px solid var(--border)", display: "flex", alignItems: "center" }}>
                   <span style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>{row.label}</span>
                 </div>
@@ -269,7 +330,12 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
                   const l = laptops[vi];
                   const isBestPriceCol = isPrice && (l.current_price ?? 0) === minPriceVal && cols > 1;
                   return (
-                    <div key={vi} style={{ padding: "14px 16px", borderRight: "1px solid var(--border)", display: "flex", alignItems: "center", background: isBestPriceCol ? "rgba(106,247,184,0.04)" : "transparent" }}>
+                    <div key={vi} style={{
+                      padding: "14px 16px 14px 14px", borderRight: "1px solid var(--border)", display: "flex", alignItems: "center",
+                      background: isBestPriceCol ? "rgba(106,247,184,0.05)" : "transparent",
+                      borderLeft: isBestPriceCol ? "3px solid var(--accent-3)" : "3px solid transparent",
+                      transition: "background 0.2s",
+                    }}>
                       {val ? (
                         <span style={{
                           fontSize: 13,
@@ -278,7 +344,7 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
                             ? (isBestPriceCol ? "var(--accent-3)" : "var(--text)")
                             : row.key === "discount" ? "#f7c26a"
                             : "var(--text-muted)",
-                        }}>{val}</span>
+                        }}>{val}{isBestPriceCol ? " ✓" : ""}</span>
                       ) : (
                         <span style={{ fontSize: 12, color: "var(--text-dim)", opacity: 0.4 }}>—</span>
                       )}
@@ -329,8 +395,9 @@ export default function CompareModal({ laptops, onClose, onRemove, currency = "C
             {laptops.map(l => (
               <div key={l.id} style={{ padding: "16px", borderRight: "1px solid var(--border)" }}>
                 <button
+                  className="lc-cmp-details"
                   onClick={() => window.location.href = `/laptop/${l.id}`}
-                  style={{ width: "100%", background: "linear-gradient(135deg, var(--accent), #6ab4f5)", border: "none", borderRadius: 9, color: "#fff", fontSize: 12, fontWeight: 700, padding: "9px 12px", cursor: "pointer" }}
+                  style={{ width: "100%", background: "linear-gradient(135deg, var(--accent), #6ab4f5)", border: "none", borderRadius: 9, color: "#fff", fontSize: 12, fontWeight: 700, padding: "9px 12px", cursor: "pointer", transition: "transform 0.2s, box-shadow 0.2s" }}
                 >View Details →</button>
               </div>
             ))}
