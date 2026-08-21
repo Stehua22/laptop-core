@@ -263,64 +263,24 @@ export default function BestPicksPage() {
                     ? Math.round((1 - (l.current_price! / l.retail_price!)) * 100)
                     : null;
                   return (
-                    <div key={l.id}
-                      className="lc-bp-card"
-                      style={{ position: "relative", background: surface, border: `1px solid ${idx === 0 ? accent : border}`, borderRadius: 18, overflow: "hidden", transition: "transform 0.25s, box-shadow 0.25s, border-color 0.25s", cursor: "pointer", animationDelay: `${idx * 0.06}s`, boxShadow: idx === 0 ? `0 0 0 1px ${accent}33, 0 10px 28px ${accent}22` : "none" }}
-                      onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = borderHover; el.style.transform = "translateY(-4px)"; el.style.boxShadow = isDark ? "0 16px 40px rgba(0,0,0,0.35)" : "0 16px 40px rgba(0,0,0,0.1)"; }}
-                      onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = idx === 0 ? accent : border; el.style.transform = "translateY(0)"; el.style.boxShadow = idx === 0 ? `0 0 0 1px ${accent}33, 0 10px 28px ${accent}22` : "none"; }}
-                      onClick={() => router.push("/tracker")}
-                    >
-                      {idx === 0 && (
-                        <div style={{
-                          position: "absolute", top: 14, right: 14, zIndex: 2,
-                          fontSize: 10.5, fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase",
-                          color: "#fff", background: `linear-gradient(135deg, ${accent}, ${accent3})`, borderRadius: 20, padding: "5px 12px",
-                          boxShadow: `0 4px 12px ${accent}55`,
-                        }}>
-                          ✦ Top pick
-                        </div>
-                      )}
-                      {/* Top accent line */}
-                      <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}, ${accent3})` }} />
-
-                      <div style={{ padding: "24px" }}>
-                        {/* Brand badge */}
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: isDark ? "rgba(139,179,245,0.1)" : "rgba(94,143,232,0.1)", border: `1px solid ${isDark ? "rgba(139,179,245,0.2)" : "rgba(94,143,232,0.2)"}`, borderRadius: 6, padding: "3px 10px", fontSize: 10, fontWeight: 700, color: accent, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 14 }}>
-                          {l.brand}
-                        </div>
-
-                        <h3 style={{ fontWeight: 700, fontSize: 16, marginBottom: 6, letterSpacing: "-0.02em", color: text, lineHeight: 1.3 }}>{l.model}</h3>
-                        <p style={{ fontSize: 11, color: textMuted, marginBottom: 20 }}>{l.brand} · {(l as any).year ?? ""}</p>
-
-                        {/* Price */}
-                        <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 24, fontWeight: 800, color: accent3, letterSpacing: "-0.03em" }}>
-                            {fmtPrice(l.current_price ?? l.retail_price ?? 0)}
-                          </span>
-                          {hasDiscount && (
-                            <>
-                              <span style={{ fontSize: 13, color: textMuted, textDecoration: "line-through" }}>{fmtPrice(l.retail_price!)}</span>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: accent2, background: isDark ? "rgba(247,194,106,0.12)" : "rgba(217,147,14,0.1)", border: `1px solid ${isDark ? "rgba(247,194,106,0.3)" : "rgba(217,147,14,0.25)"}`, borderRadius: 6, padding: "2px 8px" }}>-{discount}%</span>
-                            </>
-                          )}
-                        </div>
-
-                        {/* Specs */}
-                        {(l as any).specs && (
-                          <p style={{ fontSize: 12, color: textMuted, marginTop: 14, lineHeight: 1.6, borderLeft: `2px solid ${isDark ? "rgba(139,179,245,0.2)" : "rgba(94,143,232,0.3)"}`, paddingLeft: 10 }}>
-                            {(l as any).specs}
-                          </p>
-                        )}
-                      </div>
-
-                      <div style={{ padding: "0 24px 20px", display: "flex", gap: 8 }}>
-                        <button onClick={(e) => { e.stopPropagation(); router.push("/tracker"); }}
-                          style={{ flex: 1, background: isDark ? "rgba(139,179,245,0.08)" : "rgba(94,143,232,0.08)", border: `1px solid ${isDark ? "rgba(139,179,245,0.2)" : "rgba(94,143,232,0.2)"}`, borderRadius: 10, padding: "10px", fontSize: 12, fontWeight: 600, color: accent, cursor: "pointer", transition: "all 0.15s" }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = isDark ? "rgba(139,179,245,0.16)" : "rgba(94,143,232,0.16)"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = isDark ? "rgba(139,179,245,0.08)" : "rgba(94,143,232,0.08)"; }}
-                        >View Details</button>
-                      </div>
-                    </div>
+                    <ResultCard
+                      key={l.id}
+                      laptop={l}
+                      idx={idx}
+                      hasDiscount={!!hasDiscount}
+                      discount={discount}
+                      isDark={isDark}
+                      surface={surface}
+                      border={border}
+                      borderHover={borderHover}
+                      text={text}
+                      textMuted={textMuted}
+                      accent={accent}
+                      accent2={accent2}
+                      accent3={accent3}
+                      fmtPrice={fmtPrice}
+                      router={router}
+                    />
                   );
                 })}
               </div>
@@ -469,6 +429,104 @@ export default function BestPicksPage() {
             {step === STEPS.length - 1 ? (loading ? "Finding..." : "See My Picks →") : "Next →"}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Result card (separate component so each has its own image load/error state) ──
+
+function ResultCard({
+  laptop: l, idx, hasDiscount, discount, isDark, surface, border, borderHover,
+  text, textMuted, accent, accent2, accent3, fmtPrice, router,
+}: {
+  laptop: Laptop; idx: number; hasDiscount: boolean; discount: number | null; isDark: boolean;
+  surface: string; border: string; borderHover: string; text: string; textMuted: string;
+  accent: string; accent2: string; accent3: string; fmtPrice: (n: number) => string; router: ReturnType<typeof useRouter>;
+}) {
+  const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const imageUrl = (l as any).image_url as string | undefined;
+
+  return (
+    <div
+      className="lc-bp-card"
+      style={{ position: "relative", background: surface, border: `1px solid ${idx === 0 ? accent : border}`, borderRadius: 18, overflow: "hidden", transition: "transform 0.25s, box-shadow 0.25s, border-color 0.25s", cursor: "pointer", animationDelay: `${idx * 0.06}s`, boxShadow: idx === 0 ? `0 0 0 1px ${accent}33, 0 10px 28px ${accent}22` : "none" }}
+      onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = borderHover; el.style.transform = "translateY(-4px)"; el.style.boxShadow = isDark ? "0 16px 40px rgba(0,0,0,0.35)" : "0 16px 40px rgba(0,0,0,0.1)"; }}
+      onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.borderColor = idx === 0 ? accent : border; el.style.transform = "translateY(0)"; el.style.boxShadow = idx === 0 ? `0 0 0 1px ${accent}33, 0 10px 28px ${accent}22` : "none"; }}
+      onClick={() => router.push("/tracker")}
+    >
+      {idx === 0 && (
+        <div style={{
+          position: "absolute", top: 14, right: 14, zIndex: 2,
+          fontSize: 10.5, fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase",
+          color: "#fff", background: `linear-gradient(135deg, ${accent}, ${accent3})`, borderRadius: 20, padding: "5px 12px",
+          boxShadow: `0 4px 12px ${accent}55`,
+        }}>
+          ✦ Top pick
+        </div>
+      )}
+      {/* Top accent line */}
+      <div style={{ height: 3, background: `linear-gradient(90deg, ${accent}, ${accent3})` }} />
+
+      {/* Image */}
+      <div style={{
+        position: "relative", height: 150, display: "flex", alignItems: "center", justifyContent: "center",
+        background: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)",
+        borderBottom: `1px solid ${border}`,
+      }}>
+        {hasDiscount && (
+          <div style={{ position: "absolute", top: 12, left: 12, fontSize: 11, fontWeight: 800, color: accent2, background: surface, border: `1px solid ${border}`, borderRadius: 7, padding: "3px 9px", zIndex: 1 }}>
+            -{discount}%
+          </div>
+        )}
+        {imageUrl && !imgError ? (
+          <img
+            src={imageUrl} alt={l.model}
+            onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)}
+            style={{ maxHeight: 110, maxWidth: "85%", objectFit: "contain", opacity: imgLoaded ? 1 : 0, transition: "opacity 0.3s" }}
+          />
+        ) : (
+          <div style={{ fontSize: 40, opacity: 0.15 }}>▭</div>
+        )}
+      </div>
+
+      <div style={{ padding: "24px" }}>
+        {/* Brand badge */}
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: isDark ? "rgba(139,179,245,0.1)" : "rgba(94,143,232,0.1)", border: `1px solid ${isDark ? "rgba(139,179,245,0.2)" : "rgba(94,143,232,0.2)"}`, borderRadius: 6, padding: "3px 10px", fontSize: 10, fontWeight: 700, color: accent, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 14 }}>
+          {l.brand}
+        </div>
+
+        <h3 style={{ fontWeight: 700, fontSize: 16, marginBottom: 6, letterSpacing: "-0.02em", color: text, lineHeight: 1.3 }}>{l.model}</h3>
+        <p style={{ fontSize: 11, color: textMuted, marginBottom: 20 }}>{l.brand} · {(l as any).year ?? ""}</p>
+
+        {/* Price */}
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 24, fontWeight: 800, color: accent3, letterSpacing: "-0.03em" }}>
+            {fmtPrice(l.current_price ?? l.retail_price ?? 0)}
+          </span>
+          {hasDiscount && (
+            <>
+              <span style={{ fontSize: 13, color: textMuted, textDecoration: "line-through" }}>{fmtPrice(l.retail_price!)}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: accent2, background: isDark ? "rgba(247,194,106,0.12)" : "rgba(217,147,14,0.1)", border: `1px solid ${isDark ? "rgba(247,194,106,0.3)" : "rgba(217,147,14,0.25)"}`, borderRadius: 6, padding: "2px 8px" }}>-{discount}%</span>
+            </>
+          )}
+        </div>
+
+        {/* Specs */}
+        {(l as any).specs && (
+          <p style={{ fontSize: 12, color: textMuted, marginTop: 14, lineHeight: 1.6, borderLeft: `2px solid ${isDark ? "rgba(139,179,245,0.2)" : "rgba(94,143,232,0.3)"}`, paddingLeft: 10 }}>
+            {(l as any).specs}
+          </p>
+        )}
+      </div>
+
+      <div style={{ padding: "0 24px 20px", display: "flex", gap: 8 }}>
+        <button onClick={(e) => { e.stopPropagation(); router.push("/tracker"); }}
+          style={{ flex: 1, background: isDark ? "rgba(139,179,245,0.08)" : "rgba(94,143,232,0.08)", border: `1px solid ${isDark ? "rgba(139,179,245,0.2)" : "rgba(94,143,232,0.2)"}`, borderRadius: 10, padding: "10px", fontSize: 12, fontWeight: 600, color: accent, cursor: "pointer", transition: "all 0.15s" }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = isDark ? "rgba(139,179,245,0.16)" : "rgba(94,143,232,0.16)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = isDark ? "rgba(139,179,245,0.08)" : "rgba(94,143,232,0.08)"; }}
+        >View Details</button>
       </div>
     </div>
   );
