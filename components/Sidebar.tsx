@@ -166,6 +166,16 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
   });
   const [brandsOpen, setBrandsOpen] = useState(false);
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close the mobile drawer automatically on route/page change
+  useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth > 860) setMobileOpen(false);
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     supabaseBrowser.auth.getSession().then(({ data }) => {
@@ -192,10 +202,30 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
   }
 
   return (
-    <aside
-      className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""}`}
-      style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}
-    >
+    <>
+      {/* Hamburger toggle — only visible below 860px via CSS */}
+      <button
+        className={styles.mobileToggle}
+        onClick={() => setMobileOpen((p) => !p)}
+        aria-label="Toggle menu"
+        type="button"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text)" strokeWidth="2" strokeLinecap="round">
+          {mobileOpen ? (
+            <path d="M6 6l12 12M6 18L18 6" />
+          ) : (
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          )}
+        </svg>
+      </button>
+
+      {/* Backdrop — only rendered/visible on mobile when the drawer is open */}
+      {mobileOpen && <div className={styles.mobileOverlay} onClick={() => setMobileOpen(false)} />}
+
+      <aside
+        className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""} ${mobileOpen ? styles.mobileOpen : ""}`}
+        style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}
+      >
       <div className={styles.brand}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
           <path
@@ -387,5 +417,6 @@ export default function Sidebar({ activeKey = "home", onSettingsClick, onResetSe
         </button>
       </div>
     </aside>
+    </>
   );
 }

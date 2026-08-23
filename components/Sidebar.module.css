@@ -17,6 +17,68 @@
   padding: 20px 10px;
 }
 
+/* Mobile: sidebar becomes a slide-in drawer instead of a permanent 220px column */
+@media (max-width: 860px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 2000;
+    width: 240px;
+    transform: translateX(-100%);
+    box-shadow: 8px 0 30px rgba(0,0,0,0.3);
+  }
+  .sidebar.mobileOpen {
+    transform: translateX(0);
+  }
+  /* Collapsed state is irrelevant on mobile — the drawer is either open or closed */
+  .sidebar.collapsed {
+    width: 240px;
+    padding: 20px 14px;
+  }
+  .sidebar.collapsed .brandText,
+  .sidebar.collapsed .label,
+  .sidebar.collapsed .sectionLabel {
+    display: unset;
+  }
+}
+
+.mobileOverlay {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .mobileOverlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1999;
+    animation: fadeIn 0.2s ease both;
+  }
+
+  .mobileToggle {
+    display: flex !important;
+  }
+}
+
+.mobileToggle {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 2001;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+}
+
 .brand {
   display: flex;
   align-items: center;

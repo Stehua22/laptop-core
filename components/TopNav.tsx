@@ -41,26 +41,27 @@ export default function TopNav() {
         // No paddingTop hacks needed on any page, ever.
         position: 'sticky',
         top: 0,
-        height: 72,
+        minHeight: 72,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 10,
-        padding: '0 20px',
+        padding: '8px 20px',
         background: 'var(--surface, #0f1220)',
         borderBottom: '1px solid var(--border, rgba(255,255,255,0.06))',
         zIndex: 900,
+        flexWrap: 'wrap',
       }}
     >
       {/* Logo — set in Admin Panel → Site Images → "Logo (top nav)" */}
-      <Link href="/" style={{ display: 'flex', alignItems: 'center' }}>
+      <Link href="/" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
         {logoOk && (
           <img
             src={logoUrl}
             alt=""
-            width={64}
-            height={64}
-            style={{ objectFit: 'contain' }}
+            width={88}
+            height={88}
+            style={{ objectFit: 'contain', maxHeight: 56, width: 'auto' }}
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = 'none'; // hide instantly, no broken-icon flash
               setLogoOk(false);
@@ -69,7 +70,7 @@ export default function TopNav() {
         )}
       </Link>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         <ThemeToggle />
 
         {loggedIn === null ? null : loggedIn ? (
@@ -85,7 +86,7 @@ export default function TopNav() {
             >
               ⭐ Premium
             </Link>
-            <span style={{ fontSize: 13, color: 'inherit', opacity: 0.7 }}>
+            <span className="lc-topnav-email" style={{ fontSize: 13, color: 'inherit', opacity: 0.7 }}>
               {email}
             </span>
             <button
@@ -135,6 +136,12 @@ export default function TopNav() {
           </>
         )}
       </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 480px) {
+          .lc-topnav-email { display: none; }
+        }
+      `}} />
     </div>
   );
 }

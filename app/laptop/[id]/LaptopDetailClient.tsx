@@ -213,6 +213,13 @@ export default function LaptopPage() {
           .lc-det-buy-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0,0,0,0.22); }
           .lc-det-buy-secondary { transition: transform 0.15s ease, border-color 0.15s ease; }
           .lc-det-buy-secondary:hover { transform: translateY(-2px); }
+          .lc-det-hero-grid { grid-template-columns: 1fr 400px; }
+          @media (max-width: 860px) {
+            .lc-det-hero-grid { grid-template-columns: 1fr !important; }
+          }
+          @media (max-width: 860px) {
+            .lc-det-content-wrap { padding-left: 16px !important; padding-right: 16px !important; }
+          }
         `}} />
         <div className="lc-det-orb" />
 
@@ -243,10 +250,10 @@ export default function LaptopPage() {
           </div>
         </div>
 
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 20px", position: "relative", zIndex: 1 }}>
+        <div className="lc-det-content-wrap" style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 20px", position: "relative", zIndex: 1 }}>
 
           {/* Hero */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: 40, alignItems: "start", marginBottom: 64 }}>
+          <div className="lc-det-hero-grid" style={{ display: "grid", gap: 40, alignItems: "start", marginBottom: 64 }}>
 
             {/* Image */}
             <div className="lc-det-image-wrap lc-det-fadein" style={{ position: "relative", background: "var(--card-bg, var(--surface-2))", border: "1px solid var(--card-border, var(--border))", borderRadius: "var(--card-radius, 20px)", boxShadow: "var(--card-shadow, 0 12px 32px rgba(0,0,0,0.1))", backdropFilter: "blur(var(--card-blur, 0px))", padding: "56px 40px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 420, overflow: "hidden" }}>
