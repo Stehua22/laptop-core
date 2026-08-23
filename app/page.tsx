@@ -28,6 +28,30 @@ function useInView<T extends HTMLElement>(threshold = 0.15) {
   return { ref, inView };
 }
 
+// Small outline icon set — replaces emoji so the icons read as designed
+// rather than picked from a keyboard.
+function Icon({ name, size = 20 }: { name: string; size?: number }) {
+  const common = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  switch (name) {
+    case "trend":
+      return <svg {...common}><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></svg>;
+    case "search":
+      return <svg {...common}><circle cx="10.5" cy="10.5" r="6.5" /><path d="M20 20l-4.3-4.3" /></svg>;
+    case "target":
+      return <svg {...common}><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.2" /></svg>;
+    case "scale":
+      return <svg {...common}><path d="M12 3v18" /><path d="M5 8h14" /><path d="M5 8l-2.5 5a2.5 2.5 0 005 0z" /><path d="M19 8l-2.5 5a2.5 2.5 0 005 0z" /></svg>;
+    case "chart":
+      return <svg {...common}><path d="M4 20V10" /><path d="M11 20V4" /><path d="M18 20v-7" /></svg>;
+    case "currency":
+      return <svg {...common}><path d="M7 7h11l-3-3" /><path d="M17 17H6l3 3" /></svg>;
+    case "flame":
+      return <svg {...common}><path d="M12 2c1.5 3 5 5 5 9.5A5 5 0 0112 17a5 5 0 01-5-5.5C7 8 8.5 6.5 9.5 5c.3 1.5 1 2 1.5 1.5C11.2 5 11 3 12 2z" /></svg>;
+    default:
+      return null;
+  }
+}
+
 // Same bucket the admin panel's "Site Images" tab uploads to — whatever's
 // uploaded there shows up here automatically, no code changes needed.
 const SITE_IMAGES_BUCKET = "site-images";
@@ -43,37 +67,37 @@ const CAD_TO_USD = 0.73;
 
 const FEATURES = [
   {
-    icon: "📈",
+    icon: "trend",
     title: "Track prices",
     desc: "Every laptop we list gets checked regularly, not just once. We log the price every time it changes, so you're seeing real movement instead of a single snapshot.",
     detail: "e.g. \"$2,449 → $2,199 over 6 weeks\"",
   },
   {
-    icon: "🔍",
+    icon: "search",
     title: "Deal scanner",
     desc: "Runs in the background across Apple, Lenovo, Dell, ASUS and more, comparing today's price against what a laptop has actually sold for before — not just the sticker \"was\" price.",
     detail: "Flags drops of 10%+ below tracked average",
   },
   {
-    icon: "🎯",
+    icon: "target",
     title: "Best picks",
     desc: "A short set of questions about what you'll use the laptop for — school, home, or business — narrows the catalog down to a handful of laptops that actually fit, instead of scrolling everything.",
     detail: "Takes about 30 seconds",
   },
   {
-    icon: "⚖️",
+    icon: "scale",
     title: "Compare specs",
     desc: "Pick a few laptops from the catalog and see their specs and prices lined up in one table, so trade-offs like RAM vs. price are obvious at a glance.",
     detail: "Compare up to 3 laptops free, more with Premium",
   },
   {
-    icon: "📊",
+    icon: "chart",
     title: "Price history",
     desc: "Every laptop page has a chart of where its price has actually been over time, so you can tell whether today's number is a genuine low or just this week's price.",
     detail: "Shows lowest price ever tracked",
   },
   {
-    icon: "💱",
+    icon: "currency",
     title: "CAD and USD",
     desc: "Every price on the site — cards, comparisons, deal scanner — converts instantly using a live exchange rate, so you're never doing the math yourself.",
     detail: "Rate updates automatically",
@@ -85,42 +109,42 @@ const BRANDS = ["Apple", "Lenovo", "Dell", "HP", "ASUS", "Acer", "Microsoft", "S
 const TUTORIAL_STEPS = [
   {
     label: "Search & Filter",
-    icon: "🔍",
+    icon: "search",
     title: "Find laptops that fit your needs",
     desc: "Filter by brand, price range, screen size, weight, or what you'll actually use it for — student, home, or business.",
     mock: "filter" as const,
   },
   {
     label: "Track Prices",
-    icon: "📈",
+    icon: "trend",
     title: "See where the price has actually been",
     desc: "Every laptop has a price history chart, so you can tell if today's price is a real deal or just marketing.",
     mock: "chart" as const,
   },
   {
     label: "Compare",
-    icon: "⚖️",
+    icon: "scale",
     title: "Put laptops side by side",
     desc: "Select a few laptops and compare specs and prices in one view before you decide.",
     mock: "compare" as const,
   },
   {
     label: "Spot Deals",
-    icon: "🔥",
+    icon: "flame",
     title: "Catch the real price drops",
     desc: "The Deal Scanner flags genuine discounts across stores, so you don't have to go hunting for them yourself.",
     mock: "deals" as const,
   },
   {
     label: "Best Picks",
-    icon: "🎯",
+    icon: "target",
     title: "Answer a few questions, get a shortlist",
     desc: "Tell us what you'll use it for and your budget — Best Picks narrows the whole catalog down to laptops that actually fit.",
     mock: "quiz" as const,
   },
   {
     label: "Switch Currency",
-    icon: "💱",
+    icon: "currency",
     title: "See it in CAD or USD, instantly",
     desc: "One toggle converts every price on the site using a live exchange rate — no mental math, no separate tab.",
     mock: "currency" as const,
@@ -578,7 +602,7 @@ export default function LandingPage() {
                 transition: "all 0.2s ease",
               }}
             >
-              <span style={{ fontSize: 13 }}>{s.icon}</span>{s.label}
+              <span style={{ display: "inline-flex" }}><Icon name={s.icon} size={13} /></span>{s.label}
             </button>
           ))}
         </div>
@@ -598,8 +622,8 @@ export default function LandingPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
               <span style={{
                 width: 30, height: 30, borderRadius: 9, background: `${accent}1f`, color: accent,
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0,
-              }}>{TUTORIAL_STEPS[activeTutorial].icon}</span>
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}><Icon name={TUTORIAL_STEPS[activeTutorial].icon} size={16} /></span>
               <span style={{ fontSize: 11, fontWeight: 700, color: accent, letterSpacing: "0.06em", textTransform: "uppercase" }}>
                 Step {activeTutorial + 1} of {TUTORIAL_STEPS.length}
               </span>
@@ -666,12 +690,13 @@ export default function LandingPage() {
               }}
             >
               <div style={{
-                fontSize: 24, marginBottom: 12, display: "inline-block",
-                transform: hoveredCard === f.title ? "scale(1.25) rotate(-6deg)" : "scale(1) rotate(0deg)",
-                transition: "transform 0.2s",
-                animation: hoveredCard === f.title ? "none" : "lc-icon-bob 3s ease-in-out infinite",
-                animationDelay: `${i * 0.15}s`,
-              }}>{f.icon}</div>
+                width: 38, height: 38, borderRadius: 10, marginBottom: 14,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: hoveredCard === f.title ? accent : `${accent}14`,
+                color: hoveredCard === f.title ? "#fff" : accent,
+                transform: hoveredCard === f.title ? "scale(1.08)" : "scale(1)",
+                transition: "transform 0.2s, background 0.2s, color 0.2s",
+              }}><Icon name={f.icon} size={19} /></div>
               <h3 style={{ fontWeight: 700, fontSize: 15.5, marginBottom: 10, color: text, letterSpacing: "-0.01em" }}>{f.title}</h3>
               <p style={{ fontSize: 13.5, color: textMuted, lineHeight: 1.65, marginBottom: 14, flex: 1 }}>{f.desc}</p>
               <div style={{

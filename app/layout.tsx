@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+﻿import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
@@ -13,12 +13,19 @@ export const metadata: Metadata = {
   description: "Find Your Next Laptop Deal",
 };
 
+// Without this, mobile browsers render the page at a virtual desktop-width
+// canvas and zoom out to fit — every @media (max-width: ...) rule in the
+// site silently never matches on real phones. This is what makes them match.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" data-theme="dark">
       <body>
         <ThemeInit />
-        {/* useSearchParams inside RouteProgress requires a Suspense boundary in the App Router */}
         <Suspense fallback={null}>
           <RouteProgress />
         </Suspense>
