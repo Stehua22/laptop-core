@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import ChangelogClient from "./ChangelogClient.tsx";
+import ChangelogClient from "./ChangelogClient";
 
 export const metadata: Metadata = {
   title: "Updates — LaptopCore",
