@@ -51,6 +51,26 @@ function getPageWindow(current: number, total: number): (number | "gap")[] {
 export default function TrackerClient({ initialLaptops, dbError }: { initialLaptops: Laptop[]; dbError: string | null }) {
   const [laptops, setLaptops] = useState<Laptop[]>(initialLaptops);
   const [search, setSearch] = useState("");
+
+  // QoL: "/" jumps focus to search (unless already typing somewhere), Esc clears it
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement;
+      const isTyping = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+
+      if (e.key === "/" && !isTyping) {
+        e.preventDefault();
+        const input = document.querySelector<HTMLInputElement>('input[placeholder="Search brand, model, specs..."]');
+        input?.focus();
+      }
+      if (e.key === "Escape" && isTyping && (target as HTMLInputElement).placeholder === "Search brand, model, specs...") {
+        (target as HTMLInputElement).blur();
+        setSearch("");
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
   const [brandFilter, setBrandFilter] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [goodForFilter, setGoodForFilter] = useState("");

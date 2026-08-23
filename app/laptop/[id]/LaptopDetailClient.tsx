@@ -23,6 +23,7 @@ export default function LaptopPage() {
   const [loading, setLoading] = useState(true);
   const [imgError, setImgError] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [pendingUrl, setPendingUrl] = useState("");
   const [pendingStore, setPendingStore] = useState("");
   const [unlocked, setUnlocked] = useState(false);
@@ -345,6 +346,19 @@ export default function LaptopPage() {
                 onMouseEnter={e => { const el = e.currentTarget; el.style.borderColor = "var(--border-hover)"; el.style.color = "var(--text)"; }}
                 onMouseLeave={e => { const el = e.currentTarget; el.style.borderColor = "var(--border)"; el.style.color = "var(--text-muted)"; }}
               >View price history</button>
+
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  setLinkCopied(true);
+                  setTimeout(() => setLinkCopied(false), 1800);
+                }}
+                style={{ background: "transparent", color: linkCopied ? "var(--accent-3)" : "var(--text-dim)", border: "none", padding: "10px 0 0", fontWeight: 600, fontSize: 12.5, cursor: "pointer", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "color 0.15s" }}
+                onMouseEnter={e => { if (!linkCopied) e.currentTarget.style.color = "var(--text)"; }}
+                onMouseLeave={e => { if (!linkCopied) e.currentTarget.style.color = "var(--text-dim)"; }}
+              >
+                {linkCopied ? "✓ Link copied" : "🔗 Copy link to this laptop"}
+              </button>
             </div>
           </div>
 
