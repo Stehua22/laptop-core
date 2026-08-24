@@ -31,6 +31,40 @@ export async function POST(req: NextRequest) {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
+
+      // --- Marketplace one-time purchase (listing checkout) ---
+      if (session.mode === 'payment' && session.metadata?.listingId) {
+        const { listingId, buyerId, sellerId, amount, platformFee } = session.metadata;
+
+        // Idempotency: Stripe can retry webhook delivery, so bail if we've
+        // already recorded this session.
+        const { data: existingOrder } = await supabase
+          .from('marketplace_orders')
+          .select('id')
+          .eq('stripe_checkout_session_id', session.id)
+          .maybeSingle();
+
+        if (!existingOrder) {
+          await supabase.from('marketplace_orders').insert({
+            listing_id: Number(listingId),
+            buyer_id: buyerId,
+            seller_id: sellerId,
+            amount: Number(amount),
+            platform_fee: Number(platformFee),
+            stripe_checkout_session_id: session.id,
+            stripe_payment_intent_id: session.payment_intent as string,
+            status: 'paid',
+          });
+
+          await supabase
+            .from('listings')
+            .update({ status: 'sold' })
+            .eq('id', Number(listingId));
+        }
+        break;
+      }
+
+      // --- Premium/Ultra subscription (existing flow, unchanged) ---
       const userId = session.metadata?.userId;
       const plan = session.metadata?.plan === 'ultra' ? 'ultra' : 'premium';
 
@@ -101,6 +135,20 @@ export async function POST(req: NextRequest) {
         .from('profiles')
         .update({ is_premium: isActive })
         .eq('stripe_subscription_id', subscription.id);
+      break;
+    }
+
+    // Fires whenever a seller's Connect account changes — including as
+    // they progress through onboarding. We flag them "ready" once Stripe
+    // confirms they can actually receive payouts.
+    case 'account.updated': {
+      const account = event.data.object as Stripe.Account;
+      const isReady = !!account.details_submitted && !!account.charges_enabled;
+
+      await supabase
+        .from('profiles')
+        .update({ stripe_connect_ready: isReady })
+        .eq('stripe_connect_id', account.id);
       break;
     }
   }

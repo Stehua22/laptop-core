@@ -21,6 +21,7 @@ export default function MyListingsPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [connectReady, setConnectReady] = useState(false);
 
   useEffect(() => {
     supabaseBrowser.auth.getUser().then(async ({ data }) => {
@@ -29,6 +30,12 @@ export default function MyListingsPage() {
       if (data.user) {
         const mine = await fetchMyListings(data.user.id);
         setListings(mine);
+        const { data: profile } = await supabaseBrowser
+          .from("profiles")
+          .select("stripe_connect_ready")
+          .eq("id", data.user.id)
+          .single();
+        setConnectReady(!!profile?.stripe_connect_ready);
         setLoading(false);
       } else {
         setLoading(false);
@@ -72,6 +79,17 @@ export default function MyListingsPage() {
     <div style={{ position: "relative", zIndex: 1, display: "flex" }}>
       <Sidebar activeKey="refurbished" />
       <div style={{ flex: 1, maxWidth: 900, margin: "0 auto", padding: "32px 20px 80px" }}>
+        {!connectReady && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", background: "rgba(139,179,245,0.08)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 18px", marginBottom: 20 }}>
+            <span style={{ fontSize: 13, color: "var(--text)" }}>
+              Set up payouts so buyers can purchase your listings directly instead of just contacting you.
+            </span>
+            <Link href="/refurbished/payouts" style={{ fontSize: 12.5, fontWeight: 700, color: "#fff", background: "var(--accent)", borderRadius: 8, padding: "8px 16px", textDecoration: "none", flexShrink: 0 }}>
+              Set up payouts
+            </Link>
+          </div>
+        )}
+
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
           <h1 style={{ fontSize: "clamp(1.6rem, 4vw, 2.2rem)", fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text)" }}>
             My Listings

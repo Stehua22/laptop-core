@@ -20,6 +20,9 @@ export default function ListingDetailPage() {
   const [sellerEmail, setSellerEmail] = useState<string | null>(null);
   const [activeImg, setActiveImg] = useState(0);
   const [showContact, setShowContact] = useState(false);
+  const [buying, setBuying] = useState(false);
+  const [buyError, setBuyError] = useState("");
+  const [sellerReady, setSellerReady] = useState(false);
 
   useEffect(() => {
     const id = Number(params.id);
@@ -28,6 +31,14 @@ export default function ListingDetailPage() {
     fetchListingById(id).then((data) => {
       setListing(data);
       setLoading(false);
+      if (data) {
+        supabaseBrowser
+          .from("profiles")
+          .select("stripe_connect_ready")
+          .eq("id", data.seller_id)
+          .single()
+          .then(({ data: profile }) => setSellerReady(!!profile?.stripe_connect_ready));
+      }
     });
 
     supabaseBrowser.auth.getUser().then(({ data }) => setUser(data.user ?? null));
@@ -52,7 +63,34 @@ export default function ListingDetailPage() {
     setShowContact(true);
   }
 
-  if (loading) {
+  async function handleBuyNow() {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    if (!listing || !user.email) return;
+    setBuying(true);
+    setBuyError("");
+    try {
+      const res = await fetch("/api/marketplace/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId: listing.id, buyerId: user.id, buyerEmail: user.email }),
+      });
+      const { url, error: apiError } = await res.json();
+      if (url) {
+        window.location.href = url;
+      } else {
+        setBuyError(apiError || "Something went wrong.");
+        setBuying(false);
+      }
+    } catch {
+      setBuyError("Something went wrong. Try again.");
+      setBuying(false);
+    }
+  }
+
+
     return (
       <div style={{ position: "relative", zIndex: 1, display: "flex" }}>
         <Sidebar activeKey="refurbished" />
@@ -162,16 +200,36 @@ export default function ListingDetailPage() {
                 Manage this listing
               </Link>
             ) : listing.status === "active" ? (
-              <button
-                onClick={handleContactClick}
-                style={{
-                  width: "100%", background: "var(--accent)", color: "#fff", border: "none",
-                  borderRadius: "var(--btn-radius, 10px)", padding: "14px", fontWeight: 700, fontSize: 14.5, cursor: "pointer",
-                  boxShadow: "0 4px 16px var(--glow)",
-                }}
-              >
-                Contact Seller
-              </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {sellerReady && (
+                  <button
+                    onClick={handleBuyNow}
+                    disabled={buying}
+                    style={{
+                      width: "100%", background: "var(--accent)", color: "#fff", border: "none",
+                      borderRadius: "var(--btn-radius, 10px)", padding: "14px", fontWeight: 700, fontSize: 14.5,
+                      cursor: buying ? "default" : "pointer", opacity: buying ? 0.7 : 1,
+                      boxShadow: "0 4px 16px var(--glow)",
+                    }}
+                  >
+                    {buying ? "Redirecting to checkout…" : "Buy Now"}
+                  </button>
+                )}
+                <button
+                  onClick={handleContactClick}
+                  style={{
+                    width: "100%",
+                    background: sellerReady ? "transparent" : "var(--accent)",
+                    color: sellerReady ? "var(--text)" : "#fff",
+                    border: sellerReady ? "1px solid var(--border)" : "none",
+                    borderRadius: "var(--btn-radius, 10px)", padding: "14px", fontWeight: 700, fontSize: 14.5, cursor: "pointer",
+                    boxShadow: sellerReady ? "none" : "0 4px 16px var(--glow)",
+                  }}
+                >
+                  Contact Seller
+                </button>
+                {buyError && <div style={{ color: "#f76a6a", fontSize: 12.5 }}>{buyError}</div>}
+              </div>
             ) : null}
 
             {showContact && (
@@ -189,9 +247,16 @@ export default function ListingDetailPage() {
               </div>
             )}
 
+            {!sellerReady && listing.status === "active" && (
+              <p style={{ fontSize: 11.5, color: "var(--text-dim)", marginTop: 10 }}>
+                This seller hasn&apos;t set up payouts yet, so purchases go through direct contact for now.
+              </p>
+            )}
+
             <p style={{ fontSize: 11.5, color: "var(--text-dim)", marginTop: 14, lineHeight: 1.6 }}>
-              LaptopCore doesn&apos;t handle payment for this listing yet — arrange payment and{" "}
-              {listing.delivery_method === "shipping" ? "shipping" : "pickup"} directly with the seller.
+              {sellerReady
+                ? `Payment is handled securely through Stripe. Arrange ${listing.delivery_method === "shipping" ? "shipping" : "pickup"} details directly with the seller after purchase.`
+                : `Arrange payment and ${listing.delivery_method === "shipping" ? "shipping" : "pickup"} directly with the seller.`}
             </p>
           </div>
         </div>
