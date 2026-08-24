@@ -218,3 +218,95 @@ export async function saveLaptopDesign(design: LaptopDesign): Promise<void> {
     .upsert({ ...design, updated_at: new Date().toISOString() }, { onConflict: "laptop_id" });
   if (error) throw error;
 }
+// ============================================================
+// Refurbished Market — add this block to lib/supabase.ts
+// (paste at the end of the file, after your existing exports)
+// ============================================================
+
+export type Listing = {
+  id: number;
+  seller_id: string;
+  brand: string;
+  model: string;
+  specs: string | null;
+  condition: string;
+  description: string | null;
+  price: number;
+  images: string[];
+  delivery_method: "pickup" | "shipping" | "both";
+  location: string | null;
+  status: "active" | "sold" | "removed";
+  created_at: string;
+  updated_at: string;
+};
+
+export async function fetchListings(): Promise<Listing[]> {
+  const { data, error } = await supabase
+    .from("listings")
+    .select("*")
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function fetchListingById(id: number): Promise<Listing | null> {
+  const { data, error } = await supabase
+    .from("listings")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error) {
+    if (error.code === "PGRST116") return null; // no rows found
+    throw error;
+  }
+  return data;
+}
+
+export async function fetchMyListings(sellerId: string): Promise<Listing[]> {
+  const { data, error } = await supabase
+    .from("listings")
+    .select("*")
+    .eq("seller_id", sellerId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createListing(
+  listing: Omit<Listing, "id" | "created_at" | "updated_at" | "status">
+): Promise<Listing> {
+  const { data, error } = await supabase
+    .from("listings")
+    .insert({ ...listing, status: "active" })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateListing(id: number, patch: Partial<Listing>): Promise<void> {
+  const { error } = await supabase.from("listings").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+export async function markListingSold(id: number): Promise<void> {
+  return updateListing(id, { status: "sold" });
+}
+
+export async function deleteListing(id: number): Promise<void> {
+  const { error } = await supabase.from("listings").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// Uploads a listing photo to the `listing-images` bucket under the
+// seller's own user-id folder (required by the storage RLS policy),
+// and returns its public URL.
+export async function uploadListingImage(userId: string, file: File): Promise<string> {
+  const ext = file.name.split(".").pop();
+  const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage.from("listing-images").upload(path, file);
+  if (error) throw error;
+  const { data } = supabase.storage.from("listing-images").getPublicUrl(path);
+  return data.publicUrl;
+}
