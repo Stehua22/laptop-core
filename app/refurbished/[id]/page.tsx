@@ -91,6 +91,7 @@ export default function ListingDetailPage() {
   }
 
 
+  if (loading) {
     return (
       <div style={{ position: "relative", zIndex: 1, display: "flex" }}>
         <Sidebar activeKey="refurbished" />
