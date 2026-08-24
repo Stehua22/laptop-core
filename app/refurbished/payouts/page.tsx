@@ -36,6 +36,24 @@ function PayoutsContent() {
           .single();
         setHasConnectId(!!profile?.stripe_connect_id);
         setConnectReady(!!profile?.stripe_connect_ready);
+
+        // The webhook that's supposed to flip stripe_connect_ready can be
+        // unreliable depending on which event format Stripe sends for a
+        // given account, so actively double-check with Stripe directly —
+        // this is the source of truth, not the (possibly stale) DB column.
+        if (profile?.stripe_connect_id) {
+          try {
+            const res = await fetch("/api/connect/status", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId: data.user.id }),
+            });
+            const result = await res.json();
+            if (typeof result.ready === "boolean") setConnectReady(result.ready);
+          } catch {
+            // If this check fails, fall back to whatever the DB already said above.
+          }
+        }
       }
       setChecking(false);
     });
