@@ -9,24 +9,6 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 const fmt = (n: number) =>
   "$" + n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-const CONDITION_COLOR: Record<string, string> = {
-  "New - Open Box": "#2e7d32",
-  "Used - Like New": "#2e7d32",
-  "Used - Good": "#1877f2",
-  "Used - Fair": "#a374e0",
-  "For Parts": "#b71c1c",
-};
-
-function timeAgo(dateString: string): string {
-  const diffMs = Date.now() - new Date(dateString).getTime();
-  const hours = Math.floor(diffMs / 3600000);
-  if (hours < 1) return "Just now";
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return `${Math.floor(days / 7)}w ago`;
-}
-
 type SortKey = "newest" | "price-low" | "price-high";
 
 export default function RefurbishedMarketPage() {
@@ -36,6 +18,9 @@ export default function RefurbishedMarketPage() {
   const [sortBy, setSortBy] = useState<SortKey>("newest");
   const [brandFilter, setBrandFilter] = useState("");
   const [deliveryFilter, setDeliveryFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
 
   useEffect(() => {
     fetchListings()
@@ -54,12 +39,22 @@ export default function RefurbishedMarketPage() {
     let list = listings;
     if (brandFilter) list = list.filter((l) => l.brand === brandFilter);
     if (deliveryFilter) list = list.filter((l) => l.delivery_method === deliveryFilter || l.delivery_method === "both");
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter((l) =>
+        `${l.brand} ${l.model} ${l.specs ?? ""}`.toLowerCase().includes(q)
+      );
+    }
+    const min = minPrice ? parseFloat(minPrice) : null;
+    const max = maxPrice ? parseFloat(maxPrice) : null;
+    if (min !== null) list = list.filter((l) => l.price >= min);
+    if (max !== null) list = list.filter((l) => l.price <= max);
     return [...list].sort((a, b) => {
       if (sortBy === "price-low") return a.price - b.price;
       if (sortBy === "price-high") return b.price - a.price;
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [listings, brandFilter, deliveryFilter, sortBy]);
+  }, [listings, brandFilter, deliveryFilter, searchQuery, minPrice, maxPrice, sortBy]);
 
   const selectStyle: React.CSSProperties = {
     fontSize: 13, padding: "9px 14px", borderRadius: "var(--btn-radius, 10px)",
@@ -67,10 +62,16 @@ export default function RefurbishedMarketPage() {
     fontFamily: "inherit", cursor: "pointer", outline: "none",
   };
 
+  const inputStyle: React.CSSProperties = {
+    fontSize: 13, padding: "9px 14px", borderRadius: "var(--btn-radius, 10px)",
+    border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--text)",
+    fontFamily: "inherit", outline: "none",
+  };
+
   const cardStyle: React.CSSProperties = {
-    background: "var(--card-bg, var(--surface))", border: "1px solid var(--border)",
-    borderRadius: "var(--card-radius, 10px)", overflow: "hidden",
-    display: "flex", flexDirection: "column", transition: "transform 0.15s, box-shadow 0.15s",
+    background: "var(--card-bg, var(--surface))", border: "none",
+    borderRadius: "8px", overflow: "hidden",
+    display: "flex", flexDirection: "column", transition: "box-shadow 0.15s",
   };
 
   return (
@@ -112,7 +113,19 @@ export default function RefurbishedMarketPage() {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10, marginBottom: 28, flexWrap: "wrap" }}>
+        <div style={{ position: "relative", marginBottom: 14 }}>
+          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--text-muted)", pointerEvents: "none" }}>
+            🔍
+          </span>
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search brand, model, or specs…"
+            style={{ ...inputStyle, width: "100%", padding: "12px 14px 12px 38px", boxSizing: "border-box", fontSize: 14 }}
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: 10, marginBottom: 28, flexWrap: "wrap", alignItems: "center" }}>
           <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} style={selectStyle}>
             <option value="newest">Sort: Newest</option>
             <option value="price-low">Sort: Price (Low to High)</option>
@@ -127,80 +140,96 @@ export default function RefurbishedMarketPage() {
             <option value="pickup">Local Pickup</option>
             <option value="shipping">Shipping</option>
           </select>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <input
+              type="number"
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              placeholder="Min"
+              style={{ ...inputStyle, width: 80 }}
+            />
+            <span style={{ color: "var(--text-muted)", fontSize: 13 }}>to</span>
+            <input
+              type="number"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              placeholder="Max"
+              style={{ ...inputStyle, width: 80 }}
+            />
+          </div>
+          {(searchQuery || minPrice || maxPrice || brandFilter || deliveryFilter) && (
+            <button
+              onClick={() => { setSearchQuery(""); setMinPrice(""); setMaxPrice(""); setBrandFilter(""); setDeliveryFilter(""); }}
+              style={{ ...selectStyle, cursor: "pointer", color: "var(--text-muted)" }}
+            >
+              Clear filters
+            </button>
+          )}
         </div>
 
         {loading ? (
           <div style={{ color: "var(--text-muted)", fontSize: 14, padding: "40px 0" }}>Loading listings…</div>
         ) : filtered.length === 0 ? (
           <div style={{ ...cardStyle, padding: "48px 24px", textAlign: "center", color: "var(--text-muted)", fontSize: 14 }}>
-            No listings yet.{" "}
-            <Link href="/refurbished/sell" style={{ color: "var(--accent)", fontWeight: 600 }}>
-              Be the first to list one.
-            </Link>
+            {listings.length === 0 ? (
+              <>
+                No listings yet.{" "}
+                <Link href="/refurbished/sell" style={{ color: "var(--accent)", fontWeight: 600 }}>
+                  Be the first to list one.
+                </Link>
+              </>
+            ) : (
+              "No listings match your search."
+            )}
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
-            {filtered.map((l) => {
-              const color = CONDITION_COLOR[l.condition] ?? "var(--accent)";
-              return (
-                <Link
-                  key={l.id}
-                  href={`/refurbished/${l.id}`}
-                  style={{ ...cardStyle, textDecoration: "none", color: "inherit" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.14)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
-                >
-                  {/* Photo — square, condition badge overlaid like FB Marketplace/eBay */}
-                  <div style={{ position: "relative", width: "100%", aspectRatio: "1 / 1", background: "var(--surface-2)" }}>
-                    {l.images?.[0] ? (
-                      <img
-                        src={l.images[0]}
-                        alt={`${l.brand} ${l.model}`}
-                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                      />
-                    ) : (
-                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, opacity: 0.15 }}>▭</div>
-                    )}
-                    <span style={{
-                      position: "absolute", top: 8, left: 8, fontSize: 10.5, fontWeight: 700, color: "#fff",
-                      background: color, padding: "3px 8px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.02em",
-                    }}>
-                      {l.condition.replace(/^(New|Used)\s*-\s*/, "")}
-                    </span>
-                    {l.status === "sold" && (
-                      <div style={{
-                        position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                      }}>
-                        <span style={{ color: "#fff", fontWeight: 800, fontSize: 15, letterSpacing: "0.05em", textTransform: "uppercase" }}>Sold</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Info — price first and boldest, then title, then meta, matching FB/eBay card order */}
-                  <div style={{ padding: "10px 12px 12px", display: "flex", flexDirection: "column", gap: 2 }}>
-                    <div style={{ fontSize: 19, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.01em" }}>
-                      {fmt(l.price)}
-                    </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px 14px" }}>
+            {filtered.map((l) => (
+              <Link
+                key={l.id}
+                href={`/refurbished/${l.id}`}
+                style={{ ...cardStyle, textDecoration: "none", color: "inherit" }}
+                onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 1px 6px rgba(0,0,0,0.15)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; }}
+              >
+                {/* Photo — near-square crop, no overlay, matching FB Marketplace search results */}
+                <div style={{ position: "relative", width: "100%", aspectRatio: "1 / 0.95", background: "var(--surface-2)", borderRadius: 8, overflow: "hidden" }}>
+                  {l.images?.[0] ? (
+                    <img
+                      src={l.images[0]}
+                      alt={`${l.brand} ${l.model}`}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                  ) : (
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, opacity: 0.15 }}>▭</div>
+                  )}
+                  {l.status === "sold" && (
                     <div style={{
-                      fontSize: 13.5, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis",
-                      whiteSpace: "nowrap", fontWeight: 500,
+                      position: "absolute", inset: 0, background: "rgba(255,255,255,0.75)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
                     }}>
-                      {l.brand} {l.model}
+                      <span style={{ color: "var(--text)", fontWeight: 800, fontSize: 13, letterSpacing: "0.04em", textTransform: "uppercase", border: "1.5px solid var(--text)", padding: "4px 10px", borderRadius: 4 }}>Sold</span>
                     </div>
-                    {l.specs && (
-                      <div style={{ fontSize: 11.5, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {l.specs}
-                      </div>
-                    )}
-                    <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 4, display: "flex", justifyContent: "space-between" }}>
-                      <span>{l.location || (l.delivery_method === "shipping" ? "Ships" : "Local pickup")}</span>
-                      <span>{timeAgo(l.created_at)}</span>
-                    </div>
+                  )}
+                </div>
+
+                {/* Info — price bold, then a 2-line title, then location; matches FB Marketplace card order */}
+                <div style={{ padding: "8px 2px 0", display: "flex", flexDirection: "column", gap: 2 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>
+                    {fmt(l.price)}
                   </div>
-                </Link>
-              );
-            })}
+                  <div style={{
+                    fontSize: 13, color: "var(--text)", lineHeight: 1.3,
+                    display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+                  }}>
+                    {l.brand} {l.model}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 1 }}>
+                    {l.location || (l.delivery_method === "shipping" ? "Ships" : "Local pickup")}
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
         )}
       </div>
