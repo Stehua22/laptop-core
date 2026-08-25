@@ -21,6 +21,10 @@ export default function RefurbishedMarketPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [expanded, setExpanded] = useState({ sort: false, price: true, brand: false, delivery: false });
+
+  const toggle = (key: keyof typeof expanded) =>
+    setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
 
   useEffect(() => {
     fetchListings()
@@ -74,98 +78,175 @@ export default function RefurbishedMarketPage() {
     display: "flex", flexDirection: "column", transition: "box-shadow 0.15s",
   };
 
+  const sectionHeaderStyle: React.CSSProperties = {
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+    width: "100%", background: "none", border: "none", cursor: "pointer",
+    padding: "12px 0", fontSize: 14, fontWeight: 700, color: "var(--text)",
+    fontFamily: "inherit", textAlign: "left",
+  };
+
+  const optionRowStyle: React.CSSProperties = {
+    display: "flex", alignItems: "center", gap: 8, padding: "6px 0",
+    fontSize: 13.5, color: "var(--text-muted)", cursor: "pointer",
+  };
+
   return (
     <div style={{ position: "relative", zIndex: 1, display: "flex" }}>
       <Sidebar activeKey="refurbished" />
-      <div style={{ flex: 1, maxWidth: 1200, margin: "0 auto", padding: "32px 20px" }}>
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: 10, color: "var(--accent)", letterSpacing: "0.25em", textTransform: "uppercase", marginBottom: 10, fontWeight: 600, opacity: 0.8 }}>
-            // buy and sell with other people
+      <div style={{ flex: 1, maxWidth: 1200, margin: "0 auto", padding: "32px 20px", display: "flex", gap: 32, alignItems: "flex-start" }}>
+        {/* Left filter panel — mirrors FB Marketplace's "Search results" sidebar */}
+        <aside style={{ width: 260, flexShrink: 0 }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>Marketplace</div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text)", margin: "0 0 16px", letterSpacing: "-0.02em" }}>
+            Search results
+          </h1>
+
+          <div style={{ position: "relative", marginBottom: 12 }}>
+            <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--text-muted)", pointerEvents: "none" }}>
+              🔍
+            </span>
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search Marketplace"
+              style={{ ...pillInputStyle, width: "100%", padding: "10px 14px 10px 36px", boxSizing: "border-box", fontSize: 13.5 }}
+            />
           </div>
-          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-            <div>
-              <h1 style={{ fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 800, lineHeight: 1, letterSpacing: "-0.04em", color: "var(--text)", margin: 0 }}>
-                Refurbished Market<span style={{ color: "var(--accent)", opacity: 0.9 }}>.</span>
-              </h1>
-              <p style={{ marginTop: 10, color: "var(--text-muted)", fontSize: 13 }}>
-                Laptops listed by other people · {filtered.length} listing{filtered.length !== 1 ? "s" : ""}
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              {loggedIn && (
-                <Link href="/refurbished/my-listings" style={{
-                  fontSize: 13, fontWeight: 600, padding: "11px 18px", borderRadius: "var(--btn-radius, 10px)",
-                  border: "1px solid var(--border)", color: "var(--text-muted)", textDecoration: "none",
-                }}>
-                  My Listings
-                </Link>
-              )}
-              <Link href="/refurbished/sell" style={{
-                background: "var(--accent)", color: "#fff", border: "none",
-                borderRadius: "var(--btn-radius, 10px)", padding: "11px 22px",
-                fontWeight: 700, fontSize: 14, textDecoration: "none",
-                display: "flex", alignItems: "center", gap: 6,
-                boxShadow: "0 4px 16px var(--glow)",
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+            {loggedIn && (
+              <Link href="/refurbished/my-listings" style={{
+                fontSize: 13, fontWeight: 600, padding: "10px 14px", borderRadius: "var(--btn-radius, 10px)",
+                border: "1px solid var(--border)", color: "var(--text)", textDecoration: "none", textAlign: "center",
               }}>
-                + Sell Your Laptop
+                My Listings
               </Link>
+            )}
+            <Link href="/refurbished/sell" style={{
+              background: "var(--accent)", color: "#fff", border: "none",
+              borderRadius: "var(--btn-radius, 10px)", padding: "10px 14px",
+              fontWeight: 700, fontSize: 13.5, textDecoration: "none", textAlign: "center",
+            }}>
+              + Create new listing
+            </Link>
+          </div>
+
+          <div style={{ borderTop: "1px solid var(--border)", paddingTop: 4 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "var(--text)", marginTop: 12, marginBottom: 2 }}>Filters</div>
+            <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginBottom: 4 }}>
+              {filtered.length} listing{filtered.length !== 1 ? "s" : ""}
             </div>
-          </div>
-        </div>
 
-        <div style={{ position: "relative", marginBottom: 14 }}>
-          <span style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--text-muted)", pointerEvents: "none" }}>
-            🔍
-          </span>
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Marketplace"
-            style={{ ...pillInputStyle, width: "100%", padding: "13px 16px 13px 40px", boxSizing: "border-box", fontSize: 14.5 }}
-          />
-        </div>
+            {/* Sort by */}
+            <div style={{ borderTop: "1px solid var(--border)" }}>
+              <button style={sectionHeaderStyle} onClick={() => toggle("sort")}>
+                Sort by <span style={{ opacity: 0.6 }}>{expanded.sort ? "▴" : "▾"}</span>
+              </button>
+              {expanded.sort && (
+                <div style={{ paddingBottom: 8 }}>
+                  {([
+                    ["newest", "Newest"],
+                    ["price-low", "Price: Low to High"],
+                    ["price-high", "Price: High to Low"],
+                  ] as [SortKey, string][]).map(([key, label]) => (
+                    <label key={key} style={optionRowStyle}>
+                      <input type="radio" checked={sortBy === key} onChange={() => setSortBy(key)} />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap", alignItems: "center" }}>
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} style={pillStyle}>
-            <option value="newest">Sort: Newest</option>
-            <option value="price-low">Sort: Price (Low to High)</option>
-            <option value="price-high">Sort: Price (High to Low)</option>
-          </select>
-          <select value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)} style={pillStyle}>
-            <option value="">All Brands</option>
-            {brands.map((b) => <option key={b} value={b}>{b}</option>)}
-          </select>
-          <select value={deliveryFilter} onChange={(e) => setDeliveryFilter(e.target.value)} style={pillStyle}>
-            <option value="">Pickup or Shipping</option>
-            <option value="pickup">Local Pickup</option>
-            <option value="shipping">Shipping</option>
-          </select>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-2)", borderRadius: 999, padding: "5px 12px" }}>
-            <input
-              type="number"
-              value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
-              placeholder="Min"
-              style={{ ...pillInputStyle, background: "transparent", width: 60, padding: "4px 0" }}
-            />
-            <span style={{ color: "var(--text-muted)", fontSize: 13 }}>–</span>
-            <input
-              type="number"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              placeholder="Max"
-              style={{ ...pillInputStyle, background: "transparent", width: 60, padding: "4px 0" }}
-            />
+            {/* Price */}
+            <div style={{ borderTop: "1px solid var(--border)" }}>
+              <button style={sectionHeaderStyle} onClick={() => toggle("price")}>
+                Price <span style={{ opacity: 0.6 }}>{expanded.price ? "▴" : "▾"}</span>
+              </button>
+              {expanded.price && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 12 }}>
+                  <input
+                    type="number"
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                    placeholder="Min"
+                    style={{ ...pillInputStyle, width: "100%", padding: "8px 12px" }}
+                  />
+                  <span style={{ color: "var(--text-muted)", fontSize: 13 }}>to</span>
+                  <input
+                    type="number"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                    placeholder="Max"
+                    style={{ ...pillInputStyle, width: "100%", padding: "8px 12px" }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Brand */}
+            <div style={{ borderTop: "1px solid var(--border)" }}>
+              <button style={sectionHeaderStyle} onClick={() => toggle("brand")}>
+                Brand <span style={{ opacity: 0.6 }}>{expanded.brand ? "▴" : "▾"}</span>
+              </button>
+              {expanded.brand && (
+                <div style={{ paddingBottom: 8 }}>
+                  <label style={optionRowStyle}>
+                    <input type="radio" checked={brandFilter === ""} onChange={() => setBrandFilter("")} />
+                    All Brands
+                  </label>
+                  {brands.map((b) => (
+                    <label key={b} style={optionRowStyle}>
+                      <input type="radio" checked={brandFilter === b} onChange={() => setBrandFilter(b)} />
+                      {b}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Delivery */}
+            <div style={{ borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
+              <button style={sectionHeaderStyle} onClick={() => toggle("delivery")}>
+                Delivery <span style={{ opacity: 0.6 }}>{expanded.delivery ? "▴" : "▾"}</span>
+              </button>
+              {expanded.delivery && (
+                <div style={{ paddingBottom: 8 }}>
+                  {[
+                    ["", "Pickup or Shipping"],
+                    ["pickup", "Local Pickup"],
+                    ["shipping", "Shipping"],
+                  ].map(([key, label]) => (
+                    <label key={key} style={optionRowStyle}>
+                      <input type="radio" checked={deliveryFilter === key} onChange={() => setDeliveryFilter(key)} />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {(searchQuery || minPrice || maxPrice || brandFilter || deliveryFilter) && (
+              <button
+                onClick={() => { setSearchQuery(""); setMinPrice(""); setMaxPrice(""); setBrandFilter(""); setDeliveryFilter(""); }}
+                style={{ ...pillStyle, color: "var(--accent)", fontWeight: 600, marginTop: 12, width: "100%", textAlign: "center" }}
+              >
+                Clear filters
+              </button>
+            )}
           </div>
-          {(searchQuery || minPrice || maxPrice || brandFilter || deliveryFilter) && (
-            <button
-              onClick={() => { setSearchQuery(""); setMinPrice(""); setMaxPrice(""); setBrandFilter(""); setDeliveryFilter(""); }}
-              style={{ ...pillStyle, color: "var(--accent)", fontWeight: 600 }}
-            >
-              Clear filters
-            </button>
-          )}
-        </div>
+        </aside>
+
+        {/* Right column — results grid */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ marginBottom: 20 }}>
+            <h2 style={{ fontSize: "clamp(1.6rem, 4vw, 2.2rem)", fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text)", margin: 0 }}>
+              Refurbished Market<span style={{ color: "var(--accent)", opacity: 0.9 }}>.</span>
+            </h2>
+            <p style={{ marginTop: 6, color: "var(--text-muted)", fontSize: 13 }}>
+              Laptops listed by other people
+            </p>
+          </div>
 
         {loading ? (
           <div style={{ color: "var(--text-muted)", fontSize: 14, padding: "40px 0" }}>Loading listings…</div>
@@ -232,6 +313,7 @@ export default function RefurbishedMarketPage() {
             ))}
           </div>
         )}
+        </div>
       </div>
     </div>
   );
