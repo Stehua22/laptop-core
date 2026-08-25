@@ -56,15 +56,15 @@ export default function RefurbishedMarketPage() {
     });
   }, [listings, brandFilter, deliveryFilter, searchQuery, minPrice, maxPrice, sortBy]);
 
-  const selectStyle: React.CSSProperties = {
-    fontSize: 13, padding: "9px 14px", borderRadius: "var(--btn-radius, 10px)",
-    border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--text)",
-    fontFamily: "inherit", cursor: "pointer", outline: "none",
+  const pillStyle: React.CSSProperties = {
+    fontSize: 13.5, padding: "9px 16px", borderRadius: 999,
+    border: "none", background: "var(--surface-2)", color: "var(--text)",
+    fontFamily: "inherit", cursor: "pointer", outline: "none", fontWeight: 500,
   };
 
-  const inputStyle: React.CSSProperties = {
-    fontSize: 13, padding: "9px 14px", borderRadius: "var(--btn-radius, 10px)",
-    border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--text)",
+  const pillInputStyle: React.CSSProperties = {
+    fontSize: 13.5, padding: "9px 16px", borderRadius: 999,
+    border: "none", background: "var(--surface-2)", color: "var(--text)",
     fontFamily: "inherit", outline: "none",
   };
 
@@ -114,53 +114,53 @@ export default function RefurbishedMarketPage() {
         </div>
 
         <div style={{ position: "relative", marginBottom: 14 }}>
-          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--text-muted)", pointerEvents: "none" }}>
+          <span style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--text-muted)", pointerEvents: "none" }}>
             🔍
           </span>
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search brand, model, or specs…"
-            style={{ ...inputStyle, width: "100%", padding: "12px 14px 12px 38px", boxSizing: "border-box", fontSize: 14 }}
+            placeholder="Search Marketplace"
+            style={{ ...pillInputStyle, width: "100%", padding: "13px 16px 13px 40px", boxSizing: "border-box", fontSize: 14.5 }}
           />
         </div>
 
-        <div style={{ display: "flex", gap: 10, marginBottom: 28, flexWrap: "wrap", alignItems: "center" }}>
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} style={selectStyle}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap", alignItems: "center" }}>
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortKey)} style={pillStyle}>
             <option value="newest">Sort: Newest</option>
             <option value="price-low">Sort: Price (Low to High)</option>
             <option value="price-high">Sort: Price (High to Low)</option>
           </select>
-          <select value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)} style={selectStyle}>
+          <select value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)} style={pillStyle}>
             <option value="">All Brands</option>
             {brands.map((b) => <option key={b} value={b}>{b}</option>)}
           </select>
-          <select value={deliveryFilter} onChange={(e) => setDeliveryFilter(e.target.value)} style={selectStyle}>
+          <select value={deliveryFilter} onChange={(e) => setDeliveryFilter(e.target.value)} style={pillStyle}>
             <option value="">Pickup or Shipping</option>
             <option value="pickup">Local Pickup</option>
             <option value="shipping">Shipping</option>
           </select>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-2)", borderRadius: 999, padding: "5px 12px" }}>
             <input
               type="number"
               value={minPrice}
               onChange={(e) => setMinPrice(e.target.value)}
               placeholder="Min"
-              style={{ ...inputStyle, width: 80 }}
+              style={{ ...pillInputStyle, background: "transparent", width: 60, padding: "4px 0" }}
             />
-            <span style={{ color: "var(--text-muted)", fontSize: 13 }}>to</span>
+            <span style={{ color: "var(--text-muted)", fontSize: 13 }}>–</span>
             <input
               type="number"
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
               placeholder="Max"
-              style={{ ...inputStyle, width: 80 }}
+              style={{ ...pillInputStyle, background: "transparent", width: 60, padding: "4px 0" }}
             />
           </div>
           {(searchQuery || minPrice || maxPrice || brandFilter || deliveryFilter) && (
             <button
               onClick={() => { setSearchQuery(""); setMinPrice(""); setMaxPrice(""); setBrandFilter(""); setDeliveryFilter(""); }}
-              style={{ ...selectStyle, cursor: "pointer", color: "var(--text-muted)" }}
+              style={{ ...pillStyle, color: "var(--accent)", fontWeight: 600 }}
             >
               Clear filters
             </button>
@@ -183,7 +183,7 @@ export default function RefurbishedMarketPage() {
             )}
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "20px 14px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "16px 10px" }}>
             {filtered.map((l) => (
               <Link
                 key={l.id}
@@ -215,7 +215,7 @@ export default function RefurbishedMarketPage() {
 
                 {/* Info — price bold, then a 2-line title, then location; matches FB Marketplace card order */}
                 <div style={{ padding: "8px 2px 0", display: "flex", flexDirection: "column", gap: 2 }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>
+                  <div style={{ fontSize: 16.5, fontWeight: 800, color: "var(--text)" }}>
                     {fmt(l.price)}
                   </div>
                   <div style={{
