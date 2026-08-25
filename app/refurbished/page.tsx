@@ -10,12 +10,22 @@ const fmt = (n: number) =>
   "$" + n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 const CONDITION_COLOR: Record<string, string> = {
-  "New - Open Box": "#e0a530",
-  "Used - Like New": "#4caf7d",
-  "Used - Good": "#5e8fe8",
+  "New - Open Box": "#2e7d32",
+  "Used - Like New": "#2e7d32",
+  "Used - Good": "#1877f2",
   "Used - Fair": "#a374e0",
-  "For Parts": "#ec6f9b",
+  "For Parts": "#b71c1c",
 };
+
+function timeAgo(dateString: string): string {
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  const hours = Math.floor(diffMs / 3600000);
+  if (hours < 1) return "Just now";
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return `${Math.floor(days / 7)}w ago`;
+}
 
 type SortKey = "newest" | "price-low" | "price-high";
 
@@ -59,8 +69,8 @@ export default function RefurbishedMarketPage() {
 
   const cardStyle: React.CSSProperties = {
     background: "var(--card-bg, var(--surface))", border: "1px solid var(--border)",
-    borderRadius: "var(--modal-radius, 16px)", overflow: "hidden",
-    display: "flex", flexDirection: "column", transition: "transform 0.2s, box-shadow 0.2s, border-color 0.2s",
+    borderRadius: "var(--card-radius, 10px)", overflow: "hidden",
+    display: "flex", flexDirection: "column", transition: "transform 0.15s, box-shadow 0.15s",
   };
 
   return (
@@ -129,7 +139,7 @@ export default function RefurbishedMarketPage() {
             </Link>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 18 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
             {filtered.map((l) => {
               const color = CONDITION_COLOR[l.condition] ?? "var(--accent)";
               return (
@@ -137,27 +147,55 @@ export default function RefurbishedMarketPage() {
                   key={l.id}
                   href={`/refurbished/${l.id}`}
                   style={{ ...cardStyle, textDecoration: "none", color: "inherit" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = "var(--border-hover, var(--accent))"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.borderColor = "var(--border)"; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.14)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
                 >
-                  <div style={{ height: 3, background: `linear-gradient(90deg, ${color}, ${color}60)` }} />
-                  {l.images?.[0] ? (
-                    <div style={{ height: 150, background: "var(--surface-2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <img src={l.images[0]} alt={`${l.brand} ${l.model}`} style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain" }} />
-                    </div>
-                  ) : (
-                    <div style={{ height: 150, background: "var(--surface-2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, opacity: 0.15 }}>▭</div>
-                  )}
-                  <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
-                    <span style={{ alignSelf: "flex-start", fontSize: 11, fontWeight: 700, color, background: `${color}18`, padding: "3px 9px", borderRadius: 999 }}>
-                      {l.condition}
+                  {/* Photo — square, condition badge overlaid like FB Marketplace/eBay */}
+                  <div style={{ position: "relative", width: "100%", aspectRatio: "1 / 1", background: "var(--surface-2)" }}>
+                    {l.images?.[0] ? (
+                      <img
+                        src={l.images[0]}
+                        alt={`${l.brand} ${l.model}`}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                      />
+                    ) : (
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, opacity: 0.15 }}>▭</div>
+                    )}
+                    <span style={{
+                      position: "absolute", top: 8, left: 8, fontSize: 10.5, fontWeight: 700, color: "#fff",
+                      background: color, padding: "3px 8px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.02em",
+                    }}>
+                      {l.condition.replace(/^(New|Used)\s*-\s*/, "")}
                     </span>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>{l.brand} {l.model}</div>
-                    {l.specs && <div style={{ fontSize: 12.5, color: "var(--text-muted)", lineHeight: 1.4 }}>{l.specs}</div>}
-                    <div style={{ marginTop: "auto", fontSize: 20, fontWeight: 800, color: "var(--text)", paddingTop: 8 }}>{fmt(l.price)}</div>
-                    <div style={{ fontSize: 11.5, color: "var(--text-muted)", display: "flex", justifyContent: "space-between" }}>
-                      <span>{l.delivery_method === "both" ? "Pickup or shipping" : l.delivery_method === "pickup" ? "Local pickup" : "Ships"}</span>
-                      {l.location && <span>{l.location}</span>}
+                    {l.status === "sold" && (
+                      <div style={{
+                        position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <span style={{ color: "#fff", fontWeight: 800, fontSize: 15, letterSpacing: "0.05em", textTransform: "uppercase" }}>Sold</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info — price first and boldest, then title, then meta, matching FB/eBay card order */}
+                  <div style={{ padding: "10px 12px 12px", display: "flex", flexDirection: "column", gap: 2 }}>
+                    <div style={{ fontSize: 19, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.01em" }}>
+                      {fmt(l.price)}
+                    </div>
+                    <div style={{
+                      fontSize: 13.5, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis",
+                      whiteSpace: "nowrap", fontWeight: 500,
+                    }}>
+                      {l.brand} {l.model}
+                    </div>
+                    {l.specs && (
+                      <div style={{ fontSize: 11.5, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {l.specs}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 4, display: "flex", justifyContent: "space-between" }}>
+                      <span>{l.location || (l.delivery_method === "shipping" ? "Ships" : "Local pickup")}</span>
+                      <span>{timeAgo(l.created_at)}</span>
                     </div>
                   </div>
                 </Link>
