@@ -102,14 +102,106 @@ const VIEWS: Record<string, { pos: [number, number, number]; target: [number, nu
   top: { pos: [0.01, 4.2, 0.01], target: [0, 0, 0] },
 };
 
-// Overall proportions, in scene units (roughly a 14" laptop)
+// Overall footprint stays constant (screen-size scaling applies uniformly on top);
+// everything else that actually varies between laptop families lives in SHAPE_PROFILES below.
 const DIMS = {
   width: 2.2,
   depth: 1.5,
-  baseThickness: 0.07,
-  lidThickness: 0.04,
-  cornerRadius: 0.04,
 };
+
+// ---- Shape profiles: brand families get genuinely different proportions/details, not just color ----
+type ShapeProfile = {
+  name: string;
+  baseThickness: number;
+  lidThickness: number;
+  cornerRadius: number;      // 0 = sharp/angular, higher = rounded consumer look
+  deckInsetX: number;        // how far the keyboard deck sits in from the sides
+  bezelInset: number;        // screen bezel thickness (larger = thicker bezel, ThinkPad-like)
+  vents: "side" | "rear" | "hidden";
+  keyHeight: number;         // keycap thickness -- flatter for ultrabooks, taller for gaming
+  keyGap: number;
+  hasTrackpoint: boolean;
+  hasCameraBump: boolean;
+  logoStyle: "centered-glow" | "corner-etched";
+};
+
+const SHAPE_PROFILES: Record<string, ShapeProfile> = {
+  thinkpad: {
+    name: "thinkpad",
+    baseThickness: 0.078,
+    lidThickness: 0.038,
+    cornerRadius: 0.016,
+    deckInsetX: 0.16,
+    bezelInset: 0.05,
+    vents: "side",
+    keyHeight: 0.014,
+    keyGap: 0.02,
+    hasTrackpoint: true,
+    hasCameraBump: true,
+    logoStyle: "corner-etched",
+  },
+  macbook: {
+    name: "macbook",
+    baseThickness: 0.052,
+    lidThickness: 0.028,
+    cornerRadius: 0.065,
+    deckInsetX: 0.11,
+    bezelInset: 0.022,
+    vents: "hidden",
+    keyHeight: 0.009,
+    keyGap: 0.014,
+    hasTrackpoint: false,
+    hasCameraBump: false,
+    logoStyle: "centered-glow",
+  },
+  gaming: {
+    name: "gaming",
+    baseThickness: 0.098,
+    lidThickness: 0.05,
+    cornerRadius: 0.022,
+    deckInsetX: 0.18,
+    bezelInset: 0.035,
+    vents: "rear",
+    keyHeight: 0.02,
+    keyGap: 0.016,
+    hasTrackpoint: false,
+    hasCameraBump: false,
+    logoStyle: "centered-glow",
+  },
+  default: {
+    name: "default",
+    baseThickness: 0.07,
+    lidThickness: 0.04,
+    cornerRadius: 0.04,
+    deckInsetX: 0.14,
+    bezelInset: 0.045,
+    vents: "side",
+    keyHeight: 0.016,
+    keyGap: 0.018,
+    hasTrackpoint: false,
+    hasCameraBump: false,
+    logoStyle: "centered-glow",
+  },
+};
+
+function isThinkpadName(brand?: string, model?: string): boolean {
+  const b = (brand || "").toLowerCase();
+  const m = (model || "").toLowerCase();
+  return b.includes("thinkpad") || m.includes("thinkpad") ||
+    (b.includes("lenovo") && (m.includes("x1") || m.includes("t14") || m.includes("carbon") || m.includes("p1")));
+}
+
+function profileForLaptop(brand?: string, model?: string): ShapeProfile {
+  const b = (brand || "").toLowerCase();
+  const m = (model || "").toLowerCase();
+  if (b.includes("apple") || b.includes("macbook") || m.includes("macbook")) return SHAPE_PROFILES.macbook;
+  if (isThinkpadName(brand, model)) return SHAPE_PROFILES.thinkpad;
+  if (
+    b.includes("rog") || m.includes("rog") || b.includes("razer") || b.includes("msi") ||
+    m.includes("legion") || m.includes("predator") || m.includes("alienware") || m.includes("titan")
+  ) return SHAPE_PROFILES.gaming;
+  return SHAPE_PROFILES.default;
+}
 
 function makeBrushedMetalNormalMap(): THREE.CanvasTexture {
   const size = 256;
@@ -136,7 +228,6 @@ function makeBrushedMetalNormalMap(): THREE.CanvasTexture {
   return tex;
 }
 
-// Subtle roughness variation map so the metal body doesn't look like flat plastic
 function makeMicroRoughnessMap(): THREE.CanvasTexture {
   const size = 256;
   const canvas = document.createElement("canvas");
@@ -183,7 +274,6 @@ function getDisplayTexture(theme: "windows" | "mac", customUrl?: string): THREE.
   }
   let url = theme === "windows" ? win11B64 : macB64;
   if (customUrl) {
-    // Proxy the image URL to bypass CORS and prevent black screens in WebGL
     url = `https://api.allorigins.win/raw?url=${encodeURIComponent(customUrl)}`;
   }
   texLoader.crossOrigin = "anonymous";
@@ -237,7 +327,7 @@ function makeBrandLogoTexture(brand: string, model: string): THREE.CanvasTexture
     ctx.font = "italic bold 160px serif";
     ctx.fillText("hp", 256, 270);
   } else if (b.includes("lenovo") || b.includes("thinkpad") || m.includes("thinkpad") || m.includes("legion") || m.includes("yoga")) {
-    const isThinkpad = b.includes("thinkpad") || m.includes("thinkpad") || (b.includes("lenovo") && (m.includes("x1") || m.includes("t14") || m.includes("carbon") || m.includes("p1")));
+    const isThinkpad = isThinkpadName(brand, model);
     if (isThinkpad) {
       ctx.font = "bold 90px sans-serif";
       ctx.fillText("ThinkPad", 256, 256);
@@ -302,15 +392,21 @@ type LaptopMeshRefs = {
   cameraBump: THREE.Mesh;
   bottomDetails: THREE.Group;
   group: THREE.Group;
+  profile: ShapeProfile;
 };
 
+// buildLaptop now takes a ShapeProfile so different laptop families get real
+// geometric differences (thickness, corner radius, deck size, vents, key height)
+// instead of only a recolored identical box.
 function buildLaptop(
   bodyMat: THREE.MeshPhysicalMaterial,
-  displayTexture: THREE.Texture
+  displayTexture: THREE.Texture,
+  profile: ShapeProfile
 ): { group: THREE.Group; refs: LaptopMeshRefs } {
   const group = new THREE.Group();
   const bodyMeshes: THREE.Mesh[] = [];
-  const { width, depth, baseThickness, lidThickness, cornerRadius } = DIMS;
+  const { width, depth } = DIMS;
+  const { baseThickness, lidThickness, cornerRadius, deckInsetX, bezelInset, keyHeight, keyGap } = profile;
 
   const darkMat = new THREE.MeshStandardMaterial({
     color: "#181a1e",
@@ -343,6 +439,13 @@ function buildLaptop(
     transparent: true,
     opacity: 1,
   });
+  const ventAccentMat = new THREE.MeshStandardMaterial({
+    color: profile.vents === "rear" ? "#ff3b3b" : "#0d0e0f",
+    roughness: 0.6,
+    metalness: 0.3,
+    emissive: profile.vents === "rear" ? new THREE.Color("#ff3b3b") : new THREE.Color("#000000"),
+    emissiveIntensity: profile.vents === "rear" ? 0.35 : 0,
+  });
 
   const base = new THREE.Mesh(
     new RoundedBoxGeometry(width, baseThickness, depth, 16, cornerRadius),
@@ -368,17 +471,34 @@ function buildLaptop(
     group.add(foot);
   });
 
-  const ventGeo = new THREE.BoxGeometry(0.09, 0.006, 0.012);
-  for (let i = 0; i < 10; i++) {
-    const vent = new THREE.Mesh(ventGeo, darkMat);
-    vent.position.set(-width / 2 + 0.25 + i * 0.1, baseThickness - 0.002, -depth / 2 + 0.01);
-    group.add(vent);
+  // ---- Vents: differ by profile instead of always identical side slats ----
+  if (profile.vents === "side") {
+    const ventGeo = new THREE.BoxGeometry(0.09, 0.006, 0.012);
+    for (let i = 0; i < 10; i++) {
+      const vent = new THREE.Mesh(ventGeo, darkMat);
+      vent.position.set(-width / 2 + 0.25 + i * 0.1, baseThickness - 0.002, -depth / 2 + 0.01);
+      group.add(vent);
+    }
+  } else if (profile.vents === "rear") {
+    // Aggressive rear-exhaust slats with a colored accent line, gaming-laptop style
+    const ventGeo = new THREE.BoxGeometry(0.05, baseThickness * 0.7, 0.014);
+    const slatCount = 14;
+    const spanW = width - 0.3;
+    for (let i = 0; i < slatCount; i++) {
+      const vent = new THREE.Mesh(ventGeo, darkMat);
+      vent.position.set(-spanW / 2 + (i / (slatCount - 1)) * spanW, baseThickness * 0.55, -depth / 2 + 0.006);
+      group.add(vent);
+    }
+    const accent = new THREE.Mesh(new THREE.BoxGeometry(spanW + 0.02, 0.006, 0.01), ventAccentMat);
+    accent.position.set(0, baseThickness * 0.2, -depth / 2 + 0.006);
+    group.add(accent);
   }
+  // profile.vents === "hidden" -> no visible vent geometry (MacBook-style bottom-only venting, omitted for simplicity)
 
-  const deckWidth = width - 0.28;
+  const deckWidth = width - deckInsetX * 2;
   const deckDepth = depth - 0.42;
   const deck = new THREE.Mesh(
-    new RoundedBoxGeometry(deckWidth, 0.006, deckDepth, 3, 0.02),
+    new RoundedBoxGeometry(deckWidth, 0.006, deckDepth, 3, Math.min(0.02, cornerRadius)),
     darkMat
   );
   deck.position.set(0, baseThickness + 0.003, -depth * 0.06);
@@ -400,10 +520,9 @@ function buildLaptop(
   const cols = 14;
   const rows = 5;
   const keySize = 0.1;
-  const keyGap = 0.018;
   const keyStepX = keySize + keyGap;
   const keyStepZ = keySize + keyGap;
-  const keyGeo = new RoundedBoxGeometry(keySize, 0.016, keySize, 3, 0.024);
+  const keyGeo = new RoundedBoxGeometry(keySize, keyHeight, keySize, 3, 0.024);
   const keysMesh = new THREE.InstancedMesh(keyGeo, keyMat, cols * rows);
   keysMesh.castShadow = true;
   keysMesh.receiveShadow = true;
@@ -415,7 +534,7 @@ function buildLaptop(
     for (let c = 0; c < cols; c++) {
       const x = -gridWidth / 2 + c * keyStepX;
       const z = deck.position.z - gridDepth / 2 + r * keyStepZ + 0.06;
-      dummy.position.set(x, baseThickness + 0.014, z);
+      dummy.position.set(x, baseThickness + keyHeight / 2 + 0.006, z);
       dummy.updateMatrix();
       keysMesh.setMatrixAt(idx, dummy.matrix);
       idx++;
@@ -424,13 +543,13 @@ function buildLaptop(
   keysMesh.instanceMatrix.needsUpdate = true;
   group.add(keysMesh);
 
-  // ThinkPad TrackPoint (red dot in the middle of keyboard)
+  // ThinkPad TrackPoint (red dot in the middle of keyboard) -- visibility set per-profile below
   const trackpoint = new THREE.Mesh(
     new THREE.SphereGeometry(0.015, 16, 16),
     new THREE.MeshStandardMaterial({ color: "#ff0000", roughness: 0.7 })
   );
   trackpoint.position.set(0, baseThickness + 0.02, deck.position.z);
-  trackpoint.visible = false;
+  trackpoint.visible = profile.hasTrackpoint;
   group.add(trackpoint);
 
   const trackpad = new THREE.Mesh(
@@ -477,7 +596,7 @@ function buildLaptop(
   screenPivot.position.set(0, baseThickness, -depth / 2);
   group.add(screenPivot);
 
-  // Bottom Details (Feet and Vents)
+  // Bottom Details (Feet and Vents) -- shown for ThinkPad-style profiles only
   const bottomDetails = new THREE.Group();
   bottomDetails.position.set(0, 0, 0);
 
@@ -522,7 +641,7 @@ function buildLaptop(
   );
   cameraBump.position.set(0, depth + 0.01, -lidThickness / 2);
   cameraBump.castShadow = true;
-  cameraBump.visible = false;
+  cameraBump.visible = profile.hasCameraBump;
   screenPivot.add(cameraBump);
   bodyMeshes.push(cameraBump);
 
@@ -554,12 +673,15 @@ function buildLaptop(
     })
   );
   secondaryLogo.rotation.y = Math.PI;
-  secondaryLogo.position.set(0, 0, -lidThickness - 0.001);
+  secondaryLogo.position.set(-width / 2 + 0.15, 0.25, -lidThickness - 0.001);
+  secondaryLogo.rotation.z = Math.PI / 2;
   secondaryLogo.visible = false;
   screenPivot.add(secondaryLogo);
 
+  // Bezel thickness now varies by profile -- ThinkPad gets a visibly thicker bezel,
+  // MacBook a much thinner one, instead of both sharing one fixed inset.
   const bezel = new THREE.Mesh(
-    new THREE.PlaneGeometry(width - 0.09, depth - 0.09),
+    new THREE.PlaneGeometry(width - bezelInset, depth - bezelInset),
     bezelMat
   );
   bezel.position.set(0, depth / 2, 0.002);
@@ -571,14 +693,14 @@ function buildLaptop(
     toneMapped: false,
   });
   const display = new THREE.Mesh(
-    new THREE.PlaneGeometry(width - 0.16, depth - 0.2),
+    new THREE.PlaneGeometry(width - bezelInset * 1.8, depth - bezelInset * 2.2),
     displayMat
   );
   display.position.set(0, depth / 2 + 0.02, 0.003);
   screenPivot.add(display);
 
   const screenGlass = new THREE.Mesh(
-    new THREE.PlaneGeometry(width - 0.09, depth - 0.09),
+    new THREE.PlaneGeometry(width - bezelInset, depth - bezelInset),
     screenGlassMat
   );
   screenGlass.position.set(0, depth / 2, 0.0035);
@@ -593,8 +715,19 @@ function buildLaptop(
 
   return {
     group,
-    refs: { bodyMeshes, screenPivot, display, backlightPlane, logo, secondaryLogo, trackpoint, cameraBump, bottomDetails, group },
+    refs: { bodyMeshes, screenPivot, display, backlightPlane, logo, secondaryLogo, trackpoint, cameraBump, bottomDetails, group, profile },
   };
+}
+
+// Disposes every geometry/material in a group so switching profiles doesn't leak GPU memory
+function disposeGroup(group: THREE.Group) {
+  group.traverse((child) => {
+    if (child instanceof THREE.Mesh || child instanceof THREE.InstancedMesh) {
+      child.geometry?.dispose();
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach((m) => m?.dispose());
+    }
+  });
 }
 
 export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: { isAdmin?: boolean; studioMode?: boolean }) {
@@ -607,6 +740,9 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   const groundRef = useRef<THREE.Mesh | null>(null);
   const customModelRef = useRef<THREE.Group | null>(null);
   const blobUrlRef = useRef<string | null>(null);
+  const bodyMatRef = useRef<THREE.MeshPhysicalMaterial | null>(null);
+  const normalMapRef = useRef<THREE.CanvasTexture | null>(null);
+  const roughnessMapRef = useRef<THREE.CanvasTexture | null>(null);
 
   const [laptops, setLaptops] = useState<Laptop[]>([]);
   const [selectedId, setSelectedId] = useState<number | "">("");
@@ -807,7 +943,6 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(BACKGROUNDS[0].color);
-    // Soft fog helps separate the laptop from the backdrop and adds depth
     scene.fog = new THREE.Fog(BACKGROUNDS[0].color, 8, 16);
     sceneRef.current = scene;
 
@@ -830,17 +965,16 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.055;          // smoother, more weighty feel
+    controls.dampingFactor = 0.055;
     controls.minDistance = 1.8;
     controls.maxDistance = 7.5;
     controls.maxPolarAngle = Math.PI * 0.49;
-    controls.zoomSpeed = 0.7;                // gentler scroll zoom
-    controls.rotateSpeed = 0.65;             // slightly slower drag rotation
+    controls.zoomSpeed = 0.7;
+    controls.rotateSpeed = 0.65;
     controls.panSpeed = 0.8;
     controls.target.set(...VIEWS.iso.target);
     controlsRef.current = controls;
 
-    // ---- Lighting: soft hemisphere fill + key + rim + gentle front fill ----
     const hemi = new THREE.HemisphereLight(0xf5f7ff, 0x3a3d45, 0.55);
     scene.add(hemi);
 
@@ -862,7 +996,6 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     rimLight.position.set(-4.5, 3.5, -3.5);
     scene.add(rimLight);
 
-    // Low, soft front fill so the shadowed face of the laptop isn't pure black
     const fillLight = new THREE.DirectionalLight(0xffffff, 0.25);
     fillLight.position.set(-1.5, 1.2, 4);
     scene.add(fillLight);
@@ -892,6 +1025,8 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
 
     const normalMap = makeBrushedMetalNormalMap();
     const roughnessMap = makeMicroRoughnessMap();
+    normalMapRef.current = normalMap;
+    roughnessMapRef.current = roughnessMap;
     const finish = FINISHES[finishIndex];
     const bodyMat = new THREE.MeshPhysicalMaterial({
       color: baseColor,
@@ -906,41 +1041,38 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
       roughnessMap,
       envMapIntensity: 1.3,
     });
+    bodyMatRef.current = bodyMat;
 
     const initialDisplayTexture = getDisplayTexture(osTheme, customDisplayUrl);
-    const { group: laptop, refs } = buildLaptop(bodyMat, initialDisplayTexture);
+    const initialProfile = profileForLaptop(brandName, modelName);
+    const { group: laptop, refs } = buildLaptop(bodyMat, initialDisplayTexture, initialProfile);
     refs.screenPivot.rotation.x = THREE.MathUtils.degToRad(-(180 - openAngle));
     scene.add(laptop);
     meshesRef.current = refs;
 
-    // ---- Spring-physics state ----
-    // Auto-rotate uses spring damping so it eases in/out smoothly.
-    // Hover tilt adds a parallax lean that springs back to rest.
-    let rotVelocity = 0.004;         // current angular velocity (rad/frame)
-    const rotTarget  = 0.0032;       // desired auto-rotate speed
-    const rotDamping = 0.96;         // velocity bleed per frame (< 1 = friction)
-    const rotSpring  = 0.015;        // spring towards target speed
+    let rotVelocity = 0.004;
+    const rotTarget  = 0.0032;
+    const rotDamping = 0.96;
+    const rotSpring  = 0.015;
 
-    let hoverTiltX   = 0;            // current tilt around X (up/down)
-    let hoverTiltY   = 0;            // current tilt around Y (side)
+    let hoverTiltX   = 0;
+    let hoverTiltY   = 0;
     let hoverTiltTargetX = 0;
     let hoverTiltTargetY = 0;
-    const tiltSpring  = 0.07;        // how fast tilt springs to mouse pos
-    const tiltDamping = 0.82;        // tilt velocity damping
+    const tiltSpring  = 0.07;
+    const tiltDamping = 0.82;
     let tiltVelX = 0, tiltVelY = 0;
-    const MAX_TILT   = 0.14;         // max tilt radians (~8°)
+    const MAX_TILT   = 0.14;
 
-    let floatT = 0;                  // time accumulator for idle float
-    const FLOAT_SPEED  = 0.5;        // oscillation frequency
-    const FLOAT_AMP    = 0.018;      // float amplitude (scene units)
+    let floatT = 0;
+    const FLOAT_SPEED  = 0.5;
+    const FLOAT_AMP    = 0.018;
 
-    // Rainbow backlight time
     let rainbowT = 0;
 
-    // Pointer tracking for hover tilt
     const onPointerMove = (e: MouseEvent) => {
       const rect = mount.getBoundingClientRect();
-      const nx = ((e.clientX - rect.left) / rect.width  - 0.5) * 2;  // -1 to 1
+      const nx = ((e.clientX - rect.left) / rect.width  - 0.5) * 2;
       const ny = ((e.clientY - rect.top)  / rect.height - 0.5) * 2;
       hoverTiltTargetY =  nx * MAX_TILT;
       hoverTiltTargetX = -ny * MAX_TILT * 0.5;
@@ -956,44 +1088,42 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     let lastTime = performance.now();
     const animate = (now: number) => {
       frameId = requestAnimationFrame(animate);
-      const dt = Math.min((now - lastTime) / 16.67, 3); // normalise to 60 fps units
+      const dt = Math.min((now - lastTime) / 16.67, 3);
       lastTime = now;
 
-      // -- Auto-rotate with spring inertia --
-      if (autoRotateRef.current) {
-        // spring velocity toward target speed
-        rotVelocity += (rotTarget - rotVelocity) * rotSpring * dt;
-        laptop.rotation.y += rotVelocity * dt;
-      } else {
-        // friction bleed-out when auto-rotate is off
-        rotVelocity *= Math.pow(rotDamping, dt);
-        if (Math.abs(rotVelocity) > 0.00005) laptop.rotation.y += rotVelocity * dt;
+      const currentLaptop = meshesRef.current?.group;
+      if (!currentLaptop) {
+        controls.update();
+        renderer.render(scene, camera);
+        return;
       }
 
-      // -- Idle float (gentle up-and-down bob) --
-      floatT += FLOAT_SPEED * 0.016 * dt;
-      laptop.position.y = Math.sin(floatT) * FLOAT_AMP;
+      if (autoRotateRef.current) {
+        rotVelocity += (rotTarget - rotVelocity) * rotSpring * dt;
+        currentLaptop.rotation.y += rotVelocity * dt;
+      } else {
+        rotVelocity *= Math.pow(rotDamping, dt);
+        if (Math.abs(rotVelocity) > 0.00005) currentLaptop.rotation.y += rotVelocity * dt;
+      }
 
-      // -- Hover tilt (spring to mouse position) --
+      floatT += FLOAT_SPEED * 0.016 * dt;
+      currentLaptop.position.y = Math.sin(floatT) * FLOAT_AMP;
+
       if (!autoRotateRef.current) {
-        // Only apply tilt when user is controlling
         tiltVelX += (hoverTiltTargetX - hoverTiltX) * tiltSpring * dt;
         tiltVelY += (hoverTiltTargetY - hoverTiltY) * tiltSpring * dt;
         tiltVelX *= Math.pow(tiltDamping, dt);
         tiltVelY *= Math.pow(tiltDamping, dt);
         hoverTiltX += tiltVelX * dt;
         hoverTiltY += tiltVelY * dt;
-        laptop.rotation.x = hoverTiltX;
+        currentLaptop.rotation.x = hoverTiltX;
       } else {
-        // Ease tilt back to zero while auto-rotating
         hoverTiltX *= Math.pow(0.92, dt);
-        laptop.rotation.x = hoverTiltX;
+        currentLaptop.rotation.x = hoverTiltX;
       }
 
-      // -- Rainbow backlight --
       const blMat = meshesRef.current?.backlightPlane.material as THREE.MeshStandardMaterial | undefined;
       if (blMat && blMat.emissiveIntensity > 0) {
-        // Check if rainbow mode (detect via emissive cycling)
         if ((blMat as any).__rainbow) {
           rainbowT += 0.012 * dt;
           const r = Math.sin(rainbowT) * 0.5 + 0.5;
@@ -1030,7 +1160,57 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---- Reactive updates ----
+  // ---- Rebuild geometry when the laptop's shape PROFILE actually changes ----
+  // (color/finish/backlight/etc. below still update in place without a rebuild --
+  // only brand/model changes that imply a different physical shape trigger this.)
+  useEffect(() => {
+    const scene = sceneRef.current;
+    const bodyMat = bodyMatRef.current;
+    if (!scene || !bodyMat) return;
+
+    const newProfile = profileForLaptop(brandName, modelName);
+    const currentProfile = meshesRef.current?.profile;
+
+    // Skip rebuild if it's the same profile family (e.g. two different ThinkPads) --
+    // avoids tearing down/rebuilding geometry for no visual gain.
+    if (currentProfile && currentProfile.name === newProfile.name) return;
+
+    const oldGroup = meshesRef.current?.group;
+    const wasVisible = oldGroup ? oldGroup.visible : true;
+    const oldRotationY = oldGroup ? oldGroup.rotation.y : 0;
+    const oldScale = oldGroup ? oldGroup.scale.x : modelScale;
+
+    if (oldGroup) {
+      scene.remove(oldGroup);
+      disposeGroup(oldGroup);
+    }
+
+    const displayTexture = getDisplayTexture(osTheme, customDisplayUrl);
+    const { group: laptop, refs } = buildLaptop(bodyMat, displayTexture, newProfile);
+    laptop.rotation.y = oldRotationY;
+    laptop.scale.setScalar(oldScale);
+    laptop.visible = wasVisible && !customModelRef.current;
+    refs.screenPivot.rotation.x = THREE.MathUtils.degToRad(-(180 - openAngle));
+
+    const blMat = refs.backlightPlane.material as THREE.MeshStandardMaterial;
+    const bl = BACKLIGHTS[backlightIndex];
+    if (bl.color === "__rainbow__") {
+      blMat.emissive.set("#ff4444");
+      blMat.emissiveIntensity = 1.1;
+      (blMat as any).__rainbow = true;
+    } else if (bl.color) {
+      blMat.emissive.set(bl.color);
+      blMat.emissiveIntensity = 1.0;
+    }
+
+    const logoMat = refs.logo.material as THREE.MeshStandardMaterial;
+    logoMat.emissiveIntensity = logoGlow ? 0.8 : 0;
+
+    scene.add(laptop);
+    meshesRef.current = refs;
+  }, [brandName, modelName]);
+
+  // ---- Reactive updates (color/finish/etc. -- unchanged behaviour, still in-place updates) ----
   useEffect(() => {
     const refs = meshesRef.current;
     if (refs) {
@@ -1107,13 +1287,13 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     logoMat.alphaMap = logoTex;
     logoMat.needsUpdate = true;
 
-    const b = (brandName || "").toLowerCase();
-    const m = (modelName || "").toLowerCase();
-    const isThinkpad = b.includes("thinkpad") || m.includes("thinkpad") || (b.includes("lenovo") && (m.includes("x1") || m.includes("t14") || m.includes("carbon") || m.includes("p1")));
+    const isThinkpad = isThinkpadName(brandName, modelName);
     refs.trackpoint.visible = isThinkpad;
     refs.bottomDetails.visible = isThinkpad;
     refs.cameraBump.visible = isThinkpad;
 
+    const b = (brandName || "").toLowerCase();
+    const m = (modelName || "").toLowerCase();
     if (b.includes("apple") || b.includes("macbook") || m.includes("macbook") || b.includes("rog") || m.includes("rog") || b.includes("razer") || b.includes("msi")) {
       logoMat.emissiveIntensity = 0.8;
       logoMat.metalness = 0.2;
@@ -1125,22 +1305,21 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
       logoMat.color.set("#dddddd");
     }
 
-    const { width, depth, lidThickness } = DIMS;
+    const profile = refs.profile;
+    const { width, depth } = DIMS;
+    const lidThickness = profile.lidThickness;
     if (isThinkpad) {
       refs.logo.position.set(width / 2 - 0.35, depth - 0.25, -lidThickness - 0.001);
       refs.logo.rotation.z = Math.PI / 8;
       refs.logo.scale.set(1.2, 1.2, 1);
-
       refs.secondaryLogo.visible = true;
-      refs.secondaryLogo.position.set(-width / 2 + 0.15, 0.25, -lidThickness - 0.001);
-      refs.secondaryLogo.rotation.z = Math.PI / 2;
     } else {
       refs.logo.position.set(0, depth / 2, -lidThickness - 0.001);
       refs.logo.rotation.z = 0;
       refs.logo.scale.set(1, 1, 1);
       refs.secondaryLogo.visible = false;
     }
-  }, [brandName]);
+  }, [brandName, modelName]);
 
   useEffect(() => {
     const refs = meshesRef.current;
