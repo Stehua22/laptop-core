@@ -203,6 +203,91 @@ function profileForLaptop(brand?: string, model?: string): ShapeProfile {
   return SHAPE_PROFILES.default;
 }
 
+// ---- Exact-model dimension overrides, sourced from real spec sheets (mm, converted to scene units) ----
+// This is the actual accuracy upgrade: instead of every ThinkPad or every MacBook sharing one guessed
+// shape, laptops matching these specific model names get their *real* measured footprint and thickness.
+// Anything not in this table still falls back to its shape-profile family above.
+type DimensionOverride = { widthScene: number; depthScene: number; thicknessScene: number };
+
+// Calibrated against the ThinkPad T14 Gen 5's real 315.9 x 223.7mm footprint mapping to this scene's
+// existing 2.2 x 1.5 unit baseline -- so all other real-world mm figures convert on the same scale.
+const MM_TO_SCENE_W = 2.2 / 315.9;
+const MM_TO_SCENE_D = 1.5 / 223.7;
+
+function mmToScene(widthMm: number, depthMm: number, thicknessMm: number): DimensionOverride {
+  return {
+    widthScene: widthMm * MM_TO_SCENE_W,
+    depthScene: depthMm * MM_TO_SCENE_D,
+    thicknessScene: thicknessMm * MM_TO_SCENE_W,
+  };
+}
+
+// Keys are matched as case-insensitive substrings against "<brand> <model>".
+// Source: manufacturer spec sheets / PSREF, checked at the time these were added.
+const MODEL_DIMENSIONS: Record<string, DimensionOverride> = {
+  "thinkpad t14 gen 5": mmToScene(315.9, 223.7, 17.7),
+  "thinkpad t14s gen 5": mmToScene(313.6, 219.4, 15.3),
+  "macbook air 13": mmToScene(304.1, 215.0, 11.3),
+  "macbook air m2": mmToScene(304.1, 215.0, 11.3),
+  "macbook pro 14": mmToScene(312.6, 221.2, 15.5),
+  "legion 5": mmToScene(362.5, 260.0, 24.0),
+  "xps 13": mmToScene(295.3, 199.04, 14.8),
+};
+
+function dimensionOverrideForLaptop(brand?: string, model?: string): DimensionOverride | null {
+  const key = `${brand || ""} ${model || ""}`.toLowerCase();
+  for (const [needle, dims] of Object.entries(MODEL_DIMENSIONS)) {
+    if (key.includes(needle)) return dims;
+  }
+  return null;
+}
+
+// ---- Real official color options per model, replacing the generic 14-swatch palette ----
+// When a laptop matches one of these, the Color picker shows ONLY the colors that
+// model actually ships in (verified against manufacturer pages), instead of letting
+// the user pick an arbitrary shade Lenovo/Apple/Dell never made.
+type OfficialColor = { name: string; hex: string };
+
+const OFFICIAL_COLORS: Record<string, OfficialColor[]> = {
+  "thinkpad t14 gen 5": [{ name: "Thunder Black", hex: "#1c1e22" }],
+  "thinkpad t14s gen 5": [{ name: "Thunder Black", hex: "#1c1e22" }],
+  "macbook air 13": [
+    { name: "Midnight", hex: "#1e2a3d" },
+    { name: "Starlight", hex: "#e9e2d0" },
+    { name: "Space Gray", hex: "#5c5c5e" },
+    { name: "Silver", hex: "#e5e5e7" },
+  ],
+  "macbook air m2": [
+    { name: "Midnight", hex: "#1e2a3d" },
+    { name: "Starlight", hex: "#e9e2d0" },
+    { name: "Space Gray", hex: "#5c5c5e" },
+    { name: "Silver", hex: "#e5e5e7" },
+  ],
+  "macbook pro 14": [
+    { name: "Space Gray", hex: "#4b4d50" },
+    { name: "Silver", hex: "#e5e5e7" },
+  ],
+  "xps 13": [
+    { name: "Platinum", hex: "#e6e6e8" },
+    { name: "Graphite", hex: "#3a3a3c" },
+  ],
+  "spectre x360": [
+    { name: "Nightfall Black", hex: "#1a1a1c" },
+    { name: "Natural Silver", hex: "#d6d6d8" },
+    { name: "Nocturne Blue", hex: "#1f3350" },
+  ],
+  "legion 5": [{ name: "Onyx Grey", hex: "#3a3b3f" }],
+  "legion pro 5": [{ name: "Onyx Grey", hex: "#3a3b3f" }],
+};
+
+function officialColorsForLaptop(brand?: string, model?: string): OfficialColor[] | null {
+  const key = `${brand || ""} ${model || ""}`.toLowerCase();
+  for (const [needle, colors] of Object.entries(OFFICIAL_COLORS)) {
+    if (key.includes(needle)) return colors;
+  }
+  return null;
+}
+
 function makeBrushedMetalNormalMap(): THREE.CanvasTexture {
   const size = 256;
   const canvas = document.createElement("canvas");
@@ -393,6 +478,10 @@ type LaptopMeshRefs = {
   bottomDetails: THREE.Group;
   group: THREE.Group;
   profile: ShapeProfile;
+  width: number;
+  depth: number;
+  lidThickness: number;
+  dimsOverride: DimensionOverride | null;
 };
 
 // buildLaptop now takes a ShapeProfile so different laptop families get real
@@ -401,12 +490,18 @@ type LaptopMeshRefs = {
 function buildLaptop(
   bodyMat: THREE.MeshPhysicalMaterial,
   displayTexture: THREE.Texture,
-  profile: ShapeProfile
+  profile: ShapeProfile,
+  dimsOverride: DimensionOverride | null
 ): { group: THREE.Group; refs: LaptopMeshRefs } {
   const group = new THREE.Group();
   const bodyMeshes: THREE.Mesh[] = [];
-  const { width, depth } = DIMS;
-  const { baseThickness, lidThickness, cornerRadius, deckInsetX, bezelInset, keyHeight, keyGap } = profile;
+  const width = dimsOverride?.widthScene ?? DIMS.width;
+  const depth = dimsOverride?.depthScene ?? DIMS.depth;
+  const { cornerRadius, deckInsetX, bezelInset, keyHeight, keyGap } = profile;
+  // Real measured thickness (when we have a spec-sheet match) overrides the profile's guessed thickness.
+  // Split roughly 70/30 between base and lid, matching typical laptop proportions.
+  const baseThickness = dimsOverride ? dimsOverride.thicknessScene * 0.68 : profile.baseThickness;
+  const lidThickness = dimsOverride ? dimsOverride.thicknessScene * 0.32 : profile.lidThickness;
 
   const darkMat = new THREE.MeshStandardMaterial({
     color: "#181a1e",
@@ -715,7 +810,11 @@ function buildLaptop(
 
   return {
     group,
-    refs: { bodyMeshes, screenPivot, display, backlightPlane, logo, secondaryLogo, trackpoint, cameraBump, bottomDetails, group, profile },
+    refs: {
+      bodyMeshes, screenPivot, display, backlightPlane, logo, secondaryLogo,
+      trackpoint, cameraBump, bottomDetails, group, profile,
+      width, depth, lidThickness, dimsOverride,
+    },
   };
 }
 
@@ -791,7 +890,10 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     }
     const laptop = laptops.find((l) => l.id === id);
     if (!laptop) return;
-    setBaseColor(colorForBrand(laptop.brand));
+    // Use the real official color when this exact model is recognized;
+    // otherwise fall back to the old per-brand guess.
+    const officialColors = officialColorsForLaptop(laptop.brand, laptop.model);
+    setBaseColor(officialColors ? officialColors[0].hex : colorForBrand(laptop.brand));
     setModelScale(scaleForScreenSize(laptop.screen_size));
     const theme = osThemeForBrand(laptop.brand);
     setOsTheme(theme);
@@ -1045,7 +1147,8 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
 
     const initialDisplayTexture = getDisplayTexture(osTheme, customDisplayUrl);
     const initialProfile = profileForLaptop(brandName, modelName);
-    const { group: laptop, refs } = buildLaptop(bodyMat, initialDisplayTexture, initialProfile);
+    const initialDimsOverride = dimensionOverrideForLaptop(brandName, modelName);
+    const { group: laptop, refs } = buildLaptop(bodyMat, initialDisplayTexture, initialProfile, initialDimsOverride);
     refs.screenPivot.rotation.x = THREE.MathUtils.degToRad(-(180 - openAngle));
     scene.add(laptop);
     meshesRef.current = refs;
@@ -1169,11 +1272,17 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     if (!scene || !bodyMat) return;
 
     const newProfile = profileForLaptop(brandName, modelName);
+    const newDimsOverride = dimensionOverrideForLaptop(brandName, modelName);
     const currentProfile = meshesRef.current?.profile;
+    const currentDimsOverride = meshesRef.current?.dimsOverride ?? null;
 
-    // Skip rebuild if it's the same profile family (e.g. two different ThinkPads) --
-    // avoids tearing down/rebuilding geometry for no visual gain.
-    if (currentProfile && currentProfile.name === newProfile.name) return;
+    // Skip rebuild only if BOTH the shape-profile family AND the exact real dimensions
+    // are unchanged. Two different ThinkPads share a profile family but can have
+    // different real spec-sheet sizes (e.g. T14 vs T14s), so a dims-only change must
+    // still trigger a rebuild -- comparing profile name alone would silently skip that.
+    const sameProfile = currentProfile && currentProfile.name === newProfile.name;
+    const sameDims = JSON.stringify(currentDimsOverride) === JSON.stringify(newDimsOverride);
+    if (sameProfile && sameDims) return;
 
     const oldGroup = meshesRef.current?.group;
     const wasVisible = oldGroup ? oldGroup.visible : true;
@@ -1186,7 +1295,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     }
 
     const displayTexture = getDisplayTexture(osTheme, customDisplayUrl);
-    const { group: laptop, refs } = buildLaptop(bodyMat, displayTexture, newProfile);
+    const { group: laptop, refs } = buildLaptop(bodyMat, displayTexture, newProfile, newDimsOverride);
     laptop.rotation.y = oldRotationY;
     laptop.scale.setScalar(oldScale);
     laptop.visible = wasVisible && !customModelRef.current;
@@ -1407,20 +1516,34 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
 
         <div className={styles.filterGroup}>
           <span className={styles.filterLabel}>Color</span>
-          <div className={styles.swatchRow}>
-            {BASE_COLORS.map((c) => (
-              <button
-                key={c.hex}
-                title={c.name}
-                onClick={() => setBaseColor(c.hex)}
-                className={styles.swatch}
-                style={{
-                  backgroundColor: c.hex,
-                  outline: baseColor === c.hex ? "2px solid var(--accent, #0a84ff)" : "none",
-                }}
-              />
-            ))}
-          </div>
+          {(() => {
+            // Recognized models only offer the colors they actually ship in --
+            // e.g. a real ThinkPad T14 only ever came in Thunder Black, so we
+            // don't show 13 fictional colors it never existed in.
+            const officialColors = officialColorsForLaptop(brandName, modelName);
+            const swatches: OfficialColor[] = officialColors ?? BASE_COLORS;
+            return (
+              <div className={styles.swatchRow}>
+                {swatches.map((c) => (
+                  <button
+                    key={c.hex}
+                    title={c.name}
+                    onClick={() => setBaseColor(c.hex)}
+                    className={styles.swatch}
+                    style={{
+                      backgroundColor: c.hex,
+                      outline: baseColor === c.hex ? "2px solid var(--accent, #0a84ff)" : "none",
+                    }}
+                  />
+                ))}
+              </div>
+            );
+          })()}
+          {officialColorsForLaptop(brandName, modelName) && (
+            <span style={{ fontSize: 10, color: "#8892aa", marginTop: 4, display: "block" }}>
+              Showing this model&apos;s real color options
+            </span>
+          )}
         </div>
 
         <div className={styles.filterGroup}>
