@@ -123,6 +123,7 @@ type ShapeProfile = {
   hasTrackpoint: boolean;
   hasCameraBump: boolean;
   logoStyle: "centered-glow" | "corner-etched";
+  dishedKeys: boolean; // real ThinkPad keys are visibly concave/scooped, not flat chiclet keys
 };
 
 const SHAPE_PROFILES: Record<string, ShapeProfile> = {
@@ -139,6 +140,7 @@ const SHAPE_PROFILES: Record<string, ShapeProfile> = {
     hasTrackpoint: true,
     hasCameraBump: true,
     logoStyle: "corner-etched",
+    dishedKeys: true,
   },
   macbook: {
     name: "macbook",
@@ -153,6 +155,7 @@ const SHAPE_PROFILES: Record<string, ShapeProfile> = {
     hasTrackpoint: false,
     hasCameraBump: false,
     logoStyle: "centered-glow",
+    dishedKeys: false,
   },
   gaming: {
     name: "gaming",
@@ -167,6 +170,7 @@ const SHAPE_PROFILES: Record<string, ShapeProfile> = {
     hasTrackpoint: false,
     hasCameraBump: false,
     logoStyle: "centered-glow",
+    dishedKeys: false,
   },
   default: {
     name: "default",
@@ -181,6 +185,7 @@ const SHAPE_PROFILES: Record<string, ShapeProfile> = {
     hasTrackpoint: false,
     hasCameraBump: false,
     logoStyle: "centered-glow",
+    dishedKeys: false,
   },
 };
 
@@ -465,19 +470,29 @@ const SHIFT_ROW: KeyRow = [
   { label: "V", u: 1 }, { label: "B", u: 1 }, { label: "N", u: 1 }, { label: "M", u: 1 }, { label: ",", u: 1 },
   { label: ".", u: 1 }, { label: "/", u: 1 }, { label: "Shift", u: 2.75, isMod: true },
 ];
+// Real ThinkPad top row includes Home/End/Insert/Delete after F12 (with a gap), matching
+// the photo. These are narrower keys than a full 1u -- on the real keyboard the whole
+// function row stays close to the same overall width as the rows below it (Insert/Delete's
+// right edge roughly lines up with Backspace/Enter's), not noticeably wider.
 const FUNCTION_ROW: KeyRow = [
-  { label: "Esc", u: 1, isMod: true }, { label: "", u: 0.4 },
-  { label: "F1", u: 1 }, { label: "F2", u: 1 }, { label: "F3", u: 1 }, { label: "F4", u: 1 }, { label: "", u: 0.4 },
-  { label: "F5", u: 1 }, { label: "F6", u: 1 }, { label: "F7", u: 1 }, { label: "F8", u: 1 }, { label: "", u: 0.4 },
-  { label: "F9", u: 1 }, { label: "F10", u: 1 }, { label: "F11", u: 1 }, { label: "F12", u: 1 },
+  { label: "Esc", u: 1, isMod: true }, { label: "", u: 0.3 },
+  { label: "F1", u: 1 }, { label: "F2", u: 1 }, { label: "F3", u: 1 }, { label: "F4", u: 1 }, { label: "", u: 0.3 },
+  { label: "F5", u: 1 }, { label: "F6", u: 1 }, { label: "F7", u: 1 }, { label: "F8", u: 1 }, { label: "", u: 0.3 },
+  { label: "F9", u: 1 }, { label: "F10", u: 1 }, { label: "F11", u: 1 }, { label: "F12", u: 1 }, { label: "", u: 0.3 },
+  { label: "Home", u: 0.8, isMod: true }, { label: "End", u: 0.8, isMod: true },
+  { label: "Insert", u: 0.8, isMod: true }, { label: "Delete", u: 0.8, isMod: true },
 ];
 
 // ThinkPad's signature layout quirk: Fn sits to the LEFT of Ctrl (opposite of nearly every
-// other PC keyboard), which is one of the most recognizable ThinkPad-specific details.
+// other PC keyboard). Also matching the real photo: PrtSc is its own dedicated key (not
+// "AltGr", which a real ThinkPad US layout doesn't print), and there's a stacked PgUp/PgDn
+// pair between right-Ctrl and the arrow cluster -- both were missing before.
 const THINKPAD_BOTTOM_ROW: KeyRow = [
   { label: "Fn", u: 1, isMod: true }, { label: "Ctrl", u: 1.2, isMod: true }, { label: "Win", u: 1, isMod: true },
-  { label: "Alt", u: 1, isMod: true }, { label: "", u: 5.5 }, { label: "AltGr", u: 1, isMod: true },
-  { label: "Ctrl", u: 1.2, isMod: true }, { label: "\u25c0", u: 0.9, isMod: true }, { label: "\u25b2\n\u25bc", u: 0.9, isMod: true },
+  { label: "Alt", u: 1, isMod: true }, { label: "", u: 4.4 }, { label: "Alt", u: 1, isMod: true },
+  { label: "PrtSc", u: 0.85, isMod: true }, { label: "Ctrl", u: 1.2, isMod: true },
+  { label: "PgUp\nPgDn", u: 0.85, isMod: true },
+  { label: "\u25c0", u: 0.9, isMod: true }, { label: "\u25b2\n\u25bc", u: 0.9, isMod: true },
   { label: "\u25b6", u: 0.9, isMod: true },
 ];
 
@@ -574,7 +589,10 @@ function getKeyLabelTexture(label: string, isMod: boolean): THREE.CanvasTexture 
 
 // Builds one row of individually-shaped, individually-labeled keycaps (not a uniform
 // instanced grid) so wide keys (space/shift/enter) actually look wide and every key
-// shows its real character.
+// shows its real character. `dished` renders ThinkPad's signature concave/scooped keycap
+// (a raised outer rim with a recessed, slightly darker inner surface holding the label)
+// instead of one flat top face -- that visible step/shadow is what actually reads as
+// "U-shaped" ThinkPad keys versus a flat chiclet key.
 function buildKeyRow(
   row: KeyRow,
   centerX: number,
@@ -582,7 +600,8 @@ function buildKeyRow(
   yBase: number,
   keyHeight: number,
   keyGap: number,
-  sideMat: THREE.Material
+  sideMat: THREE.Material,
+  dished: boolean = false
 ): THREE.Group {
   const group = new THREE.Group();
   const totalUnits = row.reduce((sum, k) => sum + k.u, 0) + (row.length - 1) * (keyGap / U);
@@ -595,6 +614,35 @@ function buildKeyRow(
 
     if (!key.label && key.u < 2) {
       // Blank filler slot (e.g. gap in numpad) -- skip rendering a cap entirely.
+      return;
+    }
+
+    if (dished) {
+      // Outer keycap body: same footprint, but its top face is left in the plain side
+      // color (no label) -- it acts as the raised rim visible around the recessed center.
+      const rimGeo = new RoundedBoxGeometry(keyW, keyHeight, keyD, 2, 0.02);
+      const rim = new THREE.Mesh(rimGeo, sideMat);
+      rim.position.set(centerX + x, yBase + keyHeight / 2, z);
+      rim.castShadow = true;
+      rim.receiveShadow = true;
+      group.add(rim);
+
+      // Recessed inner surface: smaller footprint, sits slightly BELOW the rim's top --
+      // this height step is what creates the visible concave/scooped look under lighting.
+      const innerW = keyW * 0.78;
+      const innerD = keyD * 0.78;
+      const recessDepth = keyHeight * 0.22;
+      const innerGeo = new RoundedBoxGeometry(innerW, keyHeight * 0.5, innerD, 2, 0.012);
+      const topMat = new THREE.MeshStandardMaterial({
+        map: getKeyLabelTexture(key.label, !!key.isMod),
+        roughness: 0.55,
+        metalness: 0.1,
+      });
+      const innerMesh = new THREE.Mesh(innerGeo, [sideMat, sideMat, topMat, sideMat, sideMat, sideMat]);
+      innerMesh.position.set(centerX + x, yBase + keyHeight - recessDepth - (keyHeight * 0.25), z);
+      innerMesh.castShadow = true;
+      innerMesh.receiveShadow = true;
+      group.add(innerMesh);
       return;
     }
 
@@ -954,7 +1002,7 @@ function buildLaptop(
 
   kbRows.forEach((row, i) => {
     const z = kbStartZ + i * rowGap;
-    const rowGroup = buildKeyRow(row, mainBlockCenterX, z, baseThickness + 0.006, keyHeight, keyGap, keySideMat);
+    const rowGroup = buildKeyRow(row, mainBlockCenterX, z, baseThickness + 0.006, keyHeight, keyGap, keySideMat, profile.dishedKeys);
     group.add(rowGroup);
   });
 
@@ -963,7 +1011,7 @@ function buildLaptop(
     const numpadCenterX = mainBlockCenterX + (Math.max(...kbRows.map((r) => r.reduce((s, k) => s + k.u, 0))) * U) / 2 + 0.06 + (numpadUnits * U) / 2;
     numpad.forEach((row, i) => {
       const z = numpadStartZ + i * rowGap;
-      const rowGroup = buildKeyRow(row, numpadCenterX, z, baseThickness + 0.006, keyHeight, keyGap, keySideMat);
+      const rowGroup = buildKeyRow(row, numpadCenterX, z, baseThickness + 0.006, keyHeight, keyGap, keySideMat, profile.dishedKeys);
       group.add(rowGroup);
     });
   }
