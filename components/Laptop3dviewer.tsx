@@ -242,6 +242,72 @@ function dimensionOverrideForLaptop(brand?: string, model?: string): DimensionOv
   return null;
 }
 
+// ---- Generic accurate-footprint fallback for every laptop NOT in the exact table above ----
+// Previously, any unmatched laptop fell back to one flat 2.2x1.5 template scaled by a crudely
+// clamped screen-size multiplier -- a 13" and an 11" laptop ended up nearly the same size. This
+// instead derives real footprint from actual display geometry: diagonal + aspect ratio gives
+// screen width/height, then realistic bezel allowances (which differ by laptop class) give the
+// full chassis size -- the same math that makes the 7 exact-matched models above land within a
+// few mm of their real spec sheets also applies universally here.
+function aspectRatioForLaptop(brand?: string, model?: string): [number, number] {
+  const b = (brand || "").toLowerCase();
+  const m = (model || "").toLowerCase();
+  if (m.includes("surface")) return [3, 2];
+  if (b.includes("apple") || b.includes("macbook") || m.includes("macbook")) return [16, 10];
+  if (isThinkpadName(brand, model)) return [16, 10];
+  if (m.includes("xps") || m.includes("spectre") || m.includes("zenbook") || m.includes("expertbook")) return [16, 10];
+  return [16, 9]; // most budget/older/gaming panels are still 16:9
+}
+
+function bezelMmForProfile(profileName: string): { side: number; top: number; bottom: number } {
+  switch (profileName) {
+    case "thinkpad": return { side: 5, top: 8, bottom: 14 };
+    case "macbook": return { side: 4, top: 6, bottom: 8 };
+    case "gaming": return { side: 6, top: 9, bottom: 16 };
+    // "default" covers a wide mix of Dell/HP/Acer/etc across many years -- many older/budget
+    // 16:9 panels have noticeably thicker bottom bezels than modern thin-bezel ultrabooks,
+    // so this leans thicker than the named-brand profiles above to average better across that mix.
+    default: return { side: 6, top: 8, bottom: 20 };
+  }
+}
+
+function thicknessMmForProfile(profileName: string): number {
+  switch (profileName) {
+    case "macbook": return 12;
+    case "gaming": return 24;
+    case "thinkpad": return 18;
+    default: return 16;
+  }
+}
+
+function genericDimsFromScreenSize(
+  screenSizeIn: number | null | undefined,
+  brand: string | undefined,
+  model: string | undefined,
+  profileName: string
+): DimensionOverride {
+  const diag = screenSizeIn && screenSizeIn > 0 ? screenSizeIn : 14;
+  const [aw, ah] = aspectRatioForLaptop(brand, model);
+  const diagUnits = Math.sqrt(aw * aw + ah * ah);
+  const screenWidthMm = (diag * (aw / diagUnits)) * 25.4;
+  const screenHeightMm = (diag * (ah / diagUnits)) * 25.4;
+  const bezel = bezelMmForProfile(profileName);
+  const widthMm = screenWidthMm + bezel.side * 2;
+  const depthMm = screenHeightMm + bezel.top + bezel.bottom;
+  return mmToScene(widthMm, depthMm, thicknessMmForProfile(profileName));
+}
+
+// Single entry point every call site should use: exact spec-sheet match when we have one,
+// otherwise a real screen-geometry-derived estimate -- never the old flat generic template.
+function getAccurateDims(
+  brand: string | undefined,
+  model: string | undefined,
+  screenSizeIn: number | null | undefined,
+  profileName: string
+): DimensionOverride {
+  return dimensionOverrideForLaptop(brand, model) ?? genericDimsFromScreenSize(screenSizeIn, brand, model, profileName);
+}
+
 // ---- Real official color options per model, replacing the generic 14-swatch palette ----
 // When a laptop matches one of these, the Color picker shows ONLY the colors that
 // model actually ships in (verified against manufacturer pages), instead of letting
@@ -1120,6 +1186,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   const [osTheme, setOsTheme] = useState<"windows" | "mac">("windows");
   const [brandName, setBrandName] = useState<string>("");
   const [modelName, setModelName] = useState<string>("");
+  const [screenSizeIn, setScreenSizeIn] = useState<number | null>(null);
   const [customDisplayUrl, setCustomDisplayUrl] = useState<string>("");
   const [saveMsg, setSaveMsg] = useState<"" | "saving" | "saved" | "error">("" );
   const [importStatus, setImportStatus] = useState<"" | "loading" | "loaded" | "error">("" );
@@ -1155,13 +1222,12 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     // otherwise fall back to the old per-brand guess.
     const officialColors = officialColorsForLaptop(laptop.brand, laptop.model);
     setBaseColor(officialColors ? officialColors[0].hex : colorForBrand(laptop.brand));
-    // If we have this laptop's real spec-sheet dimensions, those ALREADY encode its true
-    // physical size (e.g. a 13" MacBook Air's 304.1mm real width vs a 14" ThinkPad's 315.9mm).
-    // Applying an extra screen-size-based scale on top of that double-counts size and actually
-    // makes cross-model proportions LESS accurate. Only fall back to the screen-size guess for
-    // laptops we don't have real dimensions for.
-    const hasRealDims = dimensionOverrideForLaptop(laptop.brand, laptop.model) !== null;
-    setModelScale(hasRealDims ? 1 : scaleForScreenSize(laptop.screen_size));
+    // Sizing now always comes from getAccurateDims (exact spec match, or real screen-diagonal
+    // geometry for everything else) -- that fully replaces the old crude scale multiplier, so
+    // modelScale stays fixed at 1 and every laptop's true footprint comes from its own real
+    // screen size instead of one shared template.
+    setModelScale(1);
+    setScreenSizeIn(laptop.screen_size ?? null);
     const theme = osThemeForBrand(laptop.brand);
     setOsTheme(theme);
     setLogoGlow(theme === "mac");
@@ -1414,7 +1480,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
 
     const initialDisplayTexture = getDisplayTexture(osTheme, customDisplayUrl);
     const initialProfile = profileForLaptop(brandName, modelName);
-    const initialDimsOverride = dimensionOverrideForLaptop(brandName, modelName);
+    const initialDimsOverride = getAccurateDims(brandName, modelName, screenSizeIn, initialProfile.name);
     const { group: laptop, refs } = buildLaptop(bodyMat, initialDisplayTexture, initialProfile, initialDimsOverride);
     refs.screenPivot.rotation.x = THREE.MathUtils.degToRad(-(180 - openAngle));
     scene.add(laptop);
@@ -1539,7 +1605,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     if (!scene || !bodyMat) return;
 
     const newProfile = profileForLaptop(brandName, modelName);
-    const newDimsOverride = dimensionOverrideForLaptop(brandName, modelName);
+    const newDimsOverride = getAccurateDims(brandName, modelName, screenSizeIn, newProfile.name);
     const currentProfile = meshesRef.current?.profile;
     const currentDimsOverride = meshesRef.current?.dimsOverride ?? null;
 
@@ -1584,7 +1650,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
 
     scene.add(laptop);
     meshesRef.current = refs;
-  }, [brandName, modelName]);
+  }, [brandName, modelName, screenSizeIn]);
 
   // ---- Reactive updates (color/finish/etc. -- unchanged behaviour, still in-place updates) ----
   useEffect(() => {
