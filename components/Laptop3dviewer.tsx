@@ -441,30 +441,35 @@ type KeyRow = KeyDef[];
 
 const U = 0.1; // one key unit in scene units, matches the old keySize
 
+// Real ANSI key-unit widths so every alpha row totals exactly 15u and columns
+// actually line up under each other (they didn't before -- Tab/Caps/Shift/Enter/Backspace
+// were all slightly off, so e.g. "A" wasn't sitting under "Q" the way it does on a real board).
 const NUMBER_ROW: KeyRow = [
   { label: "`", u: 1 }, { label: "1", u: 1 }, { label: "2", u: 1 }, { label: "3", u: 1 },
   { label: "4", u: 1 }, { label: "5", u: 1 }, { label: "6", u: 1 }, { label: "7", u: 1 },
   { label: "8", u: 1 }, { label: "9", u: 1 }, { label: "0", u: 1 }, { label: "-", u: 1 },
-  { label: "=", u: 1 }, { label: "Bksp", u: 1.8, isMod: true },
+  { label: "=", u: 1 }, { label: "Bksp", u: 2, isMod: true },
 ];
 const QWERTY_ROW: KeyRow = [
-  { label: "Tab", u: 1.4, isMod: true }, { label: "Q", u: 1 }, { label: "W", u: 1 }, { label: "E", u: 1 },
+  { label: "Tab", u: 1.5, isMod: true }, { label: "Q", u: 1 }, { label: "W", u: 1 }, { label: "E", u: 1 },
   { label: "R", u: 1 }, { label: "T", u: 1 }, { label: "Y", u: 1 }, { label: "U", u: 1 }, { label: "I", u: 1 },
-  { label: "O", u: 1 }, { label: "P", u: 1 }, { label: "[", u: 1 }, { label: "]", u: 1 }, { label: "\\", u: 1.2, isMod: true },
+  { label: "O", u: 1 }, { label: "P", u: 1 }, { label: "[", u: 1 }, { label: "]", u: 1 }, { label: "\\", u: 1.5, isMod: true },
 ];
 const HOME_ROW: KeyRow = [
-  { label: "Caps", u: 1.7, isMod: true }, { label: "A", u: 1 }, { label: "S", u: 1 }, { label: "D", u: 1 },
+  { label: "Caps", u: 1.75, isMod: true }, { label: "A", u: 1 }, { label: "S", u: 1 }, { label: "D", u: 1 },
   { label: "F", u: 1 }, { label: "G", u: 1 }, { label: "H", u: 1 }, { label: "J", u: 1 }, { label: "K", u: 1 },
-  { label: "L", u: 1 }, { label: ";", u: 1 }, { label: "'", u: 1 }, { label: "Enter", u: 2.1, isMod: true },
+  { label: "L", u: 1 }, { label: ";", u: 1 }, { label: "'", u: 1 }, { label: "Enter", u: 2.25, isMod: true },
 ];
 const SHIFT_ROW: KeyRow = [
-  { label: "Shift", u: 2.2, isMod: true }, { label: "Z", u: 1 }, { label: "X", u: 1 }, { label: "C", u: 1 },
+  { label: "Shift", u: 2.25, isMod: true }, { label: "Z", u: 1 }, { label: "X", u: 1 }, { label: "C", u: 1 },
   { label: "V", u: 1 }, { label: "B", u: 1 }, { label: "N", u: 1 }, { label: "M", u: 1 }, { label: ",", u: 1 },
-  { label: ".", u: 1 }, { label: "/", u: 1 }, { label: "Shift", u: 2.6, isMod: true },
+  { label: ".", u: 1 }, { label: "/", u: 1 }, { label: "Shift", u: 2.75, isMod: true },
 ];
 const FUNCTION_ROW: KeyRow = [
-  { label: "Esc", u: 1, isMod: true },
-  ...Array.from({ length: 12 }, (_, i) => ({ label: `F${i + 1}`, u: 1 })),
+  { label: "Esc", u: 1, isMod: true }, { label: "", u: 0.4 },
+  { label: "F1", u: 1 }, { label: "F2", u: 1 }, { label: "F3", u: 1 }, { label: "F4", u: 1 }, { label: "", u: 0.4 },
+  { label: "F5", u: 1 }, { label: "F6", u: 1 }, { label: "F7", u: 1 }, { label: "F8", u: 1 }, { label: "", u: 0.4 },
+  { label: "F9", u: 1 }, { label: "F10", u: 1 }, { label: "F11", u: 1 }, { label: "F12", u: 1 },
 ];
 
 // ThinkPad's signature layout quirk: Fn sits to the LEFT of Ctrl (opposite of nearly every
@@ -533,7 +538,24 @@ function getKeyLabelTexture(label: string, isMod: boolean): THREE.CanvasTexture 
   const ctx = canvas.getContext("2d")!;
   ctx.fillStyle = "#1a1b1e";
   ctx.fillRect(0, 0, 64, 64);
-  if (label) {
+
+  if (label === "Win") {
+    // Real 4-pane Windows flag icon instead of plain text -- the actual logo every
+    // PC keyboard prints on this key, not a generic "Win" label.
+    const gap = 3;
+    const size = 13;
+    const cx = 32, cy = 32;
+    ctx.fillStyle = "#c6cad2";
+    // slight italic skew to match the real logo's tilt
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.transform(1, 0, -0.12, 1, 0, 0);
+    ctx.fillRect(-size - gap / 2, -size - gap / 2, size, size);
+    ctx.fillRect(gap / 2, -size - gap / 2, size, size);
+    ctx.fillRect(-size - gap / 2, gap / 2, size, size);
+    ctx.fillRect(gap / 2, gap / 2, size, size);
+    ctx.restore();
+  } else if (label) {
     ctx.fillStyle = isMod ? "#b8bcc4" : "#e8eaee";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -979,36 +1001,143 @@ function buildLaptop(
     }
   });
 
-  // Ports: real per-family layout instead of 3 identical generic slots always on the right.
-  // A ThinkPad, a MacBook, and a gaming laptop each get genuinely different port counts,
-  // types, and which side they're on -- matching what those laptops actually have.
-  const portMetalMat = new THREE.MeshStandardMaterial({
-    color: "#c9ccd1",
-    roughness: 0.25,
-    metalness: 0.85,
-  });
+  // Ports: real per-family layout AND real per-type shapes -- a USB-A, USB-C, HDMI,
+  // Ethernet jack, and headphone jack all look visually distinct, not the same
+  // rectangle resized. This is what actually reads as "real ports" instead of slots.
   const layout = portLayoutForProfile(profile.name);
+  const buildPortMesh = (type: PortType): THREE.Group => {
+    const g = new THREE.Group();
+    const dim = PORT_DIMENSIONS[type];
+
+    if (type === "audio") {
+      // Circular jack: dark recessed ring + bright metal center hole, not a rectangle.
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(dim.w / 2, 0.0015, 8, 20),
+        new THREE.MeshStandardMaterial({ color: "#8a8d92", roughness: 0.3, metalness: 0.8 })
+      );
+      ring.rotation.y = Math.PI / 2;
+      g.add(ring);
+      const hole = new THREE.Mesh(
+        new THREE.CylinderGeometry(dim.w / 2 - 0.002, dim.w / 2 - 0.002, 0.01, 16),
+        new THREE.MeshStandardMaterial({ color: "#050506", roughness: 0.9 })
+      );
+      hole.rotation.z = Math.PI / 2;
+      g.add(hole);
+      return g;
+    }
+
+    if (type === "usb-c" || type === "magsafe") {
+      // Small rounded capsule/pill -- the distinctive USB-C shape, not a rectangle.
+      const outer = new THREE.Mesh(
+        new RoundedBoxGeometry(0.014, dim.h + 0.004, dim.w + 0.004, 3, 0.003),
+        new THREE.MeshStandardMaterial({ color: type === "magsafe" ? "#d6d9dd" : "#2a2c30", roughness: 0.35, metalness: 0.6 })
+      );
+      g.add(outer);
+      const slot = new THREE.Mesh(
+        new RoundedBoxGeometry(0.008, dim.h, dim.w, 2, 0.0025),
+        new THREE.MeshStandardMaterial({ color: "#050506", roughness: 0.9 })
+      );
+      g.add(slot);
+      return g;
+    }
+
+    if (type === "hdmi") {
+      // Trapezoid: wider at the bottom edge, narrower at top -- approximated with two
+      // stacked boxes instead of one flat rectangle, which is what actually distinguishes
+      // an HDMI port's silhouette from a USB-A port at a glance.
+      const bodyMat = new THREE.MeshStandardMaterial({ color: "#e8e9ec", roughness: 0.25, metalness: 0.7 });
+      const bottom = new THREE.Mesh(new THREE.BoxGeometry(0.01, dim.h * 0.55, dim.w), bodyMat);
+      bottom.position.y = -dim.h * 0.22;
+      g.add(bottom);
+      const top = new THREE.Mesh(new THREE.BoxGeometry(0.01, dim.h * 0.55, dim.w * 0.8), bodyMat);
+      top.position.y = dim.h * 0.22;
+      g.add(top);
+      const slot = new THREE.Mesh(
+        new THREE.BoxGeometry(0.006, dim.h * 0.75, dim.w * 0.85),
+        new THREE.MeshStandardMaterial({ color: "#050506", roughness: 0.9 })
+      );
+      g.add(slot);
+      return g;
+    }
+
+    if (type === "ethernet") {
+      // RJ45: taller housing with a small raised clip tab on top -- the tab is the
+      // detail that actually reads as "Ethernet port" versus a generic dark rectangle.
+      const housing = new THREE.Mesh(
+        new RoundedBoxGeometry(0.012, dim.h, dim.w, 2, 0.002),
+        new THREE.MeshStandardMaterial({ color: "#2a2c30", roughness: 0.6, metalness: 0.3 })
+      );
+      g.add(housing);
+      const clip = new THREE.Mesh(
+        new THREE.BoxGeometry(0.004, 0.004, dim.w * 0.3),
+        new THREE.MeshStandardMaterial({ color: "#1a1a1c", roughness: 0.7 })
+      );
+      clip.position.set(0.005, dim.h / 2 - 0.001, 0);
+      g.add(clip);
+      const slot = new THREE.Mesh(
+        new THREE.BoxGeometry(0.006, dim.h * 0.8, dim.w * 0.85),
+        new THREE.MeshStandardMaterial({ color: "#050506", roughness: 0.9 })
+      );
+      g.add(slot);
+      return g;
+    }
+
+    if (type === "sdcard") {
+      // Very thin horizontal slit, no housing box needed -- a real SD slot is basically
+      // just a dark line in the chassis.
+      const slot = new THREE.Mesh(
+        new THREE.BoxGeometry(0.004, dim.h, dim.w),
+        new THREE.MeshStandardMaterial({ color: "#050506", roughness: 0.85 })
+      );
+      g.add(slot);
+      return g;
+    }
+
+    if (type === "lock") {
+      // Kensington lock: small dark rectangular hole with a slightly raised metal
+      // surround, distinctly smaller and darker than a data port.
+      const surround = new THREE.Mesh(
+        new THREE.BoxGeometry(0.008, dim.h + 0.003, dim.w + 0.003),
+        new THREE.MeshStandardMaterial({ color: "#3a3d42", roughness: 0.5, metalness: 0.4 })
+      );
+      g.add(surround);
+      const hole = new THREE.Mesh(
+        new THREE.BoxGeometry(0.006, dim.h, dim.w),
+        new THREE.MeshStandardMaterial({ color: "#050506", roughness: 0.9 })
+      );
+      g.add(hole);
+      return g;
+    }
+
+    // usb-a: rectangular metal-framed shell with a distinct lighter plastic "tongue"
+    // visible inside -- the tongue is what actually makes it read as USB-A.
+    const shell = new THREE.Mesh(
+      new RoundedBoxGeometry(0.01, dim.h + 0.004, dim.w + 0.004, 2, 0.0015),
+      new THREE.MeshStandardMaterial({ color: "#c9ccd1", roughness: 0.25, metalness: 0.85 })
+    );
+    g.add(shell);
+    const cavity = new THREE.Mesh(
+      new THREE.BoxGeometry(0.007, dim.h, dim.w),
+      new THREE.MeshStandardMaterial({ color: "#050506", roughness: 0.9 })
+    );
+    g.add(cavity);
+    const tongue = new THREE.Mesh(
+      new THREE.BoxGeometry(0.003, dim.h * 0.4, dim.w * 0.85),
+      new THREE.MeshStandardMaterial({ color: "#e8e9ec", roughness: 0.4, metalness: 0.3 })
+    );
+    tongue.position.x = 0.001;
+    g.add(tongue);
+    return g;
+  };
+
   const buildPortsOnSide = (ports: PortSpec[], side: "left" | "right") => {
     const xFace = side === "right" ? width / 2 : -width / 2;
     ports.forEach(({ type, zRatio }) => {
-      const dim = PORT_DIMENSIONS[type];
       const z = -depth / 2 + zRatio * depth;
       const y = baseThickness / 2 + 0.005;
-      const outerGeo = new THREE.BoxGeometry(0.012, dim.h + 0.006, dim.w + 0.006);
-      const outer = new THREE.Mesh(outerGeo, darkMat);
-      outer.position.set(xFace - (side === "right" ? 0.003 : -0.003), y, z);
-      group.add(outer);
-
-      const innerMat = type === "audio"
-        ? new THREE.MeshStandardMaterial({ color: PORT_DIMENSIONS.audio.color, roughness: 0.5, metalness: 0.2 })
-        : portMetalMat;
-      const innerGeo = type === "audio"
-        ? new THREE.CylinderGeometry(dim.w / 2, dim.w / 2, 0.006, 16)
-        : new THREE.BoxGeometry(0.006, dim.h, dim.w);
-      const inner = new THREE.Mesh(innerGeo, innerMat);
-      if (type === "audio") inner.rotation.z = Math.PI / 2;
-      inner.position.set(xFace - (side === "right" ? 0.001 : -0.001), y, z);
-      group.add(inner);
+      const port = buildPortMesh(type);
+      port.position.set(xFace - (side === "right" ? 0.005 : -0.005), y, z);
+      group.add(port);
     });
   };
   buildPortsOnSide(layout.left, "left");
@@ -1748,8 +1877,12 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     }
 
     const profile = refs.profile;
-    const { width, depth } = DIMS;
-    const lidThickness = profile.lidThickness;
+    // Use this laptop's ACTUAL real width/depth (refs.width/refs.depth), not the generic
+    // DIMS constant -- otherwise the logo sits in the wrong spot on any laptop using the
+    // accurate per-model dimensions instead of the old flat template.
+    const width = refs.width;
+    const depth = refs.depth;
+    const lidThickness = refs.lidThickness;
     if (isThinkpad) {
       refs.logo.position.set(width / 2 - 0.35, depth - 0.25, -lidThickness - 0.001);
       refs.logo.rotation.z = Math.PI / 8;
