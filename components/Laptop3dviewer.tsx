@@ -288,6 +288,86 @@ function officialColorsForLaptop(brand?: string, model?: string): OfficialColor[
   return null;
 }
 
+// ---- Real per-family port layouts, replacing the old "3 identical slots on the right" ----
+// Actual counts/types/sides sourced from spec sheets: e.g. a real ThinkPad T14 has 2x USB-A +
+// HDMI on one side and 2x USB-C/Thunderbolt + Ethernet + audio on the other; a MacBook Air has
+// only MagSafe + 2x Thunderbolt on the left and a headphone jack on the right, nothing more.
+type PortType = "usb-a" | "usb-c" | "hdmi" | "ethernet" | "audio" | "sdcard" | "lock" | "magsafe";
+type PortSpec = { type: PortType; zRatio: number }; // zRatio: 0 = back/hinge edge, 1 = front edge
+
+const PORT_DIMENSIONS: Record<PortType, { w: number; h: number; color: string }> = {
+  "usb-a":   { w: 0.026, h: 0.011, color: "#9a9ea3" },
+  "usb-c":   { w: 0.014, h: 0.006, color: "#c9ccd1" },
+  "hdmi":    { w: 0.024, h: 0.008, color: "#9a9ea3" },
+  "ethernet":{ w: 0.024, h: 0.02,  color: "#3a3d42" },
+  "audio":   { w: 0.012, h: 0.012, color: "#1a1a1c" },
+  "sdcard":  { w: 0.026, h: 0.003, color: "#5a5d62" },
+  "lock":    { w: 0.012, h: 0.007, color: "#2a2c30" },
+  "magsafe": { w: 0.016, h: 0.009, color: "#c9ccd1" },
+};
+
+const PORT_LAYOUTS: Record<string, { left: PortSpec[]; right: PortSpec[] }> = {
+  thinkpad: {
+    // Real T14: right side has 2x USB-A + HDMI; left side has 2x USB-C (Thunderbolt/USB4),
+    // Ethernet, headphone jack, and a Kensington lock slot near the back.
+    right: [
+      { type: "lock", zRatio: 0.08 },
+      { type: "hdmi", zRatio: 0.28 },
+      { type: "usb-a", zRatio: 0.52 },
+      { type: "usb-a", zRatio: 0.74 },
+    ],
+    left: [
+      { type: "ethernet", zRatio: 0.15 },
+      { type: "usb-c", zRatio: 0.4 },
+      { type: "usb-c", zRatio: 0.58 },
+      { type: "audio", zRatio: 0.8 },
+    ],
+  },
+  macbook: {
+    // Real MacBook Air: MagSafe 3 + 2x Thunderbolt/USB4 all on the left, headphone jack alone
+    // on the right. Nothing else -- no HDMI, no USB-A, no Ethernet, no SD card.
+    left: [
+      { type: "magsafe", zRatio: 0.2 },
+      { type: "usb-c", zRatio: 0.5 },
+      { type: "usb-c", zRatio: 0.68 },
+    ],
+    right: [
+      { type: "audio", zRatio: 0.25 },
+    ],
+  },
+  gaming: {
+    // Gaming laptops typically load most I/O onto the left side plus a rear cluster (approximated
+    // here as extra left-side ports since this model doesn't build a separate back panel), with
+    // just audio/one USB-A on the right so the RGB/vent side stays clear.
+    left: [
+      { type: "ethernet", zRatio: 0.12 },
+      { type: "hdmi", zRatio: 0.3 },
+      { type: "usb-c", zRatio: 0.48 },
+      { type: "usb-a", zRatio: 0.64 },
+      { type: "sdcard", zRatio: 0.82 },
+    ],
+    right: [
+      { type: "usb-a", zRatio: 0.35 },
+      { type: "audio", zRatio: 0.6 },
+    ],
+  },
+  default: {
+    right: [
+      { type: "usb-a", zRatio: 0.25 },
+      { type: "usb-a", zRatio: 0.5 },
+      { type: "audio", zRatio: 0.75 },
+    ],
+    left: [
+      { type: "usb-c", zRatio: 0.3 },
+      { type: "hdmi", zRatio: 0.6 },
+    ],
+  },
+};
+
+function portLayoutForProfile(profileName: string): { left: PortSpec[]; right: PortSpec[] } {
+  return PORT_LAYOUTS[profileName] ?? PORT_LAYOUTS.default;
+}
+
 function makeBrushedMetalNormalMap(): THREE.CanvasTexture {
   const size = 256;
   const canvas = document.createElement("canvas");
@@ -671,21 +751,40 @@ function buildLaptop(
     }
   });
 
-  const portOuterGeo = new THREE.BoxGeometry(0.012, 0.024, 0.07);
-  const portInnerGeo = new THREE.BoxGeometry(0.006, 0.018, 0.05);
+  // Ports: real per-family layout instead of 3 identical generic slots always on the right.
+  // A ThinkPad, a MacBook, and a gaming laptop each get genuinely different port counts,
+  // types, and which side they're on -- matching what those laptops actually have.
   const portMetalMat = new THREE.MeshStandardMaterial({
-    color: "#9a9ea3",
+    color: "#c9ccd1",
     roughness: 0.25,
     metalness: 0.85,
   });
-  [-0.35, -0.1, 0.15].forEach((z) => {
-    const outer = new THREE.Mesh(portOuterGeo, darkMat);
-    outer.position.set(width / 2 - 0.003, baseThickness / 2 + 0.01, z);
-    group.add(outer);
-    const inner = new THREE.Mesh(portInnerGeo, portMetalMat);
-    inner.position.set(width / 2 - 0.001, baseThickness / 2 + 0.01, z);
-    group.add(inner);
-  });
+  const layout = portLayoutForProfile(profile.name);
+  const buildPortsOnSide = (ports: PortSpec[], side: "left" | "right") => {
+    const xFace = side === "right" ? width / 2 : -width / 2;
+    ports.forEach(({ type, zRatio }) => {
+      const dim = PORT_DIMENSIONS[type];
+      const z = -depth / 2 + zRatio * depth;
+      const y = baseThickness / 2 + 0.005;
+      const outerGeo = new THREE.BoxGeometry(0.012, dim.h + 0.006, dim.w + 0.006);
+      const outer = new THREE.Mesh(outerGeo, darkMat);
+      outer.position.set(xFace - (side === "right" ? 0.003 : -0.003), y, z);
+      group.add(outer);
+
+      const innerMat = type === "audio"
+        ? new THREE.MeshStandardMaterial({ color: PORT_DIMENSIONS.audio.color, roughness: 0.5, metalness: 0.2 })
+        : portMetalMat;
+      const innerGeo = type === "audio"
+        ? new THREE.CylinderGeometry(dim.w / 2, dim.w / 2, 0.006, 16)
+        : new THREE.BoxGeometry(0.006, dim.h, dim.w);
+      const inner = new THREE.Mesh(innerGeo, innerMat);
+      if (type === "audio") inner.rotation.z = Math.PI / 2;
+      inner.position.set(xFace - (side === "right" ? 0.001 : -0.001), y, z);
+      group.add(inner);
+    });
+  };
+  buildPortsOnSide(layout.left, "left");
+  buildPortsOnSide(layout.right, "right");
 
   const screenPivot = new THREE.Group();
   screenPivot.position.set(0, baseThickness, -depth / 2);
@@ -894,7 +993,13 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     // otherwise fall back to the old per-brand guess.
     const officialColors = officialColorsForLaptop(laptop.brand, laptop.model);
     setBaseColor(officialColors ? officialColors[0].hex : colorForBrand(laptop.brand));
-    setModelScale(scaleForScreenSize(laptop.screen_size));
+    // If we have this laptop's real spec-sheet dimensions, those ALREADY encode its true
+    // physical size (e.g. a 13" MacBook Air's 304.1mm real width vs a 14" ThinkPad's 315.9mm).
+    // Applying an extra screen-size-based scale on top of that double-counts size and actually
+    // makes cross-model proportions LESS accurate. Only fall back to the screen-size guess for
+    // laptops we don't have real dimensions for.
+    const hasRealDims = dimensionOverrideForLaptop(laptop.brand, laptop.model) !== null;
+    setModelScale(hasRealDims ? 1 : scaleForScreenSize(laptop.screen_size));
     const theme = osThemeForBrand(laptop.brand);
     setOsTheme(theme);
     setLogoGlow(theme === "mac");
