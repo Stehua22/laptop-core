@@ -368,6 +368,164 @@ function portLayoutForProfile(profileName: string): { left: PortSpec[]; right: P
   return PORT_LAYOUTS[profileName] ?? PORT_LAYOUTS.default;
 }
 
+// ---- Real keyboard layouts with actual printed labels, instead of a blank uniform grid ----
+// A "u" is one standard keycap width; wider keys (space, shift, enter) get a multiple of that.
+type KeyDef = { label: string; u: number; isMod?: boolean };
+type KeyRow = KeyDef[];
+
+const U = 0.1; // one key unit in scene units, matches the old keySize
+
+const NUMBER_ROW: KeyRow = [
+  { label: "`", u: 1 }, { label: "1", u: 1 }, { label: "2", u: 1 }, { label: "3", u: 1 },
+  { label: "4", u: 1 }, { label: "5", u: 1 }, { label: "6", u: 1 }, { label: "7", u: 1 },
+  { label: "8", u: 1 }, { label: "9", u: 1 }, { label: "0", u: 1 }, { label: "-", u: 1 },
+  { label: "=", u: 1 }, { label: "Bksp", u: 1.8, isMod: true },
+];
+const QWERTY_ROW: KeyRow = [
+  { label: "Tab", u: 1.4, isMod: true }, { label: "Q", u: 1 }, { label: "W", u: 1 }, { label: "E", u: 1 },
+  { label: "R", u: 1 }, { label: "T", u: 1 }, { label: "Y", u: 1 }, { label: "U", u: 1 }, { label: "I", u: 1 },
+  { label: "O", u: 1 }, { label: "P", u: 1 }, { label: "[", u: 1 }, { label: "]", u: 1 }, { label: "\\", u: 1.2, isMod: true },
+];
+const HOME_ROW: KeyRow = [
+  { label: "Caps", u: 1.7, isMod: true }, { label: "A", u: 1 }, { label: "S", u: 1 }, { label: "D", u: 1 },
+  { label: "F", u: 1 }, { label: "G", u: 1 }, { label: "H", u: 1 }, { label: "J", u: 1 }, { label: "K", u: 1 },
+  { label: "L", u: 1 }, { label: ";", u: 1 }, { label: "'", u: 1 }, { label: "Enter", u: 2.1, isMod: true },
+];
+const SHIFT_ROW: KeyRow = [
+  { label: "Shift", u: 2.2, isMod: true }, { label: "Z", u: 1 }, { label: "X", u: 1 }, { label: "C", u: 1 },
+  { label: "V", u: 1 }, { label: "B", u: 1 }, { label: "N", u: 1 }, { label: "M", u: 1 }, { label: ",", u: 1 },
+  { label: ".", u: 1 }, { label: "/", u: 1 }, { label: "Shift", u: 2.6, isMod: true },
+];
+const FUNCTION_ROW: KeyRow = [
+  { label: "Esc", u: 1, isMod: true },
+  ...Array.from({ length: 12 }, (_, i) => ({ label: `F${i + 1}`, u: 1 })),
+];
+
+// ThinkPad's signature layout quirk: Fn sits to the LEFT of Ctrl (opposite of nearly every
+// other PC keyboard), which is one of the most recognizable ThinkPad-specific details.
+const THINKPAD_BOTTOM_ROW: KeyRow = [
+  { label: "Fn", u: 1, isMod: true }, { label: "Ctrl", u: 1.2, isMod: true }, { label: "Win", u: 1, isMod: true },
+  { label: "Alt", u: 1, isMod: true }, { label: "", u: 5.5 }, { label: "AltGr", u: 1, isMod: true },
+  { label: "Ctrl", u: 1.2, isMod: true }, { label: "\u25c0", u: 0.9, isMod: true }, { label: "\u25b2\n\u25bc", u: 0.9, isMod: true },
+  { label: "\u25b6", u: 0.9, isMod: true },
+];
+
+// MacBook: Control/Option/Command ordering with the Touch ID button replacing the last
+// function-row key, and the same inverted-T arrow cluster Apple has used for years.
+const MACBOOK_BOTTOM_ROW: KeyRow = [
+  { label: "Fn", u: 1, isMod: true }, { label: "Ctrl", u: 1, isMod: true }, { label: "\u2325", u: 1, isMod: true },
+  { label: "\u2318", u: 1.3, isMod: true }, { label: "", u: 5 }, { label: "\u2318", u: 1.3, isMod: true },
+  { label: "\u2325", u: 1, isMod: true }, { label: "\u25c0", u: 0.9, isMod: true }, { label: "\u25b2\n\u25bc", u: 0.9, isMod: true },
+  { label: "\u25b6", u: 0.9, isMod: true },
+];
+const MACBOOK_FUNCTION_ROW: KeyRow = [
+  { label: "esc", u: 1, isMod: true },
+  ...Array.from({ length: 11 }, (_, i) => ({ label: `F${i + 1}`, u: 1 })),
+  { label: "\u25c9", u: 1, isMod: true }, // Touch ID
+];
+
+const GAMING_BOTTOM_ROW: KeyRow = [
+  { label: "Ctrl", u: 1.2, isMod: true }, { label: "Win", u: 1, isMod: true }, { label: "Alt", u: 1, isMod: true },
+  { label: "", u: 6.25 }, { label: "Alt", u: 1, isMod: true }, { label: "Fn", u: 1, isMod: true },
+  { label: "Ctrl", u: 1.2, isMod: true }, { label: "\u25c0", u: 0.9, isMod: true }, { label: "\u25b2\n\u25bc", u: 0.9, isMod: true },
+  { label: "\u25b6", u: 0.9, isMod: true },
+];
+
+// Extra numpad block for larger gaming laptops (e.g. a real Legion Pro 5 16" ships with one).
+const NUMPAD_ROWS: KeyRow[] = [
+  [{ label: "NumLk", u: 1, isMod: true }, { label: "/", u: 1 }, { label: "*", u: 1 }, { label: "-", u: 1 }],
+  [{ label: "7", u: 1 }, { label: "8", u: 1 }, { label: "9", u: 1 }, { label: "+", u: 1 }],
+  [{ label: "4", u: 1 }, { label: "5", u: 1 }, { label: "6", u: 1 }, { label: "", u: 1 }],
+  [{ label: "1", u: 1 }, { label: "2", u: 1 }, { label: "3", u: 1 }, { label: "Enter", u: 1, isMod: true }],
+  [{ label: "0", u: 2 }, { label: ".", u: 1 }, { label: "", u: 1 }],
+];
+
+function keyboardLayoutForProfile(profileName: string): { rows: KeyRow[]; numpad: KeyRow[] | null } {
+  if (profileName === "thinkpad") {
+    return { rows: [FUNCTION_ROW, NUMBER_ROW, QWERTY_ROW, HOME_ROW, SHIFT_ROW, THINKPAD_BOTTOM_ROW], numpad: null };
+  }
+  if (profileName === "macbook") {
+    return { rows: [MACBOOK_FUNCTION_ROW, NUMBER_ROW, QWERTY_ROW, HOME_ROW, SHIFT_ROW, MACBOOK_BOTTOM_ROW], numpad: null };
+  }
+  if (profileName === "gaming") {
+    return { rows: [FUNCTION_ROW, NUMBER_ROW, QWERTY_ROW, HOME_ROW, SHIFT_ROW, GAMING_BOTTOM_ROW], numpad: NUMPAD_ROWS };
+  }
+  return { rows: [FUNCTION_ROW, NUMBER_ROW, QWERTY_ROW, HOME_ROW, SHIFT_ROW, THINKPAD_BOTTOM_ROW.map((k) => k.label === "Fn" ? { ...k, label: "Ctrl" } : k)], numpad: null };
+}
+
+// Cache one small canvas texture per unique label so we don't regenerate ~50 identical
+// "A" textures across different keyboards/rebuilds.
+const keyLabelTextureCache = new Map<string, THREE.CanvasTexture>();
+function getKeyLabelTexture(label: string, isMod: boolean): THREE.CanvasTexture {
+  const cacheKey = `${label}|${isMod}`;
+  const cached = keyLabelTextureCache.get(cacheKey);
+  if (cached) return cached;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#1a1b1e";
+  ctx.fillRect(0, 0, 64, 64);
+  if (label) {
+    ctx.fillStyle = isMod ? "#b8bcc4" : "#e8eaee";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const lines = label.split("\n");
+    const fontSize = isMod ? (lines[0].length > 2 ? 13 : 18) : 26;
+    ctx.font = `${isMod ? "600" : "500"} ${fontSize}px 'Segoe UI', system-ui, sans-serif`;
+    const lineHeight = fontSize * 1.05;
+    const startY = 32 - ((lines.length - 1) * lineHeight) / 2;
+    lines.forEach((line, i) => ctx.fillText(line, 32, startY + i * lineHeight));
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.anisotropy = 4;
+  keyLabelTextureCache.set(cacheKey, tex);
+  return tex;
+}
+
+// Builds one row of individually-shaped, individually-labeled keycaps (not a uniform
+// instanced grid) so wide keys (space/shift/enter) actually look wide and every key
+// shows its real character.
+function buildKeyRow(
+  row: KeyRow,
+  centerX: number,
+  z: number,
+  yBase: number,
+  keyHeight: number,
+  keyGap: number,
+  sideMat: THREE.Material
+): THREE.Group {
+  const group = new THREE.Group();
+  const totalUnits = row.reduce((sum, k) => sum + k.u, 0) + (row.length - 1) * (keyGap / U);
+  let cursor = -((totalUnits * U) / 2);
+  row.forEach((key) => {
+    const keyW = key.u * U - keyGap * 0.3;
+    const keyD = U - keyGap * 0.3;
+    const x = cursor + (key.u * U) / 2;
+    cursor += key.u * U + keyGap;
+
+    if (!key.label && key.u < 2) {
+      // Blank filler slot (e.g. gap in numpad) -- skip rendering a cap entirely.
+      return;
+    }
+
+    const geo = new RoundedBoxGeometry(keyW, keyHeight, keyD, 2, 0.018);
+    const topMat = new THREE.MeshStandardMaterial({
+      map: getKeyLabelTexture(key.label, !!key.isMod),
+      roughness: 0.5,
+      metalness: 0.15,
+    });
+    // Materials order for a Box-derived geometry: [+x,-x,+y,-y,+z,-z] -- index 2 is the top face.
+    const mesh = new THREE.Mesh(geo, [sideMat, sideMat, topMat, sideMat, sideMat, sideMat]);
+    mesh.position.set(centerX + x, yBase + keyHeight / 2, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+  });
+  return group;
+}
+
 function makeBrushedMetalNormalMap(): THREE.CanvasTexture {
   const size = 256;
   const canvas = document.createElement("canvas");
@@ -692,31 +850,35 @@ function buildLaptop(
   backlightPlane.position.set(0, baseThickness + 0.009, deck.position.z + 0.02);
   group.add(backlightPlane);
 
-  const cols = 14;
-  const rows = 5;
-  const keySize = 0.1;
-  const keyStepX = keySize + keyGap;
-  const keyStepZ = keySize + keyGap;
-  const keyGeo = new RoundedBoxGeometry(keySize, keyHeight, keySize, 3, 0.024);
-  const keysMesh = new THREE.InstancedMesh(keyGeo, keyMat, cols * rows);
-  keysMesh.castShadow = true;
-  keysMesh.receiveShadow = true;
-  const gridWidth = (cols - 1) * keyStepX;
-  const gridDepth = (rows - 1) * keyStepZ;
-  const dummy = new THREE.Object3D();
-  let idx = 0;
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const x = -gridWidth / 2 + c * keyStepX;
-      const z = deck.position.z - gridDepth / 2 + r * keyStepZ + 0.06;
-      dummy.position.set(x, baseThickness + keyHeight / 2 + 0.006, z);
-      dummy.updateMatrix();
-      keysMesh.setMatrixAt(idx, dummy.matrix);
-      idx++;
-    }
+  // Real keyboard: individually shaped/labeled rows instead of a uniform blank grid.
+  // Layout (row order, key widths, Fn/Ctrl position, numpad presence) is chosen per
+  // shape-profile family, so a ThinkPad, a MacBook, and a gaming laptop actually differ.
+  const { rows: kbRows, numpad } = keyboardLayoutForProfile(profile.name);
+  const keySideMat = keyMat;
+  const rowGap = U + keyGap;
+  const kbTotalDepth = kbRows.length * rowGap;
+  const kbStartZ = deck.position.z - kbTotalDepth / 2 + rowGap / 2 + 0.02;
+
+  // Numpad shifts the main alpha block left to make room on the right, matching how a
+  // real numpad gaming keyboard is laid out (not centered when a numpad is present).
+  const numpadUnits = numpad ? Math.max(...numpad.map((r) => r.reduce((s, k) => s + k.u, 0))) : 0;
+  const mainBlockCenterX = numpad ? -(numpadUnits * U) / 2 - 0.04 : 0;
+
+  kbRows.forEach((row, i) => {
+    const z = kbStartZ + i * rowGap;
+    const rowGroup = buildKeyRow(row, mainBlockCenterX, z, baseThickness + 0.006, keyHeight, keyGap, keySideMat);
+    group.add(rowGroup);
+  });
+
+  if (numpad) {
+    const numpadStartZ = deck.position.z - (numpad.length * rowGap) / 2 + rowGap / 2 + 0.02;
+    const numpadCenterX = mainBlockCenterX + (Math.max(...kbRows.map((r) => r.reduce((s, k) => s + k.u, 0))) * U) / 2 + 0.06 + (numpadUnits * U) / 2;
+    numpad.forEach((row, i) => {
+      const z = numpadStartZ + i * rowGap;
+      const rowGroup = buildKeyRow(row, numpadCenterX, z, baseThickness + 0.006, keyHeight, keyGap, keySideMat);
+      group.add(rowGroup);
+    });
   }
-  keysMesh.instanceMatrix.needsUpdate = true;
-  group.add(keysMesh);
 
   // ThinkPad TrackPoint (red dot in the middle of keyboard) -- visibility set per-profile below
   const trackpoint = new THREE.Mesh(
