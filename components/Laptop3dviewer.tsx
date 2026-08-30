@@ -563,18 +563,18 @@ function getKeyLabelTexture(label: string, isMod: boolean): THREE.CanvasTexture 
   if (cached) return cached;
 
   const canvas = document.createElement("canvas");
-  canvas.width = 64;
-  canvas.height = 64;
+  canvas.width = 128;
+  canvas.height = 128;
   const ctx = canvas.getContext("2d")!;
   ctx.fillStyle = "#1a1b1e";
-  ctx.fillRect(0, 0, 64, 64);
+  ctx.fillRect(0, 0, 128, 128);
 
   if (label === "Win") {
     // Real 4-pane Windows flag icon instead of plain text -- the actual logo every
     // PC keyboard prints on this key, not a generic "Win" label.
-    const gap = 3;
-    const size = 13;
-    const cx = 32, cy = 32;
+    const gap = 6;
+    const size = 26;
+    const cx = 64, cy = 64;
     ctx.fillStyle = "#c6cad2";
     // slight italic skew to match the real logo's tilt
     ctx.save();
@@ -586,18 +586,18 @@ function getKeyLabelTexture(label: string, isMod: boolean): THREE.CanvasTexture 
     ctx.fillRect(gap / 2, gap / 2, size, size);
     ctx.restore();
   } else if (label) {
-    ctx.fillStyle = isMod ? "#b8bcc4" : "#e8eaee";
+    ctx.fillStyle = isMod ? "#c8ccd4" : "#f0f2f5";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const lines = label.split("\n");
-    const fontSize = isMod ? (lines[0].length > 2 ? 13 : 18) : 26;
+    const fontSize = isMod ? (lines[0].length > 2 ? 32 : 44) : 64;
     ctx.font = `${isMod ? "600" : "500"} ${fontSize}px 'Segoe UI', system-ui, sans-serif`;
     const lineHeight = fontSize * 1.05;
-    const startY = 32 - ((lines.length - 1) * lineHeight) / 2;
-    lines.forEach((line, i) => ctx.fillText(line, 32, startY + i * lineHeight));
+    const startY = 64 - ((lines.length - 1) * lineHeight) / 2;
+    lines.forEach((line, i) => ctx.fillText(line, 64, startY + i * lineHeight));
   }
   const tex = new THREE.CanvasTexture(canvas);
-  tex.anisotropy = 4;
+  tex.anisotropy = 8;
   keyLabelTextureCache.set(cacheKey, tex);
   return tex;
 }
@@ -1019,7 +1019,7 @@ function buildLaptop(
   const numpadMaxUnits = numpad ? Math.max(...numpad.map((r) => r.reduce((s, k) => s + k.u, 0))) : 0;
   const numpadGapUnits = numpad ? 0.6 : 0;
   const totalLayoutUnits = mainBlockMaxUnits + numpadGapUnits + numpadMaxUnits;
-  let dynU = (deckWidth * 0.95) / totalLayoutUnits;
+  let dynU = (deckWidth * 0.82) / totalLayoutUnits;
   // Also make sure the keyboard's total DEPTH (all rows stacked, plus the numpad's row count
   // if it's taller than the main block) fits within the deck's actual depth -- a shallower
   // chassis could otherwise get a keyboard that fits width-wise but spills off the front/back.
@@ -1074,14 +1074,25 @@ function buildLaptop(
   if (tpSpec.hasClickButtons) {
     // Three physical click buttons (left / TrackPoint-middle scroll / right) directly above
     // the pad -- unique to ThinkPad, and the reason its pad sits lower/smaller than other laptops'.
+    // Lighter gray + a thin dark groove around each one so they visually read as separate
+    // physical buttons against the deck, instead of blending into it at nearly the same color.
     const btnWidth = tpWidth / 3 - 0.006;
     const btnDepth = 0.045;
-    const btnY = baseThickness + 0.0035;
+    const btnY = baseThickness + 0.004;
     const btnZ = depth * 0.34 - tpDepth / 2 - btnDepth / 2 - 0.008;
+    const btnMat = new THREE.MeshStandardMaterial({ color: "#4a4d54", roughness: 0.4, metalness: 0.15 });
+    const grooveMat = new THREE.MeshStandardMaterial({ color: "#050506", roughness: 0.9 });
     [-1, 0, 1].forEach((slot) => {
+      const groove = new THREE.Mesh(
+        new RoundedBoxGeometry(btnWidth + 0.003, 0.003, btnDepth + 0.003, 2, 0.009),
+        grooveMat
+      );
+      groove.position.set(trackpadCenterX + slot * (btnWidth + 0.006), btnY - 0.0008, btnZ);
+      group.add(groove);
+
       const btn = new THREE.Mesh(
-        new RoundedBoxGeometry(btnWidth, 0.005, btnDepth, 2, 0.008),
-        new THREE.MeshStandardMaterial({ color: "#26282c", roughness: 0.5, metalness: 0.2 })
+        new RoundedBoxGeometry(btnWidth, 0.006, btnDepth, 2, 0.008),
+        btnMat
       );
       btn.position.set(trackpadCenterX + slot * (btnWidth + 0.006), btnY, btnZ);
       group.add(btn);
