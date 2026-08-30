@@ -617,35 +617,9 @@ function buildKeyRow(
       return;
     }
 
-    if (dished) {
-      // Outer keycap body: same footprint, but its top face is left in the plain side
-      // color (no label) -- it acts as the raised rim visible around the recessed center.
-      const rimGeo = new RoundedBoxGeometry(keyW, keyHeight, keyD, 2, 0.02);
-      const rim = new THREE.Mesh(rimGeo, sideMat);
-      rim.position.set(centerX + x, yBase + keyHeight / 2, z);
-      rim.castShadow = true;
-      rim.receiveShadow = true;
-      group.add(rim);
-
-      // Recessed inner surface: smaller footprint, sits slightly BELOW the rim's top --
-      // this height step is what creates the visible concave/scooped look under lighting.
-      const innerW = keyW * 0.78;
-      const innerD = keyD * 0.78;
-      const recessDepth = keyHeight * 0.22;
-      const innerGeo = new RoundedBoxGeometry(innerW, keyHeight * 0.5, innerD, 2, 0.012);
-      const topMat = new THREE.MeshStandardMaterial({
-        map: getKeyLabelTexture(key.label, !!key.isMod),
-        roughness: 0.55,
-        metalness: 0.1,
-      });
-      const innerMesh = new THREE.Mesh(innerGeo, [sideMat, sideMat, topMat, sideMat, sideMat, sideMat]);
-      innerMesh.position.set(centerX + x, yBase + keyHeight - recessDepth - (keyHeight * 0.25), z);
-      innerMesh.castShadow = true;
-      innerMesh.receiveShadow = true;
-      group.add(innerMesh);
-      return;
-    }
-
+    // Base keycap: identical for every laptop, guaranteed to show its label -- this is the
+    // exact same geometry/material setup for both dished and flat keys, so a bug in the rim
+    // decoration below can never hide the letter again.
     const geo = new RoundedBoxGeometry(keyW, keyHeight, keyD, 2, 0.018);
     const topMat = new THREE.MeshStandardMaterial({
       map: getKeyLabelTexture(key.label, !!key.isMod),
@@ -658,6 +632,33 @@ function buildKeyRow(
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     group.add(mesh);
+
+    if (dished) {
+      // ThinkPad's concave/scooped look, added as a thin raised frame around the OUTSIDE
+      // edge of the key -- sits beside the label, never over it, so it cannot cover the
+      // letter the way a stacked "recessed center" mesh could. The frame reads as a rim
+      // and the untouched center reads as the dish relative to it.
+      const frameH = keyHeight * 0.16;
+      const frameT = Math.min(keyW, keyD) * 0.14;
+      const frameY = yBase + keyHeight + frameH / 2 - 0.0005;
+      const frameMat = sideMat;
+
+      const top = new THREE.Mesh(new THREE.BoxGeometry(keyW, frameH, frameT), frameMat);
+      top.position.set(centerX + x, frameY, z + keyD / 2 - frameT / 2);
+      group.add(top);
+
+      const bottom = new THREE.Mesh(new THREE.BoxGeometry(keyW, frameH, frameT), frameMat);
+      bottom.position.set(centerX + x, frameY, z - keyD / 2 + frameT / 2);
+      group.add(bottom);
+
+      const left = new THREE.Mesh(new THREE.BoxGeometry(frameT, frameH, keyD - frameT * 2), frameMat);
+      left.position.set(centerX + x - keyW / 2 + frameT / 2, frameY, z);
+      group.add(left);
+
+      const right = new THREE.Mesh(new THREE.BoxGeometry(frameT, frameH, keyD - frameT * 2), frameMat);
+      right.position.set(centerX + x + keyW / 2 - frameT / 2, frameY, z);
+      group.add(right);
+    }
   });
   return group;
 }
