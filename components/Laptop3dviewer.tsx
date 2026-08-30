@@ -439,6 +439,21 @@ function portLayoutForProfile(profileName: string): { left: PortSpec[]; right: P
   return PORT_LAYOUTS[profileName] ?? PORT_LAYOUTS.default;
 }
 
+// ---- Real per-family trackpad sizes, replacing the one fixed 0.62x0.4 pad every laptop shared ----
+// Sourced from real product dimensions: a MacBook's Force Touch pad is dramatically larger than
+// a ThinkPad's, and a real ThinkPad has three dedicated physical click buttons directly above
+// its pad for TrackPoint use -- a detail no other laptop family has.
+type TrackpadSpec = { widthMm: number; depthMm: number; hasClickButtons: boolean };
+const TRACKPAD_SPECS: Record<string, TrackpadSpec> = {
+  thinkpad: { widthMm: 105, depthMm: 60, hasClickButtons: true },
+  macbook: { widthMm: 132, depthMm: 82, hasClickButtons: false },
+  gaming: { widthMm: 110, depthMm: 65, hasClickButtons: false },
+  default: { widthMm: 105, depthMm: 65, hasClickButtons: false },
+};
+function trackpadSpecForProfile(profileName: string): TrackpadSpec {
+  return TRACKPAD_SPECS[profileName] ?? TRACKPAD_SPECS.default;
+}
+
 // ---- Real keyboard layouts with actual printed labels, instead of a blank uniform grid ----
 // A "u" is one standard keycap width; wider keys (space, shift, enter) get a multiple of that.
 type KeyDef = { label: string; u: number; isMod?: boolean };
@@ -601,16 +616,17 @@ function buildKeyRow(
   keyHeight: number,
   keyGap: number,
   sideMat: THREE.Material,
-  dished: boolean = false
+  dished: boolean = false,
+  unitSize: number = U
 ): THREE.Group {
   const group = new THREE.Group();
-  const totalUnits = row.reduce((sum, k) => sum + k.u, 0) + (row.length - 1) * (keyGap / U);
-  let cursor = -((totalUnits * U) / 2);
+  const totalUnits = row.reduce((sum, k) => sum + k.u, 0) + (row.length - 1) * (keyGap / unitSize);
+  let cursor = -((totalUnits * unitSize) / 2);
   row.forEach((key) => {
-    const keyW = key.u * U - keyGap * 0.3;
-    const keyD = U - keyGap * 0.3;
-    const x = cursor + (key.u * U) / 2;
-    cursor += key.u * U + keyGap;
+    const keyW = key.u * unitSize - keyGap * 0.3;
+    const keyD = unitSize - keyGap * 0.3;
+    const x = cursor + (key.u * unitSize) / 2;
+    cursor += key.u * unitSize + keyGap;
 
     if (!key.label && key.u < 2) {
       // Blank filler slot (e.g. gap in numpad) -- skip rendering a cap entirely.
@@ -992,27 +1008,47 @@ function buildLaptop(
   // shape-profile family, so a ThinkPad, a MacBook, and a gaming laptop actually differ.
   const { rows: kbRows, numpad } = keyboardLayoutForProfile(profile.name);
   const keySideMat = keyMat;
-  const rowGap = U + keyGap;
+
+  // The keyboard MUST fit inside this laptop's actual deck width -- U was previously a fixed
+  // constant regardless of the laptop's real size, so a smaller laptop's keyboard could
+  // literally overflow past its own deck/chassis edges. Instead, derive the key unit size
+  // FROM the real deck width: find the widest row (including the numpad block laid out
+  // beside the main keys, if present) and size keys so that widest extent fits with a
+  // small safety margin, then scale everything else (gaps, row spacing) proportionally.
+  const mainBlockMaxUnits = Math.max(...kbRows.map((r) => r.reduce((s, k) => s + k.u, 0)));
+  const numpadMaxUnits = numpad ? Math.max(...numpad.map((r) => r.reduce((s, k) => s + k.u, 0))) : 0;
+  const numpadGapUnits = numpad ? 0.6 : 0;
+  const totalLayoutUnits = mainBlockMaxUnits + numpadGapUnits + numpadMaxUnits;
+  let dynU = (deckWidth * 0.95) / totalLayoutUnits;
+  // Also make sure the keyboard's total DEPTH (all rows stacked, plus the numpad's row count
+  // if it's taller than the main block) fits within the deck's actual depth -- a shallower
+  // chassis could otherwise get a keyboard that fits width-wise but spills off the front/back.
+  const rowCount = Math.max(kbRows.length, numpad ? numpad.length : 0);
+  const depthBudget = deckDepth * 0.85;
+  const dynUFromDepth = depthBudget / (rowCount * (1 + keyGap / U));
+  dynU = Math.min(dynU, dynUFromDepth);
+  const dynKeyGap = keyGap * (dynU / U);
+
+  const rowGap = dynU + dynKeyGap;
   const kbTotalDepth = kbRows.length * rowGap;
   const kbStartZ = deck.position.z - kbTotalDepth / 2 + rowGap / 2 + 0.02;
 
   // Numpad shifts the main alpha block left to make room on the right, matching how a
   // real numpad gaming keyboard is laid out (not centered when a numpad is present).
-  const numpadUnits = numpad ? Math.max(...numpad.map((r) => r.reduce((s, k) => s + k.u, 0))) : 0;
-  const mainBlockCenterX = numpad ? -(numpadUnits * U) / 2 - 0.04 : 0;
+  const mainBlockCenterX = numpad ? -(numpadMaxUnits * dynU) / 2 - numpadGapUnits * dynU * 0.5 : 0;
 
   kbRows.forEach((row, i) => {
     const z = kbStartZ + i * rowGap;
-    const rowGroup = buildKeyRow(row, mainBlockCenterX, z, baseThickness + 0.006, keyHeight, keyGap, keySideMat, profile.dishedKeys);
+    const rowGroup = buildKeyRow(row, mainBlockCenterX, z, baseThickness + 0.006, keyHeight, dynKeyGap, keySideMat, profile.dishedKeys, dynU);
     group.add(rowGroup);
   });
 
   if (numpad) {
     const numpadStartZ = deck.position.z - (numpad.length * rowGap) / 2 + rowGap / 2 + 0.02;
-    const numpadCenterX = mainBlockCenterX + (Math.max(...kbRows.map((r) => r.reduce((s, k) => s + k.u, 0))) * U) / 2 + 0.06 + (numpadUnits * U) / 2;
+    const numpadCenterX = mainBlockCenterX + (mainBlockMaxUnits * dynU) / 2 + numpadGapUnits * dynU + (numpadMaxUnits * dynU) / 2;
     numpad.forEach((row, i) => {
       const z = numpadStartZ + i * rowGap;
-      const rowGroup = buildKeyRow(row, numpadCenterX, z, baseThickness + 0.006, keyHeight, keyGap, keySideMat, profile.dishedKeys);
+      const rowGroup = buildKeyRow(row, numpadCenterX, z, baseThickness + 0.006, keyHeight, dynKeyGap, keySideMat, profile.dishedKeys, dynU);
       group.add(rowGroup);
     });
   }
@@ -1026,11 +1062,37 @@ function buildLaptop(
   trackpoint.visible = profile.hasTrackpoint;
   group.add(trackpoint);
 
+  // Real per-family trackpad size and position, instead of one fixed pad every laptop shared.
+  // MacBook's is dramatically larger (Force Touch, edge-to-edge feel); ThinkPad's is smaller
+  // and sits below three dedicated physical click buttons (a ThinkPad-only detail); a gaming
+  // laptop with a numpad gets its pad aligned under the main keys, not the full chassis center.
+  const tpSpec = trackpadSpecForProfile(profile.name);
+  const tpWidth = Math.min(tpSpec.widthMm * MM_TO_SCENE_W, deckWidth * 0.72);
+  const tpDepth = tpSpec.depthMm * MM_TO_SCENE_D;
+  const trackpadCenterX = numpad ? mainBlockCenterX : 0;
+
+  if (tpSpec.hasClickButtons) {
+    // Three physical click buttons (left / TrackPoint-middle scroll / right) directly above
+    // the pad -- unique to ThinkPad, and the reason its pad sits lower/smaller than other laptops'.
+    const btnWidth = tpWidth / 3 - 0.006;
+    const btnDepth = 0.045;
+    const btnY = baseThickness + 0.0035;
+    const btnZ = depth * 0.34 - tpDepth / 2 - btnDepth / 2 - 0.008;
+    [-1, 0, 1].forEach((slot) => {
+      const btn = new THREE.Mesh(
+        new RoundedBoxGeometry(btnWidth, 0.005, btnDepth, 2, 0.008),
+        new THREE.MeshStandardMaterial({ color: "#26282c", roughness: 0.5, metalness: 0.2 })
+      );
+      btn.position.set(trackpadCenterX + slot * (btnWidth + 0.006), btnY, btnZ);
+      group.add(btn);
+    });
+  }
+
   const trackpad = new THREE.Mesh(
-    new RoundedBoxGeometry(0.62, 0.004, 0.4, 4, 0.025),
+    new RoundedBoxGeometry(tpWidth, 0.004, tpDepth, 4, 0.02),
     glassMat
   );
-  trackpad.position.set(0, baseThickness + 0.004, depth * 0.34);
+  trackpad.position.set(trackpadCenterX, baseThickness + 0.004, depth * 0.34);
   group.add(trackpad);
 
   const dotGeo = new THREE.CircleGeometry(0.008, 8);
