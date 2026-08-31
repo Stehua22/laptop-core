@@ -779,6 +779,259 @@ function getDisplayTexture(theme: "windows" | "mac", customUrl?: string): THREE.
   return tex;
 }
 
+// ==== Interactive OS layer =========================================================
+// Renders a genuinely clickable mini desktop UI (Start menu / taskbar for Windows,
+// menu bar / Dock for Mac) onto a canvas that becomes the screen's texture, with real
+// raycasting from pointer clicks against the 3D display mesh -> canvas pixel coords ->
+// hit-testing against the drawn UI regions. Only active when there's no user-uploaded
+// custom photo on the screen (can't fake clickable UI on top of a real screenshot).
+const OS_CANVAS_W = 1024;
+const OS_CANVAS_H = 640;
+
+type OSAction =
+  | { type: "toggleStart" }
+  | { type: "closeMenus" }
+  | { type: "launch"; name: string }
+  | { type: "toggleAppleMenu" }
+  | { type: "appleMenuItem"; name: string };
+
+type OSUIState = {
+  startOpen: boolean;
+  appleMenuOpen: boolean;
+  toastText: string | null;
+  toastUntil: number;
+};
+
+const WIN_APPS = ["Edge", "Word", "Photos", "Mail", "Store", "Settings"];
+const MAC_DOCK = ["Finder", "Safari", "Photos", "Mail", "Music", "Settings"];
+const MAC_MENU_ITEMS = ["About This Mac", "System Settings\u2026", "Sleep", "Restart\u2026", "Shut Down\u2026"];
+
+function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawWinLogo(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number) {
+  const gap = size * 0.16;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(cx - size - gap / 2, cy - size - gap / 2, size, size);
+  ctx.fillRect(cx + gap / 2, cy - size - gap / 2, size, size);
+  ctx.fillRect(cx - size - gap / 2, cy + gap / 2, size, size);
+  ctx.fillRect(cx + gap / 2, cy + gap / 2, size, size);
+}
+
+function drawToast(ctx: CanvasRenderingContext2D, text: string, canvasW: number, bottomClear: number) {
+  ctx.font = "600 15px 'Segoe UI', -apple-system, sans-serif";
+  const textW = ctx.measureText(text).width;
+  const padX = 18, boxW = textW + padX * 2, boxH = 42;
+  const x = canvasW / 2 - boxW / 2;
+  const y = OS_CANVAS_H - bottomClear - boxH - 14;
+  ctx.fillStyle = "rgba(20,20,24,0.88)";
+  roundRectPath(ctx, x, y, boxW, boxH, 10);
+  ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, canvasW / 2, y + boxH / 2 + 1);
+}
+
+const WIN_TASKBAR_H = 56;
+function drawWindowsUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElement | null, state: OSUIState) {
+  ctx.clearRect(0, 0, OS_CANVAS_W, OS_CANVAS_H);
+  if (wallpaper) ctx.drawImage(wallpaper, 0, 0, OS_CANVAS_W, OS_CANVAS_H);
+  else { ctx.fillStyle = "#1b2735"; ctx.fillRect(0, 0, OS_CANVAS_W, OS_CANVAS_H); }
+
+  const tbY = OS_CANVAS_H - WIN_TASKBAR_H;
+  ctx.fillStyle = "rgba(24,26,32,0.75)";
+  ctx.fillRect(0, tbY, OS_CANVAS_W, WIN_TASKBAR_H);
+
+  const centerX = OS_CANVAS_W / 2;
+  const startX = centerX - 120, startW = 44;
+  ctx.fillStyle = state.startOpen ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0)";
+  roundRectPath(ctx, startX, tbY + 6, startW, WIN_TASKBAR_H - 12, 6);
+  ctx.fill();
+  drawWinLogo(ctx, startX + startW / 2, tbY + WIN_TASKBAR_H / 2, 8);
+
+  const iconGlyphs = ["\u{1F50D}", "\u{1F4C1}", "\u{1F310}", "\u2709"];
+  let ix = startX + startW + 16;
+  iconGlyphs.forEach((g) => {
+    ctx.font = "20px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#fff";
+    ctx.fillText(g, ix, tbY + WIN_TASKBAR_H / 2);
+    ix += 42;
+  });
+
+  const now = new Date();
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#fff";
+  ctx.font = "13px 'Segoe UI', sans-serif";
+  ctx.fillText(now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), OS_CANVAS_W - 16, tbY + 20);
+  ctx.font = "11px 'Segoe UI', sans-serif";
+  ctx.fillText(now.toLocaleDateString(), OS_CANVAS_W - 16, tbY + 38);
+
+  if (state.startOpen) {
+    const panelW = 380, panelH = 380;
+    const panelX = centerX - panelW / 2, panelY = tbY - panelH - 8;
+    ctx.fillStyle = "rgba(30,32,38,0.97)";
+    roundRectPath(ctx, panelX, panelY, panelW, panelH, 12);
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(255,255,255,0.09)";
+    roundRectPath(ctx, panelX + 20, panelY + 18, panelW - 40, 34, 17);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.font = "13px 'Segoe UI', sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText("\u{1F50D}  Type here to search", panelX + 34, panelY + 35);
+
+    const cols = 3, cellW = (panelW - 40) / cols;
+    WIN_APPS.forEach((app, i) => {
+      const cx = panelX + 20 + cellW * (i % cols) + cellW / 2;
+      const cy = panelY + 100 + Math.floor(i / cols) * 100;
+      ctx.fillStyle = "rgba(255,255,255,0.07)";
+      roundRectPath(ctx, cx - 26, cy - 26, 52, 52, 10);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.font = "18px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(app[0], cx, cy - 2);
+      ctx.font = "10px 'Segoe UI', sans-serif";
+      ctx.fillText(app, cx, cy + 38);
+    });
+  }
+
+  if (state.toastText && Date.now() < state.toastUntil) {
+    drawToast(ctx, state.toastText, OS_CANVAS_W, WIN_TASKBAR_H);
+  }
+}
+
+function hitTestWindowsUI(px: number, py: number, state: OSUIState): OSAction | null {
+  const tbY = OS_CANVAS_H - WIN_TASKBAR_H;
+  const centerX = OS_CANVAS_W / 2;
+
+  if (state.startOpen) {
+    const panelW = 380, panelH = 380;
+    const panelX = centerX - panelW / 2, panelY = tbY - panelH - 8;
+    if (px >= panelX && px <= panelX + panelW && py >= panelY && py <= panelY + panelH) {
+      const cols = 3, cellW = (panelW - 40) / cols;
+      for (let i = 0; i < WIN_APPS.length; i++) {
+        const cx = panelX + 20 + cellW * (i % cols) + cellW / 2;
+        const cy = panelY + 100 + Math.floor(i / cols) * 100;
+        if (Math.abs(px - cx) < 30 && Math.abs(py - cy) < 45) return { type: "launch", name: WIN_APPS[i] };
+      }
+      return null; // clicked inside panel but not on an icon -- absorb the click, don't fall through
+    }
+  }
+
+  const startX = centerX - 120, startW = 44;
+  if (py >= tbY && px >= startX && px <= startX + startW) return { type: "toggleStart" };
+  if (py >= tbY) return { type: "closeMenus" };
+  if (state.startOpen) return { type: "closeMenus" };
+  return null;
+}
+
+const MAC_MENUBAR_H = 30;
+function drawMacUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElement | null, state: OSUIState) {
+  ctx.clearRect(0, 0, OS_CANVAS_W, OS_CANVAS_H);
+  if (wallpaper) ctx.drawImage(wallpaper, 0, 0, OS_CANVAS_W, OS_CANVAS_H);
+  else { ctx.fillStyle = "#3a3a3c"; ctx.fillRect(0, 0, OS_CANVAS_W, OS_CANVAS_H); }
+
+  ctx.fillStyle = "rgba(245,245,247,0.6)";
+  ctx.fillRect(0, 0, OS_CANVAS_W, MAC_MENUBAR_H);
+  if (state.appleMenuOpen) {
+    ctx.fillStyle = "rgba(0,0,0,0.1)";
+    ctx.fillRect(0, 0, 40, MAC_MENUBAR_H);
+  }
+  // Drawn apple-ish glyph instead of the U+F8FF private-use character, which only renders
+  // on Apple's own font stack -- most visitors on Windows/Linux would just see a blank box.
+  ctx.fillStyle = "#1a1a1c";
+  ctx.beginPath();
+  ctx.arc(20, MAC_MENUBAR_H / 2 + 1, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = wallpaper ? "rgba(245,245,247,0.6)" : "#3a3a3c";
+  ctx.beginPath();
+  ctx.ellipse(22, MAC_MENUBAR_H / 2 - 3, 2.6, 3.4, 0.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.font = "12.5px -apple-system, 'Segoe UI', sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("Finder    File    Edit    View    Go    Window    Help", 48, MAC_MENUBAR_H / 2 + 1);
+
+  const now = new Date();
+  const timeStr = `${now.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}  ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  ctx.textAlign = "right";
+  ctx.fillText(timeStr, OS_CANVAS_W - 16, MAC_MENUBAR_H / 2 + 1);
+
+  if (state.appleMenuOpen) {
+    const menuX = 6, menuY = MAC_MENUBAR_H + 2, menuW = 210, itemH = 28;
+    const menuH = MAC_MENU_ITEMS.length * itemH + 8;
+    ctx.fillStyle = "rgba(250,250,250,0.98)";
+    roundRectPath(ctx, menuX, menuY, menuW, menuH, 8);
+    ctx.fill();
+    ctx.fillStyle = "#1a1a1c";
+    ctx.font = "13px -apple-system, sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    MAC_MENU_ITEMS.forEach((item, i) => {
+      ctx.fillText(item, menuX + 14, menuY + 4 + itemH * i + itemH / 2);
+    });
+  }
+
+  const dockW = MAC_DOCK.length * 66 + 20, dockH = 60;
+  const dockX = (OS_CANVAS_W - dockW) / 2, dockY = OS_CANVAS_H - dockH - 12;
+  ctx.fillStyle = "rgba(255,255,255,0.28)";
+  roundRectPath(ctx, dockX, dockY, dockW, dockH, 16);
+  ctx.fill();
+  MAC_DOCK.forEach((app, i) => {
+    const cx = dockX + 20 + i * 66 + 23, cy = dockY + dockH / 2;
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    roundRectPath(ctx, cx - 22, cy - 22, 44, 44, 11);
+    ctx.fill();
+    ctx.fillStyle = "#333";
+    ctx.font = "16px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(app[0], cx, cy);
+  });
+
+  if (state.toastText && Date.now() < state.toastUntil) {
+    drawToast(ctx, state.toastText, OS_CANVAS_W, dockH + 26);
+  }
+}
+
+function hitTestMacUI(px: number, py: number, state: OSUIState): OSAction | null {
+  if (py <= MAC_MENUBAR_H) {
+    if (px <= 40) return { type: "toggleAppleMenu" };
+    return { type: "closeMenus" };
+  }
+  if (state.appleMenuOpen) {
+    const menuX = 6, menuY = MAC_MENUBAR_H + 2, menuW = 210, itemH = 28;
+    const menuH = MAC_MENU_ITEMS.length * itemH + 8;
+    if (px >= menuX && px <= menuX + menuW && py >= menuY && py <= menuY + menuH) {
+      const idx = Math.floor((py - menuY - 4) / itemH);
+      if (idx >= 0 && idx < MAC_MENU_ITEMS.length) return { type: "appleMenuItem", name: MAC_MENU_ITEMS[idx] };
+      return null;
+    }
+    return { type: "closeMenus" };
+  }
+  const dockW = MAC_DOCK.length * 66 + 20, dockH = 60;
+  const dockX = (OS_CANVAS_W - dockW) / 2, dockY = OS_CANVAS_H - dockH - 12;
+  if (px >= dockX && px <= dockX + dockW && py >= dockY && py <= dockY + dockH) {
+    const idx = Math.floor((px - dockX - 20) / 66);
+    if (idx >= 0 && idx < MAC_DOCK.length) return { type: "launch", name: MAC_DOCK[idx] };
+  }
+  return null;
+}
+// ==== end interactive OS layer ======================================================
+
 function makeBrandLogoTexture(brand: string, model: string): THREE.CanvasTexture {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
@@ -1485,6 +1738,16 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   const bodyMatRef = useRef<THREE.MeshPhysicalMaterial | null>(null);
   const normalMapRef = useRef<THREE.CanvasTexture | null>(null);
   const roughnessMapRef = useRef<THREE.CanvasTexture | null>(null);
+  // Interactive OS layer: persistent canvas/texture (redrawn in place, never recreated, so
+  // clicks keep working across laptop rebuilds), current UI state, and cached wallpaper images.
+  const osCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const osCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const osTextureRef = useRef<THREE.CanvasTexture | null>(null);
+  const osStateRef = useRef<OSUIState>({ startOpen: false, appleMenuOpen: false, toastText: null, toastUntil: 0 });
+  const wallpaperImagesRef = useRef<{ windows?: HTMLImageElement; mac?: HTMLImageElement }>({});
+  const osThemeRef = useRef<"windows" | "mac">("windows");
+  const customDisplayUrlRef = useRef<string>("");
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [laptops, setLaptops] = useState<Laptop[]>([]);
   const [selectedId, setSelectedId] = useState<number | "">("");
@@ -1513,6 +1776,82 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   useEffect(() => {
     autoRotateRef.current = autoRotate;
   }, [autoRotate]);
+
+  useEffect(() => {
+    osThemeRef.current = osTheme;
+  }, [osTheme]);
+  useEffect(() => {
+    customDisplayUrlRef.current = customDisplayUrl;
+  }, [customDisplayUrl]);
+  const displayOnRef = useRef(displayOn);
+  useEffect(() => {
+    displayOnRef.current = displayOn;
+  }, [displayOn]);
+
+  // Redraws the OS canvas in place using current theme + UI state, then flags the texture
+  // dirty so Three.js re-uploads it. This is what makes clicking actually visible -- every
+  // state change (menu open/close, toast) goes through here.
+  const redrawOS = () => {
+    const ctx = osCtxRef.current;
+    if (!ctx) return;
+    const theme = osThemeRef.current;
+    const wallpaper = wallpaperImagesRef.current[theme] ?? null;
+    if (theme === "mac") drawMacUI(ctx, wallpaper ?? null, osStateRef.current);
+    else drawWindowsUI(ctx, wallpaper ?? null, osStateRef.current);
+    if (osTextureRef.current) osTextureRef.current.needsUpdate = true;
+  };
+
+  // Lazily loads (and caches) the wallpaper image for a theme, redrawing once it's ready.
+  const ensureWallpaperLoaded = (theme: "windows" | "mac") => {
+    if (wallpaperImagesRef.current[theme]) {
+      redrawOS();
+      return;
+    }
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      wallpaperImagesRef.current[theme] = img;
+      redrawOS();
+    };
+    img.src = theme === "windows" ? win11B64 : macB64;
+  };
+
+  const showToast = (text: string) => {
+    osStateRef.current = { ...osStateRef.current, toastText: text, toastUntil: Date.now() + 2200 };
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => {
+      osStateRef.current = { ...osStateRef.current, toastText: null };
+      redrawOS();
+    }, 2200);
+    redrawOS();
+  };
+
+  const applyOSAction = (action: OSAction) => {
+    switch (action.type) {
+      case "toggleStart":
+        osStateRef.current = { ...osStateRef.current, startOpen: !osStateRef.current.startOpen, appleMenuOpen: false };
+        redrawOS();
+        break;
+      case "toggleAppleMenu":
+        osStateRef.current = { ...osStateRef.current, appleMenuOpen: !osStateRef.current.appleMenuOpen };
+        redrawOS();
+        break;
+      case "closeMenus":
+        if (osStateRef.current.startOpen || osStateRef.current.appleMenuOpen) {
+          osStateRef.current = { ...osStateRef.current, startOpen: false, appleMenuOpen: false };
+          redrawOS();
+        }
+        break;
+      case "launch":
+        osStateRef.current = { ...osStateRef.current, startOpen: false };
+        showToast(`Opening ${action.name}\u2026`);
+        break;
+      case "appleMenuItem":
+        osStateRef.current = { ...osStateRef.current, appleMenuOpen: false };
+        showToast(action.name.replace(/\u2026$/, "") + "\u2026");
+        break;
+    }
+  };
 
   // ---- Load real laptop data ----
   useEffect(() => {
@@ -1794,7 +2133,19 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     });
     bodyMatRef.current = bodyMat;
 
-    const initialDisplayTexture = getDisplayTexture(osTheme, customDisplayUrl);
+    // Set up the interactive OS canvas ONCE here -- it's redrawn in place afterward, never
+    // recreated, so click state survives laptop rebuilds (brand/profile switches).
+    const osCanvas = document.createElement("canvas");
+    osCanvas.width = OS_CANVAS_W;
+    osCanvas.height = OS_CANVAS_H;
+    osCanvasRef.current = osCanvas;
+    osCtxRef.current = osCanvas.getContext("2d");
+    const osTexture = new THREE.CanvasTexture(osCanvas);
+    osTexture.colorSpace = THREE.SRGBColorSpace;
+    osTextureRef.current = osTexture;
+    ensureWallpaperLoaded(osTheme);
+
+    const initialDisplayTexture = customDisplayUrl ? getDisplayTexture(osTheme, customDisplayUrl) : osTexture;
     const initialProfile = profileForLaptop(brandName, modelName);
     const initialDimsOverride = getAccurateDims(brandName, modelName, screenSizeIn, initialProfile.name);
     const { group: laptop, refs } = buildLaptop(bodyMat, initialDisplayTexture, initialProfile, initialDimsOverride);
@@ -1835,6 +2186,40 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     };
     mount.addEventListener("pointermove", onPointerMove);
     mount.addEventListener("pointerleave", onPointerLeave);
+
+    // Click detection on the screen: raycast from pointer -> display mesh -> UV -> canvas
+    // pixel coords -> hit-test against whatever UI is currently drawn there. A small movement
+    // threshold distinguishes an actual click from an OrbitControls drag-to-rotate gesture.
+    const clickRaycaster = new THREE.Raycaster();
+    let pointerDownPos: { x: number; y: number } | null = null;
+    const onScreenPointerDown = (e: PointerEvent) => {
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+    };
+    const onScreenPointerUp = (e: PointerEvent) => {
+      const down = pointerDownPos;
+      pointerDownPos = null;
+      if (!down) return;
+      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return; // was a drag, not a click
+      const displayMesh = meshesRef.current?.display;
+      if (!displayMesh || !displayMesh.visible) return;
+      if (!displayOnRef.current) return; // screen is off -- nothing to click
+      if (customDisplayUrlRef.current) return; // real uploaded photo -- no fake UI on top of it
+      const rect = mount.getBoundingClientRect();
+      const ndc = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1
+      );
+      clickRaycaster.setFromCamera(ndc, camera);
+      const hits = clickRaycaster.intersectObject(displayMesh, false);
+      if (!hits.length || !hits[0].uv) return;
+      const uv = hits[0].uv;
+      const px = uv.x * OS_CANVAS_W;
+      const py = (1 - uv.y) * OS_CANVAS_H; // canvas origin is top-left; plane UV origin is bottom-left
+      const action = osThemeRef.current === "mac" ? hitTestMacUI(px, py, osStateRef.current) : hitTestWindowsUI(px, py, osStateRef.current);
+      if (action) applyOSAction(action);
+    };
+    mount.addEventListener("pointerdown", onScreenPointerDown);
+    mount.addEventListener("pointerup", onScreenPointerUp);
 
     let frameId: number;
     let lastTime = performance.now();
@@ -1905,6 +2290,8 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
       window.removeEventListener("resize", handleResize);
       mount.removeEventListener("pointermove", onPointerMove);
       mount.removeEventListener("pointerleave", onPointerLeave);
+      mount.removeEventListener("pointerdown", onScreenPointerDown);
+      mount.removeEventListener("pointerup", onScreenPointerUp);
       controls.dispose();
       renderer.dispose();
       if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement);
@@ -1943,7 +2330,9 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
       disposeGroup(oldGroup);
     }
 
-    const displayTexture = getDisplayTexture(osTheme, customDisplayUrl);
+    // Reuse the SAME persistent OS canvas texture (not a freshly loaded one) so click state
+    // and the interactive UI survive a brand/profile rebuild, unless a real photo is uploaded.
+    const displayTexture = customDisplayUrl ? getDisplayTexture(osTheme, customDisplayUrl) : (osTextureRef.current ?? getDisplayTexture(osTheme, customDisplayUrl));
     const { group: laptop, refs } = buildLaptop(bodyMat, displayTexture, newProfile, newDimsOverride);
     laptop.rotation.y = oldRotationY;
     laptop.scale.setScalar(oldScale);
@@ -2029,11 +2418,32 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   useEffect(() => {
     const refs = meshesRef.current;
     if (!refs) return;
-    const tex = getDisplayTexture(osTheme, customDisplayUrl);
     const mat = refs.display.material as THREE.MeshBasicMaterial;
-    mat.map = tex;
+    if (customDisplayUrl) {
+      // Real uploaded photo: plain static texture, no interactive UI on top of it.
+      mat.map = getDisplayTexture(osTheme, customDisplayUrl);
+    } else {
+      // Back to (or still on) the interactive OS -- reuse the persistent canvas texture and
+      // just redraw its contents for the current theme, instead of loading a fresh image.
+      mat.map = osTextureRef.current;
+      ensureWallpaperLoaded(osTheme);
+    }
     mat.needsUpdate = true;
   }, [osTheme, customDisplayUrl]);
+
+  // Keep the OS clock roughly live and clear any stale toast, without a full redraw loop --
+  // only runs while the interactive desktop (not a custom photo) is actually showing.
+  useEffect(() => {
+    if (customDisplayUrl) return;
+    const interval = setInterval(() => redrawOS(), 20000);
+    return () => clearInterval(interval);
+  }, [customDisplayUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const refs = meshesRef.current;
