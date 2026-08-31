@@ -548,6 +548,18 @@ const NUMPAD_ROWS: KeyRow[] = [
   [{ label: "0", u: 2 }, { label: ".", u: 1 }, { label: "", u: 1 }],
 ];
 
+// Standard PC layout for everything that ISN'T a ThinkPad (Dell/HP/Acer/etc): Ctrl-Fn-Win-Alt
+// ordering, the opposite of ThinkPad's distinctive Fn-Ctrl. Previously this profile just
+// relabeled ThinkPad's row, which left a duplicate "Ctrl" key sitting next to the real one --
+// a genuine layout error, not just a cosmetic simplification.
+const DEFAULT_BOTTOM_ROW: KeyRow = [
+  { label: "Ctrl", u: 1.2, isMod: true }, { label: "Fn", u: 1, isMod: true }, { label: "Win", u: 1.2, isMod: true },
+  { label: "Alt", u: 1.2, isMod: true }, { label: "", u: 5.2 }, { label: "Alt", u: 1.2, isMod: true },
+  { label: "Ctrl", u: 1.2, isMod: true },
+  { label: "\u25c0", u: 0.9, isMod: true }, { label: "\u25b2\n\u25bc", u: 0.9, isMod: true },
+  { label: "\u25b6", u: 0.9, isMod: true },
+];
+
 function keyboardLayoutForProfile(profileName: string): { rows: KeyRow[]; numpad: KeyRow[] | null } {
   if (profileName === "thinkpad") {
     return { rows: [FUNCTION_ROW, NUMBER_ROW, QWERTY_ROW, HOME_ROW, SHIFT_ROW, THINKPAD_BOTTOM_ROW], numpad: null };
@@ -558,7 +570,7 @@ function keyboardLayoutForProfile(profileName: string): { rows: KeyRow[]; numpad
   if (profileName === "gaming") {
     return { rows: [FUNCTION_ROW, NUMBER_ROW, QWERTY_ROW, HOME_ROW, SHIFT_ROW, GAMING_BOTTOM_ROW], numpad: NUMPAD_ROWS };
   }
-  return { rows: [FUNCTION_ROW, NUMBER_ROW, QWERTY_ROW, HOME_ROW, SHIFT_ROW, THINKPAD_BOTTOM_ROW.map((k) => k.label === "Fn" ? { ...k, label: "Ctrl" } : k)], numpad: null };
+  return { rows: [FUNCTION_ROW, NUMBER_ROW, QWERTY_ROW, HOME_ROW, SHIFT_ROW, DEFAULT_BOTTOM_ROW], numpad: null };
 }
 
 // Cache one small canvas texture per unique label so we don't regenerate ~50 identical
@@ -1139,16 +1151,23 @@ function buildLaptop(
 
   const dotGeo = new THREE.CircleGeometry(0.008, 8);
   const dotMat = new THREE.MeshStandardMaterial({ color: "#0d0e0f", roughness: 0.9 });
+  // Speaker grilles now scale with the ACTUAL deck size instead of a fixed absolute dot
+  // spacing (which had the same "doesn't fit smaller/larger chassis" problem the keyboard
+  // had before it was fixed). MacBook also gets a visibly larger grille -- real MacBooks have
+  // much more prominent perforated speaker areas than a typical ThinkPad/Windows laptop.
+  const dotSpacing = deckWidth * 0.017;
+  const speakerRows = profile.name === "macbook" ? 6 : 4;
+  const speakerCols = profile.name === "macbook" ? 4 : 3;
   const speakerClusters: [number, number][] = [
-    [-deckWidth / 2 + 0.1, -depth / 2 + 0.12],
-    [deckWidth / 2 - 0.1, -depth / 2 + 0.12],
+    [-deckWidth / 2 + dotSpacing * 5, -depth / 2 + 0.12],
+    [deckWidth / 2 - dotSpacing * 5, -depth / 2 + 0.12],
   ];
   speakerClusters.forEach(([cx, cz]) => {
-    for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 3; c++) {
+    for (let r = 0; r < speakerRows; r++) {
+      for (let c = 0; c < speakerCols; c++) {
         const dot = new THREE.Mesh(dotGeo, dotMat);
         dot.rotation.x = -Math.PI / 2;
-        dot.position.set(cx + c * 0.02 - 0.02, baseThickness + 0.0035, cz + r * 0.02);
+        dot.position.set(cx + c * dotSpacing - dotSpacing, baseThickness + 0.0035, cz + r * dotSpacing);
         group.add(dot);
       }
     }
@@ -1322,12 +1341,17 @@ function buildLaptop(
   bottomDetails.visible = false;
   group.add(bottomDetails);
 
+  // Hinge design genuinely differs by family: MacBook's is a thin, almost-invisible integrated
+  // strip (Apple hides the mechanism inside the chassis), ThinkPad/gaming laptops have a visibly
+  // thicker mechanical hinge bar since that's actually how those chassis are built.
+  const hingeRadius = profile.name === "macbook" ? 0.014 : profile.name === "gaming" ? 0.034 : 0.028;
   const hinge = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.028, 0.028, width - 0.3, 24),
+    new THREE.CylinderGeometry(hingeRadius, hingeRadius, width - 0.3, 24),
     darkMat
   );
   hinge.rotation.z = Math.PI / 2;
   hinge.castShadow = true;
+  hinge.visible = profile.name !== "macbook"; // Apple's hinge sits fully hidden inside the chassis seam
   screenPivot.add(hinge);
 
   const lid = new THREE.Mesh(
