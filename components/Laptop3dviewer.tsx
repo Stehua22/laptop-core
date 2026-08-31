@@ -923,10 +923,20 @@ function buildLaptop(
     roughness: 0.35,
     metalness: 0.55,
   });
+  // Keycap finish now differs by family instead of every laptop sharing identical plastic:
+  // MacBook keys have a smoother, more premium/anodized feel; ThinkPad's soft-touch matte
+  // is distinctly rougher/less reflective; gaming keys read as grippier textured plastic.
+  const keyMatByProfile: Record<string, { roughness: number; metalness: number }> = {
+    macbook: { roughness: 0.3, metalness: 0.15 },
+    thinkpad: { roughness: 0.58, metalness: 0.2 },
+    gaming: { roughness: 0.5, metalness: 0.3 },
+    default: { roughness: 0.42, metalness: 0.25 },
+  };
+  const keyFinish = keyMatByProfile[profile.name] ?? keyMatByProfile.default;
   const keyMat = new THREE.MeshStandardMaterial({
     color: "#1a1b1e",
-    roughness: 0.42,
-    metalness: 0.25,
+    roughness: keyFinish.roughness,
+    metalness: keyFinish.metalness,
   });
   const glassMat = new THREE.MeshPhysicalMaterial({
     color: "#2a2c30",
@@ -2060,7 +2070,10 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     const width = refs.width;
     const depth = refs.depth;
     const lidThickness = refs.lidThickness;
-    if (isThinkpad) {
+    // Now actually driven by profile.logoStyle (previously defined per-profile but never
+    // read anywhere -- this re-derived the same thing via a separate isThinkpad check
+    // instead of using the field that already exists for exactly this purpose).
+    if (profile.logoStyle === "corner-etched") {
       refs.logo.position.set(width / 2 - 0.35, depth - 0.25, -lidThickness - 0.001);
       refs.logo.rotation.z = Math.PI / 8;
       refs.logo.scale.set(1.2, 1.2, 1);
