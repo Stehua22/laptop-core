@@ -443,12 +443,19 @@ function portLayoutForProfile(profileName: string): { left: PortSpec[]; right: P
 // Sourced from real product dimensions: a MacBook's Force Touch pad is dramatically larger than
 // a ThinkPad's, and a real ThinkPad has three dedicated physical click buttons directly above
 // its pad for TrackPoint use -- a detail no other laptop family has.
-type TrackpadSpec = { widthMm: number; depthMm: number; hasClickButtons: boolean };
+type TrackpadSpec = {
+  widthMm: number;
+  depthMm: number;
+  hasClickButtons: boolean;
+  cornerRadius: number;   // MacBook's pad has visibly rounder corners than a Windows clickpad
+  matte: boolean;         // MacBook = glossy Force Touch glass; everyone else = more matte plastic/glass
+  flush: boolean;         // MacBook's pad sits nearly level with the deck; others sit visibly recessed
+};
 const TRACKPAD_SPECS: Record<string, TrackpadSpec> = {
-  thinkpad: { widthMm: 105, depthMm: 60, hasClickButtons: true },
-  macbook: { widthMm: 132, depthMm: 82, hasClickButtons: false },
-  gaming: { widthMm: 110, depthMm: 65, hasClickButtons: false },
-  default: { widthMm: 105, depthMm: 65, hasClickButtons: false },
+  thinkpad: { widthMm: 105, depthMm: 60, hasClickButtons: true, cornerRadius: 0.012, matte: true, flush: false },
+  macbook: { widthMm: 132, depthMm: 82, hasClickButtons: false, cornerRadius: 0.045, matte: false, flush: true },
+  gaming: { widthMm: 110, depthMm: 65, hasClickButtons: false, cornerRadius: 0.015, matte: true, flush: false },
+  default: { widthMm: 105, depthMm: 65, hasClickButtons: false, cornerRadius: 0.015, matte: true, flush: false },
 };
 function trackpadSpecForProfile(profileName: string): TrackpadSpec {
   return TRACKPAD_SPECS[profileName] ?? TRACKPAD_SPECS.default;
@@ -1099,12 +1106,36 @@ function buildLaptop(
     });
   }
 
+  // Real material and shape per family instead of one shared glossy pad: MacBook's Force Touch
+  // glass is glossy with rounded corners and sits nearly flush with the deck; a Windows clickpad
+  // (ThinkPad/gaming/default) is more matte, more rectangular, and visibly recessed below the
+  // deck surface -- that recess is what creates the click-mechanism shadow line real ones have.
+  const matteTrackpadMat = new THREE.MeshPhysicalMaterial({
+    color: "#26282c",
+    roughness: 0.38,
+    metalness: 0.08,
+    clearcoat: 0.25,
+    clearcoatRoughness: 0.3,
+  });
+  const trackpadMat = tpSpec.matte ? matteTrackpadMat : glassMat;
+  const trackpadY = tpSpec.flush ? baseThickness + 0.0055 : baseThickness + 0.002;
   const trackpad = new THREE.Mesh(
-    new RoundedBoxGeometry(tpWidth, 0.004, tpDepth, 4, 0.02),
-    glassMat
+    new RoundedBoxGeometry(tpWidth, 0.004, tpDepth, 4, tpSpec.cornerRadius),
+    trackpadMat
   );
-  trackpad.position.set(trackpadCenterX, baseThickness + 0.004, depth * 0.34);
+  trackpad.position.set(trackpadCenterX, trackpadY, depth * 0.34);
   group.add(trackpad);
+
+  if (!tpSpec.flush) {
+    // A thin darker bezel strip visible around a recessed (non-flush) pad -- the small
+    // shadowed lip a real Windows clickpad has that a flush Force Touch pad doesn't.
+    const bezelPad = new THREE.Mesh(
+      new RoundedBoxGeometry(tpWidth + 0.006, 0.002, tpDepth + 0.006, 4, tpSpec.cornerRadius + 0.002),
+      new THREE.MeshStandardMaterial({ color: "#050506", roughness: 0.85 })
+    );
+    bezelPad.position.set(trackpadCenterX, trackpadY - 0.0015, depth * 0.34);
+    group.add(bezelPad);
+  }
 
   const dotGeo = new THREE.CircleGeometry(0.008, 8);
   const dotMat = new THREE.MeshStandardMaterial({ color: "#0d0e0f", roughness: 0.9 });
