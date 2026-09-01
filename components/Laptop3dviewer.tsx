@@ -2306,13 +2306,12 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     const onScreenPointerUp = (e: PointerEvent) => {
       const down = pointerDownPos;
       pointerDownPos = null;
-      if (!down) { console.log("[OS click] no pointerDownPos -- pointerdown never registered"); return; }
-      const moveDist = Math.hypot(e.clientX - down.x, e.clientY - down.y);
-      if (moveDist > 6) { console.log("[OS click] rejected as drag, moveDist =", moveDist); return; }
+      if (!down) return;
+      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return; // was a drag, not a click
       const displayMesh = meshesRef.current?.display;
-      if (!displayMesh || !displayMesh.visible) { console.log("[OS click] no display mesh or not visible", { displayMesh: !!displayMesh, visible: displayMesh?.visible }); return; }
-      if (!displayOnRef.current) { console.log("[OS click] displayOn is false"); return; }
-      if (customDisplayUrlRef.current) { console.log("[OS click] customDisplayUrl is set, interactivity disabled"); return; }
+      if (!displayMesh || !displayMesh.visible) return;
+      if (!displayOnRef.current) return; // screen is off -- nothing to click
+      if (customDisplayUrlRef.current) return; // real uploaded photo -- no fake UI on top of it
       const rect = mount.getBoundingClientRect();
       const ndc = new THREE.Vector2(
         ((e.clientX - rect.left) / rect.width) * 2 - 1,
@@ -2320,12 +2319,11 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
       );
       clickRaycaster.setFromCamera(ndc, camera);
       const hits = clickRaycaster.intersectObject(displayMesh, false);
-      if (!hits.length || !hits[0].uv) { console.log("[OS click] raycast missed the display mesh", { ndc, hitCount: hits.length }); return; }
+      if (!hits.length || !hits[0].uv) return;
       const uv = hits[0].uv;
       const px = uv.x * OS_CANVAS_W;
       const py = (1 - uv.y) * OS_CANVAS_H; // canvas origin is top-left; plane UV origin is bottom-left
       const action = osThemeRef.current === "mac" ? hitTestMacUI(px, py, osStateRef.current) : hitTestWindowsUI(px, py, osStateRef.current);
-      console.log("[OS click]", { uv: { x: uv.x, y: uv.y }, px, py, theme: osThemeRef.current, action });
       if (action) applyOSAction(action);
     };
     mount.addEventListener("pointerdown", onScreenPointerDown);
@@ -2385,7 +2383,12 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
         return;
       }
 
-      if (autoRotateRef.current) {
+      // Auto-rotate pauses while the mouse is over the viewer (not just while dragging) --
+      // otherwise the laptop keeps spinning during a click and the screen has physically
+      // moved by the time pointerup fires, making the raycast miss even a dead-on click.
+      // This is what the console log ("raycast missed the display mesh") was actually showing.
+      const rotationActive = autoRotateRef.current && !isHovering;
+      if (rotationActive) {
         rotVelocity += (rotTarget - rotVelocity) * rotSpring * dt;
         currentLaptop.rotation.y += rotVelocity * dt;
       } else {
@@ -2396,7 +2399,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
       floatT += FLOAT_SPEED * 0.016 * dt;
       currentLaptop.position.y = Math.sin(floatT) * FLOAT_AMP;
 
-      if (!autoRotateRef.current) {
+      if (!rotationActive) {
         tiltVelX += (hoverTiltTargetX - hoverTiltX) * tiltSpring * dt;
         tiltVelY += (hoverTiltTargetY - hoverTiltY) * tiltSpring * dt;
         tiltVelX *= Math.pow(tiltDamping, dt);
