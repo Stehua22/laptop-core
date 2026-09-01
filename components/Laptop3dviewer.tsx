@@ -100,6 +100,9 @@ const VIEWS: Record<string, { pos: [number, number, number]; target: [number, nu
   front: { pos: [0, 0.9, 3.6], target: [0, 0.65, 0] },
   side: { pos: [3.8, 0.6, 0], target: [0, 0.4, 0] },
   top: { pos: [0.01, 4.2, 0.01], target: [0, 0, 0] },
+  // Tight, close-up framing of just the screen -- for actually "using" the interactive OS
+  // instead of clicking tiny targets on a small laptop viewed from a normal distance.
+  screenFocus: { pos: [0, 0.85, 1.7], target: [0, 0.85, 0] },
 };
 
 // Overall footprint stays constant (screen-size scaling applies uniformly on top);
@@ -793,11 +796,13 @@ type OSAction =
   | { type: "closeMenus" }
   | { type: "launch"; name: string }
   | { type: "toggleAppleMenu" }
-  | { type: "appleMenuItem"; name: string };
+  | { type: "appleMenuItem"; name: string }
+  | { type: "closeBrowser" };
 
 type OSUIState = {
   startOpen: boolean;
   appleMenuOpen: boolean;
+  browserOpen: boolean;
   toastText: string | null;
   toastUntil: number;
 };
@@ -851,14 +856,25 @@ function drawWindowsUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElemen
   ctx.fillRect(0, tbY, OS_CANVAS_W, WIN_TASKBAR_H);
 
   const centerX = OS_CANVAS_W / 2;
-  const startX = centerX - 120, startW = 44;
+  const startX = centerX - 148, startW = 44;
   ctx.fillStyle = state.startOpen ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0)";
   roundRectPath(ctx, startX, tbY + 6, startW, WIN_TASKBAR_H - 12, 6);
   ctx.fill();
   drawWinLogo(ctx, startX + startW / 2, tbY + WIN_TASKBAR_H / 2, 8);
 
-  const iconGlyphs = ["\u{1F50D}", "\u{1F4C1}", "\u{1F310}", "\u2709"];
-  let ix = startX + startW + 16;
+  // Real Windows 11 taskbar has a search pill right next to Start, not just a magnifier icon.
+  const searchX = startX + startW + 10, searchW = 130;
+  ctx.fillStyle = "rgba(255,255,255,0.08)";
+  roundRectPath(ctx, searchX, tbY + 10, searchW, WIN_TASKBAR_H - 20, (WIN_TASKBAR_H - 20) / 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.65)";
+  ctx.font = "13px 'Segoe UI', sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText("\u{1F50D}  Search", searchX + 14, tbY + WIN_TASKBAR_H / 2 + 1);
+
+  const iconGlyphs = ["\u{1F4C1}", "\u{1F310}", "\u2709"];
+  let ix = searchX + searchW + 26;
   iconGlyphs.forEach((g) => {
     ctx.font = "20px sans-serif";
     ctx.textAlign = "center";
@@ -909,12 +925,18 @@ function drawWindowsUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElemen
     });
   }
 
+  if (state.browserOpen) drawBrowserWindow(ctx, "windows");
+
   if (state.toastText && Date.now() < state.toastUntil) {
     drawToast(ctx, state.toastText, OS_CANVAS_W, WIN_TASKBAR_H);
   }
 }
 
 function hitTestWindowsUI(px: number, py: number, state: OSUIState): OSAction | null {
+  if (state.browserOpen) {
+    const hit = hitTestBrowserWindow(px, py, "windows");
+    return hit === "close" ? { type: "closeBrowser" } : null;
+  }
   const tbY = OS_CANVAS_H - WIN_TASKBAR_H;
   const centerX = OS_CANVAS_W / 2;
 
@@ -932,7 +954,7 @@ function hitTestWindowsUI(px: number, py: number, state: OSUIState): OSAction | 
     }
   }
 
-  const startX = centerX - 120, startW = 44;
+  const startX = centerX - 148, startW = 44;
   if (py >= tbY && px >= startX && px <= startX + startW) return { type: "toggleStart" };
   if (py >= tbY) return { type: "closeMenus" };
   if (state.startOpen) return { type: "closeMenus" };
@@ -1002,12 +1024,18 @@ function drawMacUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElement | 
     ctx.fillText(app[0], cx, cy);
   });
 
+  if (state.browserOpen) drawBrowserWindow(ctx, "mac");
+
   if (state.toastText && Date.now() < state.toastUntil) {
     drawToast(ctx, state.toastText, OS_CANVAS_W, dockH + 26);
   }
 }
 
 function hitTestMacUI(px: number, py: number, state: OSUIState): OSAction | null {
+  if (state.browserOpen) {
+    const hit = hitTestBrowserWindow(px, py, "mac");
+    return hit === "close" ? { type: "closeBrowser" } : null;
+  }
   if (py <= MAC_MENUBAR_H) {
     if (px <= 40) return { type: "toggleAppleMenu" };
     return { type: "closeMenus" };
@@ -1026,9 +1054,77 @@ function hitTestMacUI(px: number, py: number, state: OSUIState): OSAction | null
   const dockX = (OS_CANVAS_W - dockW) / 2, dockY = OS_CANVAS_H - dockH - 12;
   if (px >= dockX && px <= dockX + dockW && py >= dockY && py <= dockY + dockH) {
     const idx = Math.floor((px - dockX - 20) / 66);
-    if (idx >= 0 && idx < MAC_DOCK.length) return { type: "launch", name: MAC_DOCK[idx] };
-  }
+    if (idx >= 0 && idx < MAC_DOCK.length) return { type: "launch", name: MAC_DOCK[idx] };  }
   return null;
+}
+
+function drawBrowserWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "mac") {
+  const winW = OS_CANVAS_W * 0.72, winH = OS_CANVAS_H * 0.68;
+  const winX = (OS_CANVAS_W - winW) / 2, winY = (OS_CANVAS_H - winH) / 2 - 20;
+  const chromeH = 40;
+
+  ctx.fillStyle = "rgba(0,0,0,0.25)";
+  ctx.fillRect(0, 0, OS_CANVAS_W, OS_CANVAS_H);
+
+  ctx.fillStyle = "#f2f3f5";
+  roundRectPath(ctx, winX, winY, winW, winH, 10);
+  ctx.fill();
+
+  ctx.fillStyle = "#e4e5e8";
+  roundRectPath(ctx, winX, winY, winW, chromeH, 10);
+  ctx.fill();
+  ctx.fillRect(winX, winY + chromeH - 10, winW, 10);
+
+  if (theme === "mac") {
+    const dotY = winY + chromeH / 2;
+    ([["#ff5f57", winX + 20], ["#febc2e", winX + 40], ["#28c840", winX + 60]] as [string, number][]).forEach(([color, cx]) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(cx, dotY, 6, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  } else {
+    ctx.fillStyle = "#333";
+    ctx.font = "16px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("\u2715", winX + winW - 24, winY + chromeH / 2);
+  }
+
+  const barX = theme === "mac" ? winX + 90 : winX + 16;
+  const barW = theme === "mac" ? winW - 180 : winW - 70;
+  ctx.fillStyle = "#fff";
+  roundRectPath(ctx, barX, winY + 8, barW, chromeH - 16, 12);
+  ctx.fill();
+  ctx.fillStyle = "#444";
+  ctx.font = "12px 'Segoe UI', -apple-system, sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText("\u{1F512}  laptopcore.ca", barX + 14, winY + chromeH / 2);
+
+  const bodyY = winY + chromeH;
+  const bodyH = winH - chromeH;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(winX, bodyY, winW, bodyH);
+  ctx.fillStyle = "#111";
+  ctx.font = "600 22px 'Segoe UI', -apple-system, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("LaptopCore", winX + winW / 2, bodyY + bodyH * 0.35);
+  ctx.fillStyle = "#666";
+  ctx.font = "13px 'Segoe UI', -apple-system, sans-serif";
+  ctx.fillText("Track prices. Compare laptops. Find the deal.", winX + winW / 2, bodyY + bodyH * 0.35 + 30);
+}
+
+function hitTestBrowserWindow(px: number, py: number, theme: "windows" | "mac"): "close" | "absorb" {
+  const winW = OS_CANVAS_W * 0.72, winH = OS_CANVAS_H * 0.68;
+  const winX = (OS_CANVAS_W - winW) / 2, winY = (OS_CANVAS_H - winH) / 2 - 20;
+  const chromeH = 40;
+  if (theme === "mac") {
+    if (py >= winY && py <= winY + chromeH && px >= winX + 12 && px <= winX + 30) return "close";
+  } else {
+    if (py >= winY && py <= winY + chromeH && px >= winX + winW - 40 && px <= winX + winW - 8) return "close";
+  }
+  return "absorb";
 }
 // ==== end interactive OS layer ======================================================
 
@@ -1743,7 +1839,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   const osCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const osCtxRef = useRef<CanvasRenderingContext2D | null>(null);
   const osTextureRef = useRef<THREE.CanvasTexture | null>(null);
-  const osStateRef = useRef<OSUIState>({ startOpen: false, appleMenuOpen: false, toastText: null, toastUntil: 0 });
+  const osStateRef = useRef<OSUIState>({ startOpen: false, appleMenuOpen: false, browserOpen: false, toastText: null, toastUntil: 0 });
   const wallpaperImagesRef = useRef<{ windows?: HTMLImageElement; mac?: HTMLImageElement }>({});
   const osThemeRef = useRef<"windows" | "mac">("windows");
   const customDisplayUrlRef = useRef<string>("");
@@ -1757,6 +1853,8 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   const [finishIndex, setFinishIndex] = useState(1);
   const [openAngle, setOpenAngle] = useState(105);
   const [autoRotate, setAutoRotate] = useState(true);
+  const [screenFocused, setScreenFocused] = useState(false);
+  const autoRotateBeforeFocusRef = useRef(true);
   const [displayOn, setDisplayOn] = useState(true);
   const [backlightIndex, setBacklightIndex] = useState(0);
   const [logoGlow, setLogoGlow] = useState(true);
@@ -1843,8 +1941,18 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
         }
         break;
       case "launch":
-        osStateRef.current = { ...osStateRef.current, startOpen: false };
-        showToast(`Opening ${action.name}\u2026`);
+        if (action.name === "Edge" || action.name === "Safari") {
+          // Browser gets an actual window instead of just a toast -- the real feature request.
+          osStateRef.current = { ...osStateRef.current, startOpen: false, appleMenuOpen: false, browserOpen: true };
+          redrawOS();
+        } else {
+          osStateRef.current = { ...osStateRef.current, startOpen: false };
+          showToast(`Opening ${action.name}\u2026`);
+        }
+        break;
+      case "closeBrowser":
+        osStateRef.current = { ...osStateRef.current, browserOpen: false };
+        redrawOS();
         break;
       case "appleMenuItem":
         osStateRef.current = { ...osStateRef.current, appleMenuOpen: false };
@@ -2221,6 +2329,46 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     mount.addEventListener("pointerdown", onScreenPointerDown);
     mount.addEventListener("pointerup", onScreenPointerUp);
 
+    // Keyboard control: precise clicking on a rotated 3D screen is fiddly, so the whole
+    // interactive desktop is also reachable from the keyboard once the mouse is over the
+    // viewer. Escape closes whatever's open; 1-6 launch pinned apps/dock icons directly
+    // without needing to open the Start menu / Dock first; S / A toggle Start / Apple menu.
+    let isHovering = false;
+    const onMountEnter = () => { isHovering = true; };
+    const onMountLeave2 = () => { isHovering = false; };
+    mount.addEventListener("pointerenter", onMountEnter);
+    mount.addEventListener("pointerleave", onMountLeave2);
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!isHovering) return;
+      if (!displayOnRef.current || customDisplayUrlRef.current) return;
+      const theme = osThemeRef.current;
+
+      if (e.key === "Escape") {
+        if (osStateRef.current.browserOpen) applyOSAction({ type: "closeBrowser" });
+        else applyOSAction({ type: "closeMenus" });
+        e.preventDefault();
+        return;
+      }
+      if (osStateRef.current.browserOpen) return; // browser window absorbs other keys while open
+
+      if (/^[1-6]$/.test(e.key)) {
+        const idx = Number(e.key) - 1;
+        const list = theme === "mac" ? MAC_DOCK : WIN_APPS;
+        if (idx < list.length) applyOSAction({ type: "launch", name: list[idx] });
+        e.preventDefault();
+        return;
+      }
+      if (theme === "windows" && (e.key === "s" || e.key === "S")) {
+        applyOSAction({ type: "toggleStart" });
+        e.preventDefault();
+      } else if (theme === "mac" && (e.key === "a" || e.key === "A")) {
+        applyOSAction({ type: "toggleAppleMenu" });
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+
     let frameId: number;
     let lastTime = performance.now();
     const animate = (now: number) => {
@@ -2292,6 +2440,9 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
       mount.removeEventListener("pointerleave", onPointerLeave);
       mount.removeEventListener("pointerdown", onScreenPointerDown);
       mount.removeEventListener("pointerup", onScreenPointerUp);
+      mount.removeEventListener("pointerenter", onMountEnter);
+      mount.removeEventListener("pointerleave", onMountLeave2);
+      window.removeEventListener("keydown", onKeyDown);
       controls.dispose();
       renderer.dispose();
       if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement);
@@ -2548,6 +2699,21 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     controls.update();
   };
 
+  const toggleScreenFocus = () => {
+    if (!screenFocused) {
+      autoRotateBeforeFocusRef.current = autoRotate;
+      setAutoRotate(false);
+      // Open the screen to a good on-axis angle for actually looking at it straight-on.
+      setOpenAngle(100);
+      goToView("screenFocus");
+      setScreenFocused(true);
+    } else {
+      setAutoRotate(autoRotateBeforeFocusRef.current);
+      goToView("iso");
+      setScreenFocused(false);
+    }
+  };
+
   return (
     <div className={studioMode ? styles.studioWrapper : styles.wrapper}>
       <div className={styles.canvasArea}>
@@ -2555,6 +2721,27 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
         {selectedLaptop && (
           <div className={styles.laptopBadge}>
             {selectedLaptop.brand} {selectedLaptop.model}
+          </div>
+        )}
+        <button
+          onClick={toggleScreenFocus}
+          title={screenFocused ? "Exit fullscreen" : "Use the screen (fullscreen)"}
+          style={{
+            position: "absolute", top: 12, right: 12, zIndex: 5,
+            background: "rgba(20,20,24,0.65)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)",
+            borderRadius: 8, padding: "6px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 6,
+          }}
+        >
+          {screenFocused ? "\u2715 Exit" : "\u2922 Use PC"}
+        </button>
+        {screenFocused && !customDisplayUrl && (
+          <div style={{
+            position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", zIndex: 5,
+            background: "rgba(20,20,24,0.6)", color: "rgba(255,255,255,0.85)", borderRadius: 8,
+            padding: "5px 12px", fontSize: 11, whiteSpace: "nowrap",
+          }}>
+            Click to interact \u00b7 1-6 launch apps \u00b7 Esc closes \u00b7 {osTheme === "mac" ? "A" : "S"} toggles menu
           </div>
         )}
       </div>
