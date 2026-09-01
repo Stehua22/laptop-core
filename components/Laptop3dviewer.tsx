@@ -2306,12 +2306,13 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     const onScreenPointerUp = (e: PointerEvent) => {
       const down = pointerDownPos;
       pointerDownPos = null;
-      if (!down) return;
-      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return; // was a drag, not a click
+      if (!down) { console.log("[OS click] no pointerDownPos -- pointerdown never registered"); return; }
+      const moveDist = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+      if (moveDist > 6) { console.log("[OS click] rejected as drag, moveDist =", moveDist); return; }
       const displayMesh = meshesRef.current?.display;
-      if (!displayMesh || !displayMesh.visible) return;
-      if (!displayOnRef.current) return; // screen is off -- nothing to click
-      if (customDisplayUrlRef.current) return; // real uploaded photo -- no fake UI on top of it
+      if (!displayMesh || !displayMesh.visible) { console.log("[OS click] no display mesh or not visible", { displayMesh: !!displayMesh, visible: displayMesh?.visible }); return; }
+      if (!displayOnRef.current) { console.log("[OS click] displayOn is false"); return; }
+      if (customDisplayUrlRef.current) { console.log("[OS click] customDisplayUrl is set, interactivity disabled"); return; }
       const rect = mount.getBoundingClientRect();
       const ndc = new THREE.Vector2(
         ((e.clientX - rect.left) / rect.width) * 2 - 1,
@@ -2319,11 +2320,12 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
       );
       clickRaycaster.setFromCamera(ndc, camera);
       const hits = clickRaycaster.intersectObject(displayMesh, false);
-      if (!hits.length || !hits[0].uv) return;
+      if (!hits.length || !hits[0].uv) { console.log("[OS click] raycast missed the display mesh", { ndc, hitCount: hits.length }); return; }
       const uv = hits[0].uv;
       const px = uv.x * OS_CANVAS_W;
       const py = (1 - uv.y) * OS_CANVAS_H; // canvas origin is top-left; plane UV origin is bottom-left
       const action = osThemeRef.current === "mac" ? hitTestMacUI(px, py, osStateRef.current) : hitTestWindowsUI(px, py, osStateRef.current);
+      console.log("[OS click]", { uv: { x: uv.x, y: uv.y }, px, py, theme: osThemeRef.current, action });
       if (action) applyOSAction(action);
     };
     mount.addEventListener("pointerdown", onScreenPointerDown);
