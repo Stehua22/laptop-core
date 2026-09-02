@@ -805,6 +805,8 @@ type OSUIState = {
   browserOpen: boolean;
   toastText: string | null;
   toastUntil: number;
+  animT: number; // 0-1 ease-in progress for whatever panel/window just opened -- makes it
+                 // actually animate in (scale + fade) instead of appearing instantly.
 };
 
 const WIN_APPS = ["Edge", "Word", "Photos", "Mail", "Store", "Settings"];
@@ -828,6 +830,196 @@ function drawWinLogo(ctx: CanvasRenderingContext2D, cx: number, cy: number, size
   ctx.fillRect(cx + gap / 2, cy - size - gap / 2, size, size);
   ctx.fillRect(cx - size - gap / 2, cy + gap / 2, size, size);
   ctx.fillRect(cx + gap / 2, cy + gap / 2, size, size);
+}
+
+// Hand-drawn vector icons instead of emoji glyphs -- emoji rendering is inconsistent across
+// browsers/OSes (the same problem the Apple logo character had), so anything meant to look
+// consistent and "real" is drawn as actual shapes instead.
+type IconName = "search" | "folder" | "globe" | "mail" | "edge" | "word" | "photos" | "store" | "settings" | "safari" | "finder" | "music" | "gear";
+
+function drawIcon(ctx: CanvasRenderingContext2D, name: IconName, cx: number, cy: number, s: number) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  switch (name) {
+    case "search": {
+      ctx.strokeStyle = "rgba(255,255,255,0.7)";
+      ctx.lineWidth = s * 0.12;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.arc(-s * 0.08, -s * 0.08, s * 0.32, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(s * 0.18, s * 0.18);
+      ctx.lineTo(s * 0.4, s * 0.4);
+      ctx.stroke();
+      break;
+    }
+    case "folder": {
+      ctx.fillStyle = "#ffc94d";
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.45, -s * 0.15);
+      ctx.lineTo(-s * 0.15, -s * 0.15);
+      ctx.lineTo(-s * 0.05, -s * 0.3);
+      ctx.lineTo(s * 0.45, -s * 0.3);
+      ctx.lineTo(s * 0.45, s * 0.35);
+      ctx.lineTo(-s * 0.45, s * 0.35);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case "globe": {
+      ctx.strokeStyle = "#4d9dff";
+      ctx.lineWidth = s * 0.09;
+      ctx.beginPath();
+      ctx.arc(0, 0, s * 0.42, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 0.2, s * 0.42, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.42, 0);
+      ctx.lineTo(s * 0.42, 0);
+      ctx.stroke();
+      break;
+    }
+    case "mail": {
+      ctx.fillStyle = "#5b9dff";
+      roundRectPath(ctx, -s * 0.45, -s * 0.32, s * 0.9, s * 0.64, s * 0.06);
+      ctx.fill();
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = s * 0.06;
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.42, -s * 0.28);
+      ctx.lineTo(0, s * 0.05);
+      ctx.lineTo(s * 0.42, -s * 0.28);
+      ctx.stroke();
+      break;
+    }
+    case "edge": {
+      const grad = ctx.createLinearGradient(-s * 0.45, -s * 0.45, s * 0.45, s * 0.45);
+      grad.addColorStop(0, "#39d0f5");
+      grad.addColorStop(1, "#1a5fd6");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, s * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.lineWidth = s * 0.08;
+      ctx.beginPath();
+      ctx.arc(s * 0.04, 0, s * 0.28, Math.PI * 0.15, Math.PI * 1.5);
+      ctx.stroke();
+      break;
+    }
+    case "word": {
+      ctx.fillStyle = "#2b5fd9";
+      roundRectPath(ctx, -s * 0.42, -s * 0.42, s * 0.84, s * 0.84, s * 0.08);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.font = `700 ${s * 0.55}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("W", 0, s * 0.03);
+      break;
+    }
+    case "photos": {
+      const colors = ["#ff5f6d", "#ffc93c", "#4dd8a0", "#4d9dff"];
+      colors.forEach((c, i) => {
+        const ang = (i / 4) * Math.PI * 2 - Math.PI / 4;
+        ctx.fillStyle = c;
+        ctx.beginPath();
+        ctx.arc(Math.cos(ang) * s * 0.2, Math.sin(ang) * s * 0.2, s * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      break;
+    }
+    case "store": {
+      ctx.fillStyle = "#4d9dff";
+      roundRectPath(ctx, -s * 0.4, -s * 0.15, s * 0.36, s * 0.55, s * 0.05);
+      ctx.fill();
+      ctx.fillStyle = "#ff8a4d";
+      roundRectPath(ctx, s * 0.04, -s * 0.4, s * 0.36, s * 0.8, s * 0.05);
+      ctx.fill();
+      break;
+    }
+    case "settings":
+    case "gear": {
+      ctx.strokeStyle = "rgba(255,255,255,0.75)";
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      ctx.lineWidth = s * 0.1;
+      for (let i = 0; i < 8; i++) {
+        const ang = (i / 8) * Math.PI * 2;
+        ctx.save();
+        ctx.rotate(ang);
+        ctx.fillRect(-s * 0.06, -s * 0.48, s * 0.12, s * 0.16);
+        ctx.restore();
+      }
+      ctx.beginPath();
+      ctx.arc(0, 0, s * 0.26, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = name === "gear" ? "#3a3a3c" : "#1a1a1c";
+      ctx.beginPath();
+      ctx.arc(0, 0, s * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case "safari": {
+      const grad = ctx.createLinearGradient(0, -s * 0.45, 0, s * 0.45);
+      grad.addColorStop(0, "#5cc9ff");
+      grad.addColorStop(1, "#1a7fd6");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, s * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 0.32);
+      ctx.lineTo(s * 0.1, -s * 0.05);
+      ctx.lineTo(0, s * 0.32);
+      ctx.lineTo(-s * 0.1, -s * 0.05);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#ff3b30";
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 0.32);
+      ctx.lineTo(s * 0.1, -s * 0.05);
+      ctx.lineTo(0, 0);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case "finder": {
+      ctx.fillStyle = "#3a8dff";
+      ctx.beginPath();
+      ctx.arc(-s * 0.14, 0, s * 0.42, -Math.PI / 2, Math.PI / 2);
+      ctx.fill();
+      ctx.fillStyle = "#5cd6ff";
+      ctx.beginPath();
+      ctx.arc(s * 0.14, 0, s * 0.42, Math.PI / 2, Math.PI * 1.5);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(-s * 0.12, -s * 0.08, s * 0.045, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case "music": {
+      ctx.fillStyle = "#ff5f9e";
+      ctx.beginPath();
+      ctx.arc(-s * 0.22, s * 0.28, s * 0.14, 0, Math.PI * 2);
+      ctx.arc(s * 0.22, s * 0.18, s * 0.14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#ff5f9e";
+      ctx.lineWidth = s * 0.07;
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.22 + s * 0.13, s * 0.28);
+      ctx.lineTo(-s * 0.22 + s * 0.13, -s * 0.35);
+      ctx.lineTo(s * 0.22 + s * 0.13, -s * 0.45);
+      ctx.lineTo(s * 0.22 + s * 0.13, s * 0.18);
+      ctx.stroke();
+      break;
+    }
+  }
+  ctx.restore();
 }
 
 function drawToast(ctx: CanvasRenderingContext2D, text: string, canvasW: number, bottomClear: number) {
@@ -867,20 +1059,17 @@ function drawWindowsUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElemen
   ctx.fillStyle = "rgba(255,255,255,0.08)";
   roundRectPath(ctx, searchX, tbY + 10, searchW, WIN_TASKBAR_H - 20, (WIN_TASKBAR_H - 20) / 2);
   ctx.fill();
+  drawIcon(ctx, "search", searchX + 22, tbY + WIN_TASKBAR_H / 2, 18);
   ctx.fillStyle = "rgba(255,255,255,0.65)";
   ctx.font = "13px 'Segoe UI', sans-serif";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText("\u{1F50D}  Search", searchX + 14, tbY + WIN_TASKBAR_H / 2 + 1);
+  ctx.fillText("Search", searchX + 38, tbY + WIN_TASKBAR_H / 2 + 1);
 
-  const iconGlyphs = ["\u{1F4C1}", "\u{1F310}", "\u2709"];
-  let ix = searchX + searchW + 26;
-  iconGlyphs.forEach((g) => {
-    ctx.font = "20px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#fff";
-    ctx.fillText(g, ix, tbY + WIN_TASKBAR_H / 2);
+  const taskbarIcons: IconName[] = ["folder", "globe", "mail"];
+  let ix = searchX + searchW + 30;
+  taskbarIcons.forEach((icon) => {
+    drawIcon(ctx, icon, ix, tbY + WIN_TASKBAR_H / 2, 22);
     ix += 42;
   });
 
@@ -895,6 +1084,12 @@ function drawWindowsUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElemen
   if (state.startOpen) {
     const panelW = 380, panelH = 380;
     const panelX = centerX - panelW / 2, panelY = tbY - panelH - 8;
+    // Ease-in: fades in and rises slightly from the taskbar instead of appearing instantly.
+    ctx.save();
+    ctx.globalAlpha = state.animT;
+    const riseOffset = (1 - state.animT) * 16;
+    ctx.translate(0, riseOffset);
+
     ctx.fillStyle = "rgba(30,32,38,0.97)";
     roundRectPath(ctx, panelX, panelY, panelW, panelH, 12);
     ctx.fill();
@@ -906,26 +1101,28 @@ function drawWindowsUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElemen
     ctx.font = "13px 'Segoe UI', sans-serif";
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.fillText("\u{1F50D}  Type here to search", panelX + 34, panelY + 35);
+    drawIcon(ctx, "search", panelX + 42, panelY + 35, 15);
+    ctx.fillText("Type here to search", panelX + 56, panelY + 35);
 
     const cols = 3, cellW = (panelW - 40) / cols;
+    const winAppIcons: IconName[] = ["edge", "word", "photos", "mail", "store", "settings"];
     WIN_APPS.forEach((app, i) => {
       const cx = panelX + 20 + cellW * (i % cols) + cellW / 2;
       const cy = panelY + 100 + Math.floor(i / cols) * 100;
       ctx.fillStyle = "rgba(255,255,255,0.07)";
       roundRectPath(ctx, cx - 26, cy - 26, 52, 52, 10);
       ctx.fill();
+      drawIcon(ctx, winAppIcons[i] ?? "settings", cx, cy - 2, 30);
       ctx.fillStyle = "#fff";
-      ctx.font = "18px sans-serif";
+      ctx.font = "10px 'Segoe UI', sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(app[0], cx, cy - 2);
-      ctx.font = "10px 'Segoe UI', sans-serif";
       ctx.fillText(app, cx, cy + 38);
     });
+    ctx.restore();
   }
 
-  if (state.browserOpen) drawBrowserWindow(ctx, "windows");
+  if (state.browserOpen) drawBrowserWindow(ctx, "windows", state.animT);
 
   if (state.toastText && Date.now() < state.toastUntil) {
     drawToast(ctx, state.toastText, OS_CANVAS_W, WIN_TASKBAR_H);
@@ -995,6 +1192,9 @@ function drawMacUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElement | 
   if (state.appleMenuOpen) {
     const menuX = 6, menuY = MAC_MENUBAR_H + 2, menuW = 210, itemH = 28;
     const menuH = MAC_MENU_ITEMS.length * itemH + 8;
+    ctx.save();
+    ctx.globalAlpha = state.animT;
+    ctx.translate(0, (1 - state.animT) * -10);
     ctx.fillStyle = "rgba(250,250,250,0.98)";
     roundRectPath(ctx, menuX, menuY, menuW, menuH, 8);
     ctx.fill();
@@ -1005,6 +1205,7 @@ function drawMacUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElement | 
     MAC_MENU_ITEMS.forEach((item, i) => {
       ctx.fillText(item, menuX + 14, menuY + 4 + itemH * i + itemH / 2);
     });
+    ctx.restore();
   }
 
   const dockW = MAC_DOCK.length * 66 + 20, dockH = 60;
@@ -1012,19 +1213,16 @@ function drawMacUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElement | 
   ctx.fillStyle = "rgba(255,255,255,0.28)";
   roundRectPath(ctx, dockX, dockY, dockW, dockH, 16);
   ctx.fill();
+  const macDockIcons: IconName[] = ["finder", "safari", "photos", "mail", "music", "gear"];
   MAC_DOCK.forEach((app, i) => {
     const cx = dockX + 20 + i * 66 + 23, cy = dockY + dockH / 2;
     ctx.fillStyle = "rgba(255,255,255,0.9)";
     roundRectPath(ctx, cx - 22, cy - 22, 44, 44, 11);
     ctx.fill();
-    ctx.fillStyle = "#333";
-    ctx.font = "16px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(app[0], cx, cy);
+    drawIcon(ctx, macDockIcons[i] ?? "gear", cx, cy, 26);
   });
 
-  if (state.browserOpen) drawBrowserWindow(ctx, "mac");
+  if (state.browserOpen) drawBrowserWindow(ctx, "mac", state.animT);
 
   if (state.toastText && Date.now() < state.toastUntil) {
     drawToast(ctx, state.toastText, OS_CANVAS_W, dockH + 26);
@@ -1058,13 +1256,23 @@ function hitTestMacUI(px: number, py: number, state: OSUIState): OSAction | null
   return null;
 }
 
-function drawBrowserWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "mac") {
+function drawBrowserWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "mac", animT: number = 1) {
   const winW = OS_CANVAS_W * 0.72, winH = OS_CANVAS_H * 0.68;
   const winX = (OS_CANVAS_W - winW) / 2, winY = (OS_CANVAS_H - winH) / 2 - 20;
   const chromeH = 40;
+  const cx = winX + winW / 2, cy = winY + winH / 2;
 
+  // Backdrop dims in immediately; the window itself scales up from ~92% while fading in,
+  // like a real window-open animation instead of popping in at full size.
   ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.fillRect(0, 0, OS_CANVAS_W, OS_CANVAS_H);
+
+  ctx.save();
+  ctx.globalAlpha = animT;
+  const scale = 0.92 + animT * 0.08;
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+  ctx.translate(-cx, -cy);
 
   ctx.fillStyle = "#f2f3f5";
   roundRectPath(ctx, winX, winY, winW, winH, 10);
@@ -1091,16 +1299,52 @@ function drawBrowserWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "ma
     ctx.fillText("\u2715", winX + winW - 24, winY + chromeH / 2);
   }
 
-  const barX = theme === "mac" ? winX + 90 : winX + 16;
-  const barW = theme === "mac" ? winW - 180 : winW - 70;
+  const navX0 = theme === "mac" ? winX + 76 : winX + 12;
+  const barX = theme === "mac" ? winX + 128 : winX + 62;
+  const barW = theme === "mac" ? winW - 218 : winW - 116;
+
+  // Simple back/forward/refresh nav buttons for extra chrome authenticity, drawn as shapes
+  // instead of relying on emoji glyphs that render inconsistently across platforms.
+  const navY = winY + chromeH / 2;
+  const navColor = "#5f6368";
+  ctx.strokeStyle = navColor;
+  ctx.fillStyle = navColor;
+  ctx.lineWidth = 1.6;
+  // back arrow
+  ctx.beginPath();
+  ctx.moveTo(navX0 + 7, navY - 5);
+  ctx.lineTo(navX0 + 2, navY);
+  ctx.lineTo(navX0 + 7, navY + 5);
+  ctx.stroke();
+  // forward arrow
+  ctx.beginPath();
+  ctx.moveTo(navX0 + 17, navY - 5);
+  ctx.lineTo(navX0 + 22, navY);
+  ctx.lineTo(navX0 + 17, navY + 5);
+  ctx.stroke();
+  // refresh (small arc + arrowhead)
+  ctx.beginPath();
+  ctx.arc(navX0 + 33, navY, 6, -Math.PI * 0.15, Math.PI * 1.3);
+  ctx.stroke();
+
   ctx.fillStyle = "#fff";
   roundRectPath(ctx, barX, winY + 8, barW, chromeH - 16, 12);
+  ctx.fill();
+  // Small padlock shape instead of an emoji, for consistent cross-platform rendering.
+  const lockX = barX + 18, lockY = winY + chromeH / 2;
+  ctx.strokeStyle = "#3a8f4a";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(lockX, lockY - 2, 3.2, Math.PI, 0);
+  ctx.stroke();
+  ctx.fillStyle = "#3a8f4a";
+  roundRectPath(ctx, lockX - 4.5, lockY - 2, 9, 6, 1.5);
   ctx.fill();
   ctx.fillStyle = "#444";
   ctx.font = "12px 'Segoe UI', -apple-system, sans-serif";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText("\u{1F512}  laptopcore.ca", barX + 14, winY + chromeH / 2);
+  ctx.fillText("laptopcore.ca", barX + 30, winY + chromeH / 2);
 
   const bodyY = winY + chromeH;
   const bodyH = winH - chromeH;
@@ -1113,6 +1357,7 @@ function drawBrowserWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "ma
   ctx.fillStyle = "#666";
   ctx.font = "13px 'Segoe UI', -apple-system, sans-serif";
   ctx.fillText("Track prices. Compare laptops. Find the deal.", winX + winW / 2, bodyY + bodyH * 0.35 + 30);
+  ctx.restore();
 }
 
 function hitTestBrowserWindow(px: number, py: number, theme: "windows" | "mac"): "close" | "absorb" {
@@ -1839,7 +2084,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   const osCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const osCtxRef = useRef<CanvasRenderingContext2D | null>(null);
   const osTextureRef = useRef<THREE.CanvasTexture | null>(null);
-  const osStateRef = useRef<OSUIState>({ startOpen: false, appleMenuOpen: false, browserOpen: false, toastText: null, toastUntil: 0 });
+  const osStateRef = useRef<OSUIState>({ startOpen: false, appleMenuOpen: false, browserOpen: false, toastText: null, toastUntil: 0, animT: 1 });
   const wallpaperImagesRef = useRef<{ windows?: HTMLImageElement; mac?: HTMLImageElement }>({});
   const osThemeRef = useRef<"windows" | "mac">("windows");
   const customDisplayUrlRef = useRef<string>("");
@@ -1899,6 +2144,28 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     if (osTextureRef.current) osTextureRef.current.needsUpdate = true;
   };
 
+  // Eases a panel/window open with a short scale+fade animation instead of it just appearing
+  // instantly -- self-contained rAF loop, not tied into the main render loop.
+  const animateOpenRef = useRef<number | null>(null);
+  const animateOpen = () => {
+    if (animateOpenRef.current) cancelAnimationFrame(animateOpenRef.current);
+    osStateRef.current = { ...osStateRef.current, animT: 0 };
+    const duration = 160;
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      osStateRef.current = { ...osStateRef.current, animT: eased };
+      redrawOS();
+      if (t < 1) {
+        animateOpenRef.current = requestAnimationFrame(step);
+      } else {
+        animateOpenRef.current = null;
+      }
+    };
+    animateOpenRef.current = requestAnimationFrame(step);
+  };
+
   // Lazily loads (and caches) the wallpaper image for a theme, redrawing once it's ready.
   const ensureWallpaperLoaded = (theme: "windows" | "mac") => {
     if (wallpaperImagesRef.current[theme]) {
@@ -1926,14 +2193,18 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
 
   const applyOSAction = (action: OSAction) => {
     switch (action.type) {
-      case "toggleStart":
-        osStateRef.current = { ...osStateRef.current, startOpen: !osStateRef.current.startOpen, appleMenuOpen: false };
-        redrawOS();
+      case "toggleStart": {
+        const opening = !osStateRef.current.startOpen;
+        osStateRef.current = { ...osStateRef.current, startOpen: opening, appleMenuOpen: false };
+        if (opening) animateOpen(); else redrawOS();
         break;
-      case "toggleAppleMenu":
-        osStateRef.current = { ...osStateRef.current, appleMenuOpen: !osStateRef.current.appleMenuOpen };
-        redrawOS();
+      }
+      case "toggleAppleMenu": {
+        const opening = !osStateRef.current.appleMenuOpen;
+        osStateRef.current = { ...osStateRef.current, appleMenuOpen: opening };
+        if (opening) animateOpen(); else redrawOS();
         break;
+      }
       case "closeMenus":
         if (osStateRef.current.startOpen || osStateRef.current.appleMenuOpen) {
           osStateRef.current = { ...osStateRef.current, startOpen: false, appleMenuOpen: false };
@@ -1944,7 +2215,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
         if (action.name === "Edge" || action.name === "Safari") {
           // Browser gets an actual window instead of just a toast -- the real feature request.
           osStateRef.current = { ...osStateRef.current, startOpen: false, appleMenuOpen: false, browserOpen: true };
-          redrawOS();
+          animateOpen();
         } else {
           osStateRef.current = { ...osStateRef.current, startOpen: false };
           showToast(`Opening ${action.name}\u2026`);
@@ -2598,6 +2869,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   useEffect(() => {
     return () => {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      if (animateOpenRef.current) cancelAnimationFrame(animateOpenRef.current);
     };
   }, []);
 
