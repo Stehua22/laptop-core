@@ -790,6 +790,11 @@ function getDisplayTexture(theme: "windows" | "mac", customUrl?: string): THREE.
 // custom photo on the screen (can't fake clickable UI on top of a real screenshot).
 const OS_CANVAS_W = 1024;
 const OS_CANVAS_H = 640;
+// Render at 2x physical pixel density while keeping all layout math in the same 1024x640
+// logical space -- sharper text/icons without having to rescale dozens of hardcoded layout
+// values (taskbar height, panel size, font sizes, hit-test regions) that all depend on each
+// other staying consistent between drawing and click detection.
+const OS_RENDER_SCALE = 2;
 
 type OSAction =
   | { type: "toggleStart" }
@@ -2515,12 +2520,18 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     // Set up the interactive OS canvas ONCE here -- it's redrawn in place afterward, never
     // recreated, so click state survives laptop rebuilds (brand/profile switches).
     const osCanvas = document.createElement("canvas");
-    osCanvas.width = OS_CANVAS_W;
-    osCanvas.height = OS_CANVAS_H;
+    osCanvas.width = OS_CANVAS_W * OS_RENDER_SCALE;
+    osCanvas.height = OS_CANVAS_H * OS_RENDER_SCALE;
     osCanvasRef.current = osCanvas;
-    osCtxRef.current = osCanvas.getContext("2d");
+    const osCtx = osCanvas.getContext("2d");
+    if (osCtx) osCtx.scale(OS_RENDER_SCALE, OS_RENDER_SCALE); // all draw calls stay in 1024x640 logical space
+    osCtxRef.current = osCtx;
     const osTexture = new THREE.CanvasTexture(osCanvas);
     osTexture.colorSpace = THREE.SRGBColorSpace;
+    osTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    osTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    osTexture.magFilter = THREE.LinearFilter;
+    osTexture.generateMipmaps = true;
     osTextureRef.current = osTexture;
     ensureWallpaperLoaded(osTheme);
 
@@ -2577,12 +2588,13 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     const onScreenPointerUp = (e: PointerEvent) => {
       const down = pointerDownPos;
       pointerDownPos = null;
-      if (!down) return;
-      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return; // was a drag, not a click
+      if (!down) { console.log("[OS click] no pointerdown recorded"); return; }
+      const moveDist = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+      if (moveDist > 6) { console.log("[OS click] rejected as drag, moveDist =", moveDist.toFixed(1)); return; }
       const displayMesh = meshesRef.current?.display;
-      if (!displayMesh || !displayMesh.visible) return;
-      if (!displayOnRef.current) return; // screen is off -- nothing to click
-      if (customDisplayUrlRef.current) return; // real uploaded photo -- no fake UI on top of it
+      if (!displayMesh || !displayMesh.visible) { console.log("[OS click] display mesh missing/hidden", { exists: !!displayMesh, visible: displayMesh?.visible }); return; }
+      if (!displayOnRef.current) { console.log("[OS click] displayOn=false"); return; }
+      if (customDisplayUrlRef.current) { console.log("[OS click] customDisplayUrl set, interactivity disabled"); return; }
       const rect = mount.getBoundingClientRect();
       const ndc = new THREE.Vector2(
         ((e.clientX - rect.left) / rect.width) * 2 - 1,
@@ -2590,11 +2602,12 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
       );
       clickRaycaster.setFromCamera(ndc, camera);
       const hits = clickRaycaster.intersectObject(displayMesh, false);
-      if (!hits.length || !hits[0].uv) return;
+      if (!hits.length || !hits[0].uv) { console.log("[OS click] raycast MISSED display mesh", { isHovering, clientX: e.clientX, clientY: e.clientY, rect: { w: rect.width, h: rect.height, l: rect.left, t: rect.top }, ndc: { x: ndc.x.toFixed(3), y: ndc.y.toFixed(3) } }); return; }
       const uv = hits[0].uv;
       const px = uv.x * OS_CANVAS_W;
       const py = (1 - uv.y) * OS_CANVAS_H; // canvas origin is top-left; plane UV origin is bottom-left
       const action = osThemeRef.current === "mac" ? hitTestMacUI(px, py, osStateRef.current) : hitTestWindowsUI(px, py, osStateRef.current);
+      console.log("[OS click] HIT", { uv: { x: uv.x.toFixed(3), y: uv.y.toFixed(3) }, px: px.toFixed(0), py: py.toFixed(0), theme: osThemeRef.current, action, state: { startOpen: osStateRef.current.startOpen, browserOpen: osStateRef.current.browserOpen } });
       if (action) applyOSAction(action);
     };
     mount.addEventListener("pointerdown", onScreenPointerDown);
