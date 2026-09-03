@@ -802,12 +802,12 @@ type OSAction =
   | { type: "launch"; name: string }
   | { type: "toggleAppleMenu" }
   | { type: "appleMenuItem"; name: string }
-  | { type: "closeBrowser" };
+  | { type: "closeApp" };
 
 type OSUIState = {
   startOpen: boolean;
   appleMenuOpen: boolean;
-  browserOpen: boolean;
+  openApp: string | null; // name of the currently open app window, or null if none
   toastText: string | null;
   toastUntil: number;
   animT: number; // 0-1 ease-in progress for whatever panel/window just opened -- makes it
@@ -1127,7 +1127,7 @@ function drawWindowsUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElemen
     ctx.restore();
   }
 
-  if (state.browserOpen) drawBrowserWindow(ctx, "windows", state.animT);
+  if (state.openApp) drawAppWindow(ctx, "windows", state.openApp, state.animT);
 
   if (state.toastText && Date.now() < state.toastUntil) {
     drawToast(ctx, state.toastText, OS_CANVAS_W, WIN_TASKBAR_H);
@@ -1135,9 +1135,9 @@ function drawWindowsUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElemen
 }
 
 function hitTestWindowsUI(px: number, py: number, state: OSUIState): OSAction | null {
-  if (state.browserOpen) {
-    const hit = hitTestBrowserWindow(px, py, "windows");
-    return hit === "close" ? { type: "closeBrowser" } : null;
+  if (state.openApp) {
+    const hit = hitTestAppWindow(px, py, "windows");
+    return hit === "close" ? { type: "closeApp" } : null;
   }
   const tbY = OS_CANVAS_H - WIN_TASKBAR_H;
   const centerX = OS_CANVAS_W / 2;
@@ -1227,7 +1227,7 @@ function drawMacUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElement | 
     drawIcon(ctx, macDockIcons[i] ?? "gear", cx, cy, 26);
   });
 
-  if (state.browserOpen) drawBrowserWindow(ctx, "mac", state.animT);
+  if (state.openApp) drawAppWindow(ctx, "mac", state.openApp, state.animT);
 
   if (state.toastText && Date.now() < state.toastUntil) {
     drawToast(ctx, state.toastText, OS_CANVAS_W, dockH + 26);
@@ -1235,9 +1235,9 @@ function drawMacUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElement | 
 }
 
 function hitTestMacUI(px: number, py: number, state: OSUIState): OSAction | null {
-  if (state.browserOpen) {
-    const hit = hitTestBrowserWindow(px, py, "mac");
-    return hit === "close" ? { type: "closeBrowser" } : null;
+  if (state.openApp) {
+    const hit = hitTestAppWindow(px, py, "mac");
+    return hit === "close" ? { type: "closeApp" } : null;
   }
   if (py <= MAC_MENUBAR_H) {
     if (px <= 40) return { type: "toggleAppleMenu" };
@@ -1261,28 +1261,26 @@ function hitTestMacUI(px: number, py: number, state: OSUIState): OSAction | null
   return null;
 }
 
-function drawBrowserWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "mac", animT: number = 1) {
+function drawAppWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "mac", appName: string, animT: number = 1) {
   const winW = OS_CANVAS_W * 0.72, winH = OS_CANVAS_H * 0.68;
   const winX = (OS_CANVAS_W - winW) / 2, winY = (OS_CANVAS_H - winH) / 2 - 20;
   const chromeH = 40;
-  const cx = winX + winW / 2, cy = winY + winH / 2;
+  const wcx = winX + winW / 2, wcy = winY + winH / 2;
+  const isBrowser = appName === "Edge" || appName === "Safari";
 
-  // Backdrop dims in immediately; the window itself scales up from ~92% while fading in,
-  // like a real window-open animation instead of popping in at full size.
   ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.fillRect(0, 0, OS_CANVAS_W, OS_CANVAS_H);
 
   ctx.save();
   ctx.globalAlpha = animT;
   const scale = 0.92 + animT * 0.08;
-  ctx.translate(cx, cy);
+  ctx.translate(wcx, wcy);
   ctx.scale(scale, scale);
-  ctx.translate(-cx, -cy);
+  ctx.translate(-wcx, -wcy);
 
   ctx.fillStyle = "#f2f3f5";
   roundRectPath(ctx, winX, winY, winW, winH, 10);
   ctx.fill();
-
   ctx.fillStyle = "#e4e5e8";
   roundRectPath(ctx, winX, winY, winW, chromeH, 10);
   ctx.fill();
@@ -1290,10 +1288,10 @@ function drawBrowserWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "ma
 
   if (theme === "mac") {
     const dotY = winY + chromeH / 2;
-    ([["#ff5f57", winX + 20], ["#febc2e", winX + 40], ["#28c840", winX + 60]] as [string, number][]).forEach(([color, cx]) => {
+    ([["#ff5f57", winX + 20], ["#febc2e", winX + 40], ["#28c840", winX + 60]] as [string, number][]).forEach(([color, dcx]) => {
       ctx.fillStyle = color;
       ctx.beginPath();
-      ctx.arc(cx, dotY, 6, 0, Math.PI * 2);
+      ctx.arc(dcx, dotY, 6, 0, Math.PI * 2);
       ctx.fill();
     });
   } else {
@@ -1304,68 +1302,268 @@ function drawBrowserWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "ma
     ctx.fillText("\u2715", winX + winW - 24, winY + chromeH / 2);
   }
 
-  const navX0 = theme === "mac" ? winX + 76 : winX + 12;
-  const barX = theme === "mac" ? winX + 128 : winX + 62;
-  const barW = theme === "mac" ? winW - 218 : winW - 116;
+  if (isBrowser) {
+    const navX0 = theme === "mac" ? winX + 76 : winX + 12;
+    const barX = theme === "mac" ? winX + 128 : winX + 62;
+    const barW = theme === "mac" ? winW - 218 : winW - 116;
+    const navY = winY + chromeH / 2;
+    ctx.strokeStyle = "#5f6368";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(navX0 + 7, navY - 5); ctx.lineTo(navX0 + 2, navY); ctx.lineTo(navX0 + 7, navY + 5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(navX0 + 17, navY - 5); ctx.lineTo(navX0 + 22, navY); ctx.lineTo(navX0 + 17, navY + 5); ctx.stroke();
+    ctx.beginPath(); ctx.arc(navX0 + 33, navY, 6, -Math.PI * 0.15, Math.PI * 1.3); ctx.stroke();
 
-  // Simple back/forward/refresh nav buttons for extra chrome authenticity, drawn as shapes
-  // instead of relying on emoji glyphs that render inconsistently across platforms.
-  const navY = winY + chromeH / 2;
-  const navColor = "#5f6368";
-  ctx.strokeStyle = navColor;
-  ctx.fillStyle = navColor;
-  ctx.lineWidth = 1.6;
-  // back arrow
-  ctx.beginPath();
-  ctx.moveTo(navX0 + 7, navY - 5);
-  ctx.lineTo(navX0 + 2, navY);
-  ctx.lineTo(navX0 + 7, navY + 5);
-  ctx.stroke();
-  // forward arrow
-  ctx.beginPath();
-  ctx.moveTo(navX0 + 17, navY - 5);
-  ctx.lineTo(navX0 + 22, navY);
-  ctx.lineTo(navX0 + 17, navY + 5);
-  ctx.stroke();
-  // refresh (small arc + arrowhead)
-  ctx.beginPath();
-  ctx.arc(navX0 + 33, navY, 6, -Math.PI * 0.15, Math.PI * 1.3);
-  ctx.stroke();
-
-  ctx.fillStyle = "#fff";
-  roundRectPath(ctx, barX, winY + 8, barW, chromeH - 16, 12);
-  ctx.fill();
-  // Small padlock shape instead of an emoji, for consistent cross-platform rendering.
-  const lockX = barX + 18, lockY = winY + chromeH / 2;
-  ctx.strokeStyle = "#3a8f4a";
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  ctx.arc(lockX, lockY - 2, 3.2, Math.PI, 0);
-  ctx.stroke();
-  ctx.fillStyle = "#3a8f4a";
-  roundRectPath(ctx, lockX - 4.5, lockY - 2, 9, 6, 1.5);
-  ctx.fill();
-  ctx.fillStyle = "#444";
-  ctx.font = "12px 'Segoe UI', -apple-system, sans-serif";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText("laptopcore.ca", barX + 30, winY + chromeH / 2);
+    ctx.fillStyle = "#fff";
+    roundRectPath(ctx, barX, winY + 8, barW, chromeH - 16, 12);
+    ctx.fill();
+    const lockX = barX + 18, lockY = winY + chromeH / 2;
+    ctx.strokeStyle = "#3a8f4a";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(lockX, lockY - 2, 3.2, Math.PI, 0); ctx.stroke();
+    ctx.fillStyle = "#3a8f4a";
+    roundRectPath(ctx, lockX - 4.5, lockY - 2, 9, 6, 1.5);
+    ctx.fill();
+    ctx.fillStyle = "#444";
+    ctx.font = "12px 'Segoe UI', -apple-system, sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText("laptopcore.ca", barX + 30, winY + chromeH / 2);
+  } else {
+    ctx.fillStyle = "#333";
+    ctx.font = "600 13px 'Segoe UI', -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(appName, winX + winW / 2, winY + chromeH / 2);
+  }
 
   const bodyY = winY + chromeH;
   const bodyH = winH - chromeH;
+  ctx.save();
+  roundRectPath(ctx, winX, bodyY, winW, bodyH, 0);
+  ctx.clip();
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(winX, bodyY, winW, bodyH);
-  ctx.fillStyle = "#111";
-  ctx.font = "600 22px 'Segoe UI', -apple-system, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("LaptopCore", winX + winW / 2, bodyY + bodyH * 0.35);
-  ctx.fillStyle = "#666";
-  ctx.font = "13px 'Segoe UI', -apple-system, sans-serif";
-  ctx.fillText("Track prices. Compare laptops. Find the deal.", winX + winW / 2, bodyY + bodyH * 0.35 + 30);
+  drawAppBody(ctx, appName, winX, bodyY, winW, bodyH);
+  ctx.restore();
+
   ctx.restore();
 }
 
-function hitTestBrowserWindow(px: number, py: number, theme: "windows" | "mac"): "close" | "absorb" {
+function drawAppBody(ctx: CanvasRenderingContext2D, appName: string, x: number, y: number, w: number, h: number) {
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+
+  if (appName === "Edge" || appName === "Safari") {
+    ctx.fillStyle = "#111";
+    ctx.font = "600 22px 'Segoe UI', -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("LaptopCore", x + w / 2, y + h * 0.35);
+    ctx.fillStyle = "#666";
+    ctx.font = "13px 'Segoe UI', -apple-system, sans-serif";
+    ctx.fillText("Track prices. Compare laptops. Find the deal.", x + w / 2, y + h * 0.35 + 30);
+    return;
+  }
+
+  if (appName === "Word") {
+    ctx.fillStyle = "#f3f3f3";
+    ctx.fillRect(x, y, w, 40);
+    ["B", "I", "U", "\u2261", "\u2263"].forEach((label, i) => {
+      ctx.fillStyle = "#444";
+      ctx.font = `${label === "B" ? "700" : "400"} 14px serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, x + 24 + i * 34, y + 20);
+    });
+    const pageX = x + w * 0.15, pageY = y + 56, pageW = w * 0.7, pageH = h - 80;
+    ctx.fillStyle = "#fff";
+    ctx.strokeStyle = "#ddd";
+    ctx.lineWidth = 1;
+    ctx.fillRect(pageX, pageY, pageW, pageH);
+    ctx.strokeRect(pageX, pageY, pageW, pageH);
+    ctx.fillStyle = "#222";
+    ctx.font = "16px 'Calibri', sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Document1", pageX + 20, pageY + 30);
+    ctx.fillStyle = "#333";
+    ctx.font = "1px serif";
+    ctx.beginPath();
+    ctx.moveTo(pageX + 20, pageY + 44);
+    ctx.lineTo(pageX + 21, pageY + 60);
+    ctx.strokeStyle = "#333";
+    ctx.stroke();
+    return;
+  }
+
+  if (appName === "Photos") {
+    const cols = 3, rows = 2, pad = 12;
+    const cellW = (w - pad * (cols + 1)) / cols, cellH = (h - pad * (rows + 1)) / rows;
+    const colors = ["#7fb0e0", "#e0a37f", "#8fd0a0", "#d08fc9", "#e0d07f", "#7fd0d0"];
+    let i = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        ctx.fillStyle = colors[i % colors.length];
+        roundRectPath(ctx, x + pad + c * (cellW + pad), y + pad + r * (cellH + pad), cellW, cellH, 6);
+        ctx.fill();
+        i++;
+      }
+    }
+    return;
+  }
+
+  if (appName === "Mail") {
+    const sidebarW = w * 0.24;
+    ctx.fillStyle = "#f5f5f7";
+    ctx.fillRect(x, y, sidebarW, h);
+    ["Inbox", "Sent", "Drafts", "Trash"].forEach((label, i) => {
+      ctx.fillStyle = i === 0 ? "#3a7bd5" : "#333";
+      ctx.font = `${i === 0 ? "600" : "400"} 12px 'Segoe UI', -apple-system, sans-serif`;
+      ctx.fillText(label, x + 16, y + 28 + i * 28);
+    });
+    const emails = [
+      ["Dell", "Your order has shipped", "10:24 AM"],
+      ["Lenovo Support", "Warranty registration", "Yesterday"],
+      ["LaptopCore", "Price drop alert: XPS 13", "Mon"],
+      ["Newsletter", "This week in tech", "Sun"],
+    ];
+    emails.forEach(([from, subj, time], i) => {
+      const ey = y + 14 + i * 56;
+      ctx.strokeStyle = "#eee";
+      ctx.beginPath(); ctx.moveTo(x + sidebarW, ey - 6); ctx.lineTo(x + w, ey - 6); ctx.stroke();
+      ctx.fillStyle = "#111";
+      ctx.font = "600 12px 'Segoe UI', -apple-system, sans-serif";
+      ctx.fillText(from, x + sidebarW + 16, ey + 10);
+      ctx.fillStyle = "#888";
+      ctx.font = "11px 'Segoe UI', -apple-system, sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(time, x + w - 16, ey + 10);
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#444";
+      ctx.font = "12px 'Segoe UI', -apple-system, sans-serif";
+      ctx.fillText(subj, x + sidebarW + 16, ey + 28);
+    });
+    return;
+  }
+
+  if (appName === "Store" || appName === "Microsoft Store") {
+    const cols = 2, pad = 16;
+    const cellW = (w - pad * (cols + 1)) / cols, cellH = 90;
+    const apps = [["Spotify", "#1db954"], ["Netflix", "#e50914"], ["Discord", "#5865f2"], ["Slack", "#4a154b"]];
+    apps.forEach(([name, color], i) => {
+      const cx0 = x + pad + (i % cols) * (cellW + pad), cy0 = y + pad + Math.floor(i / cols) * (cellH + pad);
+      ctx.fillStyle = "#fafafa";
+      roundRectPath(ctx, cx0, cy0, cellW, cellH, 8);
+      ctx.fill();
+      ctx.fillStyle = color;
+      roundRectPath(ctx, cx0 + 12, cy0 + 15, 60, 60, 10);
+      ctx.fill();
+      ctx.fillStyle = "#111";
+      ctx.font = "600 13px 'Segoe UI', sans-serif";
+      ctx.fillText(name, cx0 + 84, cy0 + 38);
+      ctx.fillStyle = "#0067c0";
+      roundRectPath(ctx, cx0 + 84, cy0 + 50, 60, 24, 4);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.font = "11px 'Segoe UI', sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Get", cx0 + 114, cy0 + 66);
+      ctx.textAlign = "left";
+    });
+    return;
+  }
+
+  if (appName === "Settings") {
+    const navW = w * 0.32;
+    ctx.fillStyle = "#f5f5f7";
+    ctx.fillRect(x, y, navW, h);
+    ["System", "Bluetooth & devices", "Network & internet", "Personalization", "Apps"].forEach((label, i) => {
+      ctx.fillStyle = i === 0 ? "#0067c0" : "#333";
+      ctx.font = `${i === 0 ? "600" : "400"} 12px 'Segoe UI', sans-serif`;
+      ctx.fillText(label, x + 16, y + 30 + i * 30);
+    });
+    const toggles: [string, boolean][] = [["Wi-Fi", true], ["Bluetooth", false], ["Dark mode", true], ["Airplane mode", false]];
+    toggles.forEach(([label, on], i) => {
+      const ty = y + 24 + i * 44;
+      ctx.fillStyle = "#111";
+      ctx.font = "13px 'Segoe UI', sans-serif";
+      ctx.fillText(label, x + navW + 20, ty + 5);
+      const swX = x + w - 70, swW = 40, swH = 20;
+      ctx.fillStyle = on ? "#0067c0" : "#ccc";
+      roundRectPath(ctx, swX, ty - 8, swW, swH, swH / 2);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(on ? swX + swW - 10 : swX + 10, ty + 2, 8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    return;
+  }
+
+  if (appName === "Finder") {
+    const navW = w * 0.28;
+    ctx.fillStyle = "#f0f0f0";
+    ctx.fillRect(x, y, navW, h);
+    ctx.fillStyle = "#888";
+    ctx.font = "600 10px -apple-system, sans-serif";
+    ctx.fillText("FAVOURITES", x + 14, y + 20);
+    ["AirDrop", "Recents", "Applications", "Desktop", "Documents"].forEach((label, i) => {
+      ctx.fillStyle = "#222";
+      ctx.font = "12px -apple-system, sans-serif";
+      ctx.fillText(label, x + 14, y + 44 + i * 26);
+    });
+    const files = [["Report.docx", "142 KB"], ["Photo.jpg", "2.1 MB"], ["Budget.xlsx", "88 KB"], ["Notes.txt", "4 KB"]];
+    files.forEach(([name, size], i) => {
+      const fy = y + 24 + i * 34;
+      ctx.fillStyle = "#3a8dff";
+      roundRectPath(ctx, x + navW + 16, fy - 10, 16, 16, 3);
+      ctx.fill();
+      ctx.fillStyle = "#222";
+      ctx.font = "12px -apple-system, sans-serif";
+      ctx.fillText(name, x + navW + 40, fy + 2);
+      ctx.fillStyle = "#999";
+      ctx.textAlign = "right";
+      ctx.fillText(size, x + w - 16, fy + 2);
+      ctx.textAlign = "left";
+    });
+    return;
+  }
+
+  if (appName === "Music") {
+    const artX = x + w / 2 - 60, artY = y + 40;
+    const grad = ctx.createLinearGradient(artX, artY, artX + 120, artY + 120);
+    grad.addColorStop(0, "#ff5f9e");
+    grad.addColorStop(1, "#5f6cff");
+    ctx.fillStyle = grad;
+    roundRectPath(ctx, artX, artY, 120, 120, 10);
+    ctx.fill();
+    ctx.fillStyle = "#111";
+    ctx.font = "600 15px -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Now Playing", x + w / 2, artY + 150);
+    ctx.fillStyle = "#888";
+    ctx.font = "12px -apple-system, sans-serif";
+    ctx.fillText("LaptopCore Radio", x + w / 2, artY + 170);
+    const barY = artY + 195, barW = 220;
+    ctx.strokeStyle = "#ddd";
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x + w / 2 - barW / 2, barY); ctx.lineTo(x + w / 2 + barW / 2, barY); ctx.stroke();
+    ctx.strokeStyle = "#5f6cff";
+    ctx.beginPath(); ctx.moveTo(x + w / 2 - barW / 2, barY); ctx.lineTo(x + w / 2 - barW / 2 + barW * 0.4, barY); ctx.stroke();
+    ["\u25c0\u25c0", "\u25b6", "\u25b6\u25b6"].forEach((sym, i) => {
+      ctx.fillStyle = "#333";
+      ctx.font = "16px sans-serif";
+      ctx.fillText(sym, x + w / 2 + (i - 1) * 40, barY + 34);
+    });
+    return;
+  }
+
+  // Fallback for any app without a dedicated body
+  ctx.fillStyle = "#999";
+  ctx.font = "13px 'Segoe UI', -apple-system, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(`${appName} is running`, x + w / 2, y + h / 2);
+}
+
+function hitTestAppWindow(px: number, py: number, theme: "windows" | "mac"): "close" | "absorb" {
   const winW = OS_CANVAS_W * 0.72, winH = OS_CANVAS_H * 0.68;
   const winX = (OS_CANVAS_W - winW) / 2, winY = (OS_CANVAS_H - winH) / 2 - 20;
   const chromeH = 40;
@@ -2089,7 +2287,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   const osCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const osCtxRef = useRef<CanvasRenderingContext2D | null>(null);
   const osTextureRef = useRef<THREE.CanvasTexture | null>(null);
-  const osStateRef = useRef<OSUIState>({ startOpen: false, appleMenuOpen: false, browserOpen: false, toastText: null, toastUntil: 0, animT: 1 });
+  const osStateRef = useRef<OSUIState>({ startOpen: false, appleMenuOpen: false, openApp: null, toastText: null, toastUntil: 0, animT: 1 });
   const wallpaperImagesRef = useRef<{ windows?: HTMLImageElement; mac?: HTMLImageElement }>({});
   const osThemeRef = useRef<"windows" | "mac">("windows");
   const customDisplayUrlRef = useRef<string>("");
@@ -2217,17 +2415,14 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
         }
         break;
       case "launch":
-        if (action.name === "Edge" || action.name === "Safari") {
-          // Browser gets an actual window instead of just a toast -- the real feature request.
-          osStateRef.current = { ...osStateRef.current, startOpen: false, appleMenuOpen: false, browserOpen: true };
-          animateOpen();
-        } else {
-          osStateRef.current = { ...osStateRef.current, startOpen: false };
-          showToast(`Opening ${action.name}\u2026`);
-        }
+        // Every pinned app now opens a real window with actual per-app content, not just
+        // a toast -- Edge/Safari get browser chrome, everything else gets its own body
+        // (Word's document view, Mail's inbox, Settings' toggles, etc).
+        osStateRef.current = { ...osStateRef.current, startOpen: false, appleMenuOpen: false, openApp: action.name };
+        animateOpen();
         break;
-      case "closeBrowser":
-        osStateRef.current = { ...osStateRef.current, browserOpen: false };
+      case "closeApp":
+        osStateRef.current = { ...osStateRef.current, openApp: null };
         redrawOS();
         break;
       case "appleMenuItem":
@@ -2607,7 +2802,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
       const px = uv.x * OS_CANVAS_W;
       const py = (1 - uv.y) * OS_CANVAS_H; // canvas origin is top-left; plane UV origin is bottom-left
       const action = osThemeRef.current === "mac" ? hitTestMacUI(px, py, osStateRef.current) : hitTestWindowsUI(px, py, osStateRef.current);
-      console.log("[OS click] HIT", { uv: { x: uv.x.toFixed(3), y: uv.y.toFixed(3) }, px: px.toFixed(0), py: py.toFixed(0), theme: osThemeRef.current, action, state: { startOpen: osStateRef.current.startOpen, browserOpen: osStateRef.current.browserOpen } });
+      console.log("[OS click] HIT", { uv: { x: uv.x.toFixed(3), y: uv.y.toFixed(3) }, px: px.toFixed(0), py: py.toFixed(0), theme: osThemeRef.current, action, state: { startOpen: osStateRef.current.startOpen, openApp: osStateRef.current.openApp } });
       if (action) applyOSAction(action);
     };
     mount.addEventListener("pointerdown", onScreenPointerDown);
@@ -2629,12 +2824,12 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
       const theme = osThemeRef.current;
 
       if (e.key === "Escape") {
-        if (osStateRef.current.browserOpen) applyOSAction({ type: "closeBrowser" });
+        if (osStateRef.current.openApp) applyOSAction({ type: "closeApp" });
         else applyOSAction({ type: "closeMenus" });
         e.preventDefault();
         return;
       }
-      if (osStateRef.current.browserOpen) return; // browser window absorbs other keys while open
+      if (osStateRef.current.openApp) return; // an open app window absorbs other keys
 
       if (/^[1-6]$/.test(e.key)) {
         const idx = Number(e.key) - 1;
