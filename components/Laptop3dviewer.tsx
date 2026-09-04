@@ -1777,15 +1777,6 @@ function buildLaptop(
     clearcoat: 1.0,
     clearcoatRoughness: 0.08,
   });
-  const screenGlassMat = new THREE.MeshPhysicalMaterial({
-    color: "#ffffff",
-    metalness: 0.1,
-    roughness: 0,
-    transmission: 1.0,
-    ior: 1.5,
-    transparent: true,
-    opacity: 1,
-  });
   const ventAccentMat = new THREE.MeshStandardMaterial({
     color: profile.vents === "rear" ? "#ff3b3b" : "#0d0e0f",
     roughness: 0.6,
@@ -2270,13 +2261,6 @@ function buildLaptop(
   );
   display.position.set(0, depth / 2 + 0.02, 0.003);
   screenPivot.add(display);
-
-  const screenGlass = new THREE.Mesh(
-    new THREE.PlaneGeometry(width - bezelInset, depth - bezelInset),
-    screenGlassMat
-  );
-  screenGlass.position.set(0, depth / 2, 0.0035);
-  screenPivot.add(screenGlass);
 
   const cam = new THREE.Mesh(
     new THREE.CircleGeometry(0.012, 12),
