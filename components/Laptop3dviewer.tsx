@@ -669,6 +669,12 @@ function buildKeyRow(
     mesh.position.set(centerX + x, yBase + keyHeight / 2, z);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
+    // Tag every keycap with its label + rest height so a raycast click can identify which
+    // key was pressed and animate it back up afterward -- this is what makes the physical
+    // keyboard clickable/typeable, not just decorative geometry.
+    mesh.userData.isKey = true;
+    mesh.userData.keyLabel = key.label;
+    mesh.userData.restY = mesh.position.y;
     group.add(mesh);
 
     if (dished) {
@@ -808,6 +814,7 @@ type OSUIState = {
   startOpen: boolean;
   appleMenuOpen: boolean;
   openApp: string | null; // name of the currently open app window, or null if none
+  wordDocText: string; // live text typed via the physical keyboard, shown in the Word app
   toastText: string | null;
   toastUntil: number;
   animT: number; // 0-1 ease-in progress for whatever panel/window just opened -- makes it
@@ -1127,7 +1134,7 @@ function drawWindowsUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElemen
     ctx.restore();
   }
 
-  if (state.openApp) drawAppWindow(ctx, "windows", state.openApp, state.animT);
+  if (state.openApp) drawAppWindow(ctx, "windows", state.openApp, state.animT, state.wordDocText);
 
   if (state.toastText && Date.now() < state.toastUntil) {
     drawToast(ctx, state.toastText, OS_CANVAS_W, WIN_TASKBAR_H);
@@ -1227,7 +1234,7 @@ function drawMacUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElement | 
     drawIcon(ctx, macDockIcons[i] ?? "gear", cx, cy, 26);
   });
 
-  if (state.openApp) drawAppWindow(ctx, "mac", state.openApp, state.animT);
+  if (state.openApp) drawAppWindow(ctx, "mac", state.openApp, state.animT, state.wordDocText);
 
   if (state.toastText && Date.now() < state.toastUntil) {
     drawToast(ctx, state.toastText, OS_CANVAS_W, dockH + 26);
@@ -1261,7 +1268,7 @@ function hitTestMacUI(px: number, py: number, state: OSUIState): OSAction | null
   return null;
 }
 
-function drawAppWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "mac", appName: string, animT: number = 1) {
+function drawAppWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "mac", appName: string, animT: number = 1, wordText: string = "") {
   const winW = OS_CANVAS_W * 0.72, winH = OS_CANVAS_H * 0.68;
   const winX = (OS_CANVAS_W - winW) / 2, winY = (OS_CANVAS_H - winH) / 2 - 20;
   const chromeH = 40;
@@ -1343,13 +1350,13 @@ function drawAppWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "mac", 
   ctx.clip();
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(winX, bodyY, winW, bodyH);
-  drawAppBody(ctx, appName, winX, bodyY, winW, bodyH);
+  drawAppBody(ctx, appName, winX, bodyY, winW, bodyH, wordText);
   ctx.restore();
 
   ctx.restore();
 }
 
-function drawAppBody(ctx: CanvasRenderingContext2D, appName: string, x: number, y: number, w: number, h: number) {
+function drawAppBody(ctx: CanvasRenderingContext2D, appName: string, x: number, y: number, w: number, h: number, wordText: string = "") {
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
 
@@ -1380,17 +1387,45 @@ function drawAppBody(ctx: CanvasRenderingContext2D, appName: string, x: number, 
     ctx.lineWidth = 1;
     ctx.fillRect(pageX, pageY, pageW, pageH);
     ctx.strokeRect(pageX, pageY, pageW, pageH);
-    ctx.fillStyle = "#222";
-    ctx.font = "16px 'Calibri', sans-serif";
-    ctx.textAlign = "left";
-    ctx.fillText("Document1", pageX + 20, pageY + 30);
-    ctx.fillStyle = "#333";
-    ctx.font = "1px serif";
+
+    // Actually typed text from the physical keyboard -- word-wrapped and clipped to the
+    // page, showing only the most recent lines once it overflows (like a real editor).
+    ctx.save();
     ctx.beginPath();
-    ctx.moveTo(pageX + 20, pageY + 44);
-    ctx.lineTo(pageX + 21, pageY + 60);
+    ctx.rect(pageX, pageY, pageW, pageH);
+    ctx.clip();
+    ctx.fillStyle = "#222";
+    ctx.font = "15px 'Calibri', sans-serif";
+    const lineHeight = 22;
+    const maxCharsPerLine = Math.floor((pageW - 40) / 8);
+    const rawLines = wordText.length ? wordText.split("\n") : [""];
+    const wrapped: string[] = [];
+    rawLines.forEach((line) => {
+      if (line.length === 0) { wrapped.push(""); return; }
+      for (let i = 0; i < line.length; i += maxCharsPerLine) wrapped.push(line.slice(i, i + maxCharsPerLine));
+    });
+    const maxVisibleLines = Math.floor((pageH - 40) / lineHeight);
+    const visible = wrapped.slice(-maxVisibleLines);
+    visible.forEach((line, i) => {
+      ctx.fillText(line, pageX + 20, pageY + 30 + i * lineHeight);
+    });
+    // Blinking-ish cursor at the end of the last visible line (steady, not actually animated
+    // per-frame since this only redraws on keystroke, but still reads as an insertion point).
+    const lastLine = visible[visible.length - 1] ?? "";
+    const cursorX = pageX + 20 + ctx.measureText(lastLine).width + 2;
+    const cursorY = pageY + 30 + (visible.length - 1) * lineHeight;
     ctx.strokeStyle = "#333";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(cursorX, cursorY - 13);
+    ctx.lineTo(cursorX, cursorY + 3);
     ctx.stroke();
+    if (!wordText.length) {
+      ctx.fillStyle = "#aaa";
+      ctx.font = "13px 'Calibri', sans-serif";
+      ctx.fillText("Click a key on the keyboard to type\u2026", pageX + 20, pageY + 30);
+    }
+    ctx.restore();
     return;
   }
 
@@ -1943,6 +1978,8 @@ function buildLaptop(
     trackpadMat
   );
   trackpad.position.set(trackpadCenterX, trackpadY, depth * 0.34);
+  trackpad.userData.isTrackpad = true;
+  trackpad.userData.restY = trackpad.position.y;
   group.add(trackpad);
 
   if (!tpSpec.flush) {
@@ -2287,7 +2324,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   const osCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const osCtxRef = useRef<CanvasRenderingContext2D | null>(null);
   const osTextureRef = useRef<THREE.CanvasTexture | null>(null);
-  const osStateRef = useRef<OSUIState>({ startOpen: false, appleMenuOpen: false, openApp: null, toastText: null, toastUntil: 0, animT: 1 });
+  const osStateRef = useRef<OSUIState>({ startOpen: false, appleMenuOpen: false, openApp: null, wordDocText: "", toastText: null, toastUntil: 0, animT: 1 });
   const wallpaperImagesRef = useRef<{ windows?: HTMLImageElement; mac?: HTMLImageElement }>({});
   const osThemeRef = useRef<"windows" | "mac">("windows");
   const customDisplayUrlRef = useRef<string>("");
@@ -2430,6 +2467,51 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
         showToast(action.name.replace(/\u2026$/, "") + "\u2026");
         break;
     }
+  };
+
+  // Physical keyboard interaction: a quick press-down animation on the exact key mesh that
+  // was clicked, plus real typing into the Word app's document if it's currently open --
+  // this is what actually connects the physical keyboard to on-screen content instead of
+  // the keyboard being purely decorative geometry.
+  const keyPressTimeouts = useRef<Map<THREE.Mesh, ReturnType<typeof setTimeout>>>(new Map());
+  const pressPhysicalKey = (mesh: THREE.Mesh) => {
+    const restY = (mesh.userData.restY as number) ?? mesh.position.y;
+    const existing = keyPressTimeouts.current.get(mesh);
+    if (existing) clearTimeout(existing);
+    mesh.position.y = restY - 0.0035;
+    const t = setTimeout(() => {
+      mesh.position.y = restY;
+      keyPressTimeouts.current.delete(mesh);
+    }, 90);
+    keyPressTimeouts.current.set(mesh, t);
+
+    if (osStateRef.current.openApp !== "Word") return;
+    const label = (mesh.userData.keyLabel as string) ?? "";
+    let text = osStateRef.current.wordDocText;
+    if (label === "Bksp") {
+      text = text.slice(0, -1);
+    } else if (label === "Enter") {
+      text = text + "\n";
+    } else if (label === "Tab") {
+      text = text + "    ";
+    } else if (label === "") {
+      // Blank-labeled wide key in the bottom row is the spacebar in every layout here.
+      text = text + " ";
+    } else if (/^[\x20-\x7E]$/.test(label)) {
+      // Single printable ASCII character keys only -- modifiers (Ctrl/Alt/Shift/Fn/Win/Esc/
+      // F-keys/arrows/Home/End/etc) have multi-character labels and are intentionally excluded.
+      text = text + label;
+    } else {
+      return; // modifier/navigation key -- no text effect, press animation already happened
+    }
+    osStateRef.current = { ...osStateRef.current, wordDocText: text };
+    redrawOS();
+  };
+
+  const pressTrackpad = (mesh: THREE.Mesh) => {
+    const restY = (mesh.userData.restY as number) ?? mesh.position.y;
+    mesh.position.y = restY - 0.0015;
+    setTimeout(() => { mesh.position.y = restY; }, 90);
   };
 
   // ---- Load real laptop data ----
@@ -2772,9 +2854,10 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     mount.addEventListener("pointermove", onPointerMove);
     mount.addEventListener("pointerleave", onPointerLeave);
 
-    // Click detection on the screen: raycast from pointer -> display mesh -> UV -> canvas
-    // pixel coords -> hit-test against whatever UI is currently drawn there. A small movement
-    // threshold distinguishes an actual click from an OrbitControls drag-to-rotate gesture.
+    // Click detection on the WHOLE laptop -- screen, physical keys, and trackpad are all
+    // clickable now, not just the screen. One raycast against the whole laptop group finds
+    // whichever part was hit; behavior branches from there. A small movement threshold still
+    // distinguishes an actual click from an OrbitControls drag-to-rotate gesture.
     const clickRaycaster = new THREE.Raycaster();
     let pointerDownPos: { x: number; y: number } | null = null;
     const onScreenPointerDown = (e: PointerEvent) => {
@@ -2783,27 +2866,44 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     const onScreenPointerUp = (e: PointerEvent) => {
       const down = pointerDownPos;
       pointerDownPos = null;
-      if (!down) { console.log("[OS click] no pointerdown recorded"); return; }
-      const moveDist = Math.hypot(e.clientX - down.x, e.clientY - down.y);
-      if (moveDist > 6) { console.log("[OS click] rejected as drag, moveDist =", moveDist.toFixed(1)); return; }
-      const displayMesh = meshesRef.current?.display;
-      if (!displayMesh || !displayMesh.visible) { console.log("[OS click] display mesh missing/hidden", { exists: !!displayMesh, visible: displayMesh?.visible }); return; }
-      if (!displayOnRef.current) { console.log("[OS click] displayOn=false"); return; }
-      if (customDisplayUrlRef.current) { console.log("[OS click] customDisplayUrl set, interactivity disabled"); return; }
+      if (!down) return;
+      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return; // was a drag, not a click
+      const laptopGroup = meshesRef.current?.group;
+      if (!laptopGroup) return;
+
       const rect = mount.getBoundingClientRect();
       const ndc = new THREE.Vector2(
         ((e.clientX - rect.left) / rect.width) * 2 - 1,
         -((e.clientY - rect.top) / rect.height) * 2 + 1
       );
       clickRaycaster.setFromCamera(ndc, camera);
-      const hits = clickRaycaster.intersectObject(displayMesh, false);
-      if (!hits.length || !hits[0].uv) { console.log("[OS click] raycast MISSED display mesh", { isHovering, clientX: e.clientX, clientY: e.clientY, rect: { w: rect.width, h: rect.height, l: rect.left, t: rect.top }, ndc: { x: ndc.x.toFixed(3), y: ndc.y.toFixed(3) } }); return; }
-      const uv = hits[0].uv;
-      const px = uv.x * OS_CANVAS_W;
-      const py = (1 - uv.y) * OS_CANVAS_H; // canvas origin is top-left; plane UV origin is bottom-left
-      const action = osThemeRef.current === "mac" ? hitTestMacUI(px, py, osStateRef.current) : hitTestWindowsUI(px, py, osStateRef.current);
-      console.log("[OS click] HIT", { uv: { x: uv.x.toFixed(3), y: uv.y.toFixed(3) }, px: px.toFixed(0), py: py.toFixed(0), theme: osThemeRef.current, action, state: { startOpen: osStateRef.current.startOpen, openApp: osStateRef.current.openApp } });
-      if (action) applyOSAction(action);
+      const hits = clickRaycaster.intersectObjects(laptopGroup.children, true);
+      if (!hits.length) return;
+      const hit = hits[0];
+
+      // Screen click -- existing behavior, unchanged.
+      const displayMesh = meshesRef.current?.display;
+      if (hit.object === displayMesh) {
+        if (!displayMesh.visible || !displayOnRef.current || customDisplayUrlRef.current || !hit.uv) return;
+        const px = hit.uv.x * OS_CANVAS_W;
+        const py = (1 - hit.uv.y) * OS_CANVAS_H;
+        const action = osThemeRef.current === "mac" ? hitTestMacUI(px, py, osStateRef.current) : hitTestWindowsUI(px, py, osStateRef.current);
+        if (action) applyOSAction(action);
+        return;
+      }
+
+      // Physical key click -- press animation, plus real typing if Word is open.
+      if (hit.object.userData.isKey) {
+        pressPhysicalKey(hit.object as THREE.Mesh);
+        return;
+      }
+
+      // Trackpad click -- press animation only (no cursor-position mapping, geometry too
+      // irregular on a rounded pad to map reliably to a screen coordinate).
+      if (hit.object.userData.isTrackpad) {
+        pressTrackpad(hit.object as THREE.Mesh);
+        return;
+      }
     };
     mount.addEventListener("pointerdown", onScreenPointerDown);
     mount.addEventListener("pointerup", onScreenPointerUp);
@@ -3078,6 +3178,8 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     return () => {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
       if (animateOpenRef.current) cancelAnimationFrame(animateOpenRef.current);
+      keyPressTimeouts.current.forEach((t) => clearTimeout(t));
+      keyPressTimeouts.current.clear();
     };
   }, []);
 
