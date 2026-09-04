@@ -2879,12 +2879,18 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
       clickRaycaster.setFromCamera(ndc, camera);
       const hits = clickRaycaster.intersectObjects(laptopGroup.children, true);
       if (!hits.length) return;
-      const hit = hits[0];
+      const displayMesh = meshesRef.current?.display;
+      // Purely decorative overlay meshes (the transmissive screen-glass layer, bezel, webcam
+      // dot) sit slightly in FRONT of the display and were silently swallowing every click
+      // since they're the closest hit but match none of our interactive checks. Scan past
+      // them for the first hit that's actually meaningful (the real display, a key, or the
+      // trackpad) instead of blindly trusting hits[0].
+      const hit = hits.find((h) => h.object === displayMesh || h.object.userData.isKey || h.object.userData.isTrackpad);
+      if (!hit) return;
 
       // Screen click -- existing behavior, unchanged.
-      const displayMesh = meshesRef.current?.display;
       if (hit.object === displayMesh) {
-        if (!displayMesh.visible || !displayOnRef.current || customDisplayUrlRef.current || !hit.uv) return;
+        if (!displayMesh!.visible || !displayOnRef.current || customDisplayUrlRef.current || !hit.uv) return;
         const px = hit.uv.x * OS_CANVAS_W;
         const py = (1 - hit.uv.y) * OS_CANVAS_H;
         const action = osThemeRef.current === "mac" ? hitTestMacUI(px, py, osStateRef.current) : hitTestWindowsUI(px, py, osStateRef.current);
