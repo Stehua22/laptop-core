@@ -808,13 +808,17 @@ type OSAction =
   | { type: "launch"; name: string }
   | { type: "toggleAppleMenu" }
   | { type: "appleMenuItem"; name: string }
-  | { type: "closeApp" };
+  | { type: "closeApp" }
+  | { type: "installApp"; name: string };
 
 type OSUIState = {
   startOpen: boolean;
   appleMenuOpen: boolean;
   openApp: string | null; // name of the currently open app window, or null if none
   wordDocText: string; // live text typed via the physical keyboard, shown in the Word app
+  browserUrl: string; // live-typed/navigated address bar text for Edge/Safari
+  installedApps: string[]; // Store apps that have finished "installing"
+  installingApp: string | null; // Store app currently mid-install animation
   settingsToggles: Record<string, boolean>; // real toggle state for the Settings app
   toastText: string | null;
   toastUntil: number;
@@ -1137,7 +1141,7 @@ function drawWindowsUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElemen
     ctx.restore();
   }
 
-  if (state.openApp) drawAppWindow(ctx, "windows", state.openApp, state.animT, state.wordDocText);
+  if (state.openApp) drawAppWindow(ctx, "windows", state.openApp, state.animT, state.wordDocText, state.settingsToggles, state.browserUrl, state.installedApps, state.installingApp);
 
   if (state.toastText && Date.now() < state.toastUntil) {
     drawToast(ctx, state.toastText, OS_CANVAS_W, WIN_TASKBAR_H);
@@ -1146,8 +1150,7 @@ function drawWindowsUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElemen
 
 function hitTestWindowsUI(px: number, py: number, state: OSUIState): OSAction | null {
   if (state.openApp) {
-    const hit = hitTestAppWindow(px, py, "windows");
-    return hit === "close" ? { type: "closeApp" } : null;
+    return hitTestAppWindow(px, py, "windows", state.openApp);
   }
   const tbY = OS_CANVAS_H - WIN_TASKBAR_H;
   const centerX = OS_CANVAS_W / 2;
@@ -1254,7 +1257,7 @@ function drawMacUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElement | 
     drawIcon(ctx, macDockIcons[i] ?? "gear", cx, cy, 26);
   });
 
-  if (state.openApp) drawAppWindow(ctx, "mac", state.openApp, state.animT, state.wordDocText);
+  if (state.openApp) drawAppWindow(ctx, "mac", state.openApp, state.animT, state.wordDocText, state.settingsToggles, state.browserUrl, state.installedApps, state.installingApp);
 
   if (state.toastText && Date.now() < state.toastUntil) {
     drawToast(ctx, state.toastText, OS_CANVAS_W, dockH + 26);
@@ -1263,8 +1266,7 @@ function drawMacUI(ctx: CanvasRenderingContext2D, wallpaper: HTMLImageElement | 
 
 function hitTestMacUI(px: number, py: number, state: OSUIState): OSAction | null {
   if (state.openApp) {
-    const hit = hitTestAppWindow(px, py, "mac");
-    return hit === "close" ? { type: "closeApp" } : null;
+    return hitTestAppWindow(px, py, "mac", state.openApp);
   }
   if (py <= MAC_MENUBAR_H) {
     if (px <= 40) return { type: "toggleAppleMenu" };
@@ -1288,7 +1290,7 @@ function hitTestMacUI(px: number, py: number, state: OSUIState): OSAction | null
   return null;
 }
 
-function drawAppWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "mac", appName: string, animT: number = 1, wordText: string = "", settingsToggles: Record<string, boolean> = SETTINGS_TOGGLE_DEFAULTS) {
+function drawAppWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "mac", appName: string, animT: number = 1, wordText: string = "", settingsToggles: Record<string, boolean> = SETTINGS_TOGGLE_DEFAULTS, browserUrl: string = "laptopcore.ca", installedApps: string[] = [], installingApp: string | null = null) {
   const winW = OS_CANVAS_W * 0.72, winH = OS_CANVAS_H * 0.68;
   const winX = (OS_CANVAS_W - winW) / 2, winY = (OS_CANVAS_H - winH) / 2 - 20;
   const chromeH = 40;
@@ -1354,7 +1356,7 @@ function drawAppWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "mac", 
     ctx.font = "12px 'Segoe UI', -apple-system, sans-serif";
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.fillText("laptopcore.ca", barX + 30, winY + chromeH / 2);
+    ctx.fillText(browserUrl || "Search or enter address", barX + 30, winY + chromeH / 2);
   } else {
     ctx.fillStyle = "#333";
     ctx.font = "600 13px 'Segoe UI', -apple-system, sans-serif";
@@ -1370,24 +1372,52 @@ function drawAppWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "mac", 
   ctx.clip();
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(winX, bodyY, winW, bodyH);
-  drawAppBody(ctx, appName, winX, bodyY, winW, bodyH, wordText, settingsToggles);
+  drawAppBody(ctx, appName, winX, bodyY, winW, bodyH, wordText, settingsToggles, browserUrl, installedApps, installingApp);
   ctx.restore();
 
   ctx.restore();
 }
 
-function drawAppBody(ctx: CanvasRenderingContext2D, appName: string, x: number, y: number, w: number, h: number, wordText: string = "", settingsToggles: Record<string, boolean> = SETTINGS_TOGGLE_DEFAULTS) {
+function drawAppBody(ctx: CanvasRenderingContext2D, appName: string, x: number, y: number, w: number, h: number, wordText: string = "", settingsToggles: Record<string, boolean> = SETTINGS_TOGGLE_DEFAULTS, browserUrl: string = "laptopcore.ca", installedApps: string[] = [], installingApp: string | null = null) {
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
 
   if (appName === "Edge" || appName === "Safari") {
-    ctx.fillStyle = "#111";
-    ctx.font = "600 22px 'Segoe UI', -apple-system, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("LaptopCore", x + w / 2, y + h * 0.35);
-    ctx.fillStyle = "#666";
+    const url = browserUrl.toLowerCase().trim();
+    const isLaptopCore = url.includes("laptopcore");
+    if (isLaptopCore || !url) {
+      ctx.fillStyle = "#111";
+      ctx.font = "600 22px 'Segoe UI', -apple-system, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("LaptopCore", x + w / 2, y + h * 0.35);
+      ctx.fillStyle = "#666";
+      ctx.font = "13px 'Segoe UI', -apple-system, sans-serif";
+      ctx.fillText("Track prices. Compare laptops. Find the deal.", x + w / 2, y + h * 0.35 + 30);
+      return;
+    }
+    // Anything else typed and "navigated" to gets a real (simulated) search-results page --
+    // this is what makes the address bar actually respond to typing instead of being static.
+    ctx.fillStyle = "#222";
     ctx.font = "13px 'Segoe UI', -apple-system, sans-serif";
-    ctx.fillText("Track prices. Compare laptops. Find the deal.", x + w / 2, y + h * 0.35 + 30);
+    ctx.textAlign = "left";
+    ctx.fillText(`Results for \u201c${browserUrl}\u201d`, x + 24, y + 30);
+    const results = [
+      [`${browserUrl} - Official Site`, `www.${url.replace(/\s+/g, "")}.com`],
+      [`${browserUrl}: Reviews, Prices & Specs \u2014 LaptopCore`, "laptopcore.ca/search"],
+      [`Best deals on ${browserUrl} this week`, "www.retailer-deals.example/offers"],
+    ];
+    results.forEach(([title, link], i) => {
+      const ry = y + 60 + i * 56;
+      ctx.fillStyle = "#1a0dab";
+      ctx.font = "14px arial, sans-serif";
+      ctx.fillText(title, x + 24, ry);
+      ctx.fillStyle = "#006621";
+      ctx.font = "11px arial, sans-serif";
+      ctx.fillText(link, x + 24, ry + 16);
+      ctx.fillStyle = "#555";
+      ctx.font = "11px arial, sans-serif";
+      ctx.fillText("Compare prices, read specs, and see what other buyers say.", x + 24, ry + 32);
+    });
     return;
   }
 
@@ -1514,13 +1544,16 @@ function drawAppBody(ctx: CanvasRenderingContext2D, appName: string, x: number, 
       ctx.fillStyle = "#111";
       ctx.font = "600 13px 'Segoe UI', sans-serif";
       ctx.fillText(name, cx0 + 84, cy0 + 38);
-      ctx.fillStyle = "#0067c0";
+
+      const isInstalled = installedApps.includes(name);
+      const isInstalling = installingApp === name;
+      ctx.fillStyle = isInstalled ? "#e8e8e8" : "#0067c0";
       roundRectPath(ctx, cx0 + 84, cy0 + 50, 60, 24, 4);
       ctx.fill();
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = isInstalled ? "#333" : "#fff";
       ctx.font = "11px 'Segoe UI', sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("Get", cx0 + 114, cy0 + 66);
+      ctx.fillText(isInstalling ? "Installing\u2026" : isInstalled ? "\u2713 Open" : "Get", cx0 + 114, cy0 + 66);
       ctx.textAlign = "left";
     });
     return;
@@ -1653,16 +1686,34 @@ function drawAppBody(ctx: CanvasRenderingContext2D, appName: string, x: number, 
   ctx.fillText(`${appName} is running`, x + w / 2, y + h / 2);
 }
 
-function hitTestAppWindow(px: number, py: number, theme: "windows" | "mac"): "close" | "absorb" {
+function hitTestAppWindow(px: number, py: number, theme: "windows" | "mac", appName: string): OSAction | null {
   const winW = OS_CANVAS_W * 0.72, winH = OS_CANVAS_H * 0.68;
   const winX = (OS_CANVAS_W - winW) / 2, winY = (OS_CANVAS_H - winH) / 2 - 20;
   const chromeH = 40;
   if (theme === "mac") {
-    if (py >= winY && py <= winY + chromeH && px >= winX + 12 && px <= winX + 30) return "close";
+    if (py >= winY && py <= winY + chromeH && px >= winX + 12 && px <= winX + 30) return { type: "closeApp" };
   } else {
-    if (py >= winY && py <= winY + chromeH && px >= winX + winW - 40 && px <= winX + winW - 8) return "close";
+    if (py >= winY && py <= winY + chromeH && px >= winX + winW - 40 && px <= winX + winW - 8) return { type: "closeApp" };
   }
-  return "absorb";
+
+  if (appName === "Store" || appName === "Microsoft Store") {
+    // Must match the exact layout math in the Store's draw case above, or clicks and
+    // buttons drift apart -- same coupling as every other draw/hit-test pair in this file.
+    const bodyY = winY + chromeH, bodyX = winX;
+    const w = winW;
+    const cols = 2, pad = 16;
+    const cellW = (w - pad * (cols + 1)) / cols, cellH = 90;
+    const apps = ["Spotify", "Netflix", "Discord", "Slack"];
+    for (let i = 0; i < apps.length; i++) {
+      const cx0 = bodyX + pad + (i % cols) * (cellW + pad), cy0 = bodyY + pad + Math.floor(i / cols) * (cellH + pad);
+      const btnX = cx0 + 84, btnY = cy0 + 50, btnW = 60, btnH = 24;
+      if (px >= btnX && px <= btnX + btnW && py >= btnY && py <= btnY + btnH) {
+        return { type: "installApp", name: apps[i] };
+      }
+    }
+  }
+
+  return null;
 }
 // ==== end interactive OS layer ======================================================
 
@@ -2363,11 +2414,12 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   const osCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const osCtxRef = useRef<CanvasRenderingContext2D | null>(null);
   const osTextureRef = useRef<THREE.CanvasTexture | null>(null);
-  const osStateRef = useRef<OSUIState>({ startOpen: false, appleMenuOpen: false, openApp: null, wordDocText: "", settingsToggles: { ...SETTINGS_TOGGLE_DEFAULTS }, toastText: null, toastUntil: 0, animT: 1 });
+  const osStateRef = useRef<OSUIState>({ startOpen: false, appleMenuOpen: false, openApp: null, wordDocText: "", browserUrl: "laptopcore.ca", installedApps: [], installingApp: null, settingsToggles: { ...SETTINGS_TOGGLE_DEFAULTS }, toastText: null, toastUntil: 0, animT: 1 });
   const wallpaperImagesRef = useRef<{ windows?: HTMLImageElement; mac?: HTMLImageElement }>({});
   const osThemeRef = useRef<"windows" | "mac">("windows");
   const customDisplayUrlRef = useRef<string>("");
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const installTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [laptops, setLaptops] = useState<Laptop[]>([]);
   const [selectedId, setSelectedId] = useState<number | "">("");
@@ -2505,6 +2557,24 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
         osStateRef.current = { ...osStateRef.current, appleMenuOpen: false };
         showToast(action.name.replace(/\u2026$/, "") + "\u2026");
         break;
+      case "installApp": {
+        // This action was already being detected on click (the hit-test returns it) but had
+        // no handler at all -- clicking "Get" produced a real action that just evaporated.
+        // That's the actual "can't install anything" bug.
+        if (osStateRef.current.installedApps.includes(action.name) || osStateRef.current.installingApp) break;
+        osStateRef.current = { ...osStateRef.current, installingApp: action.name };
+        redrawOS();
+        installTimeoutRef.current = setTimeout(() => {
+          osStateRef.current = {
+            ...osStateRef.current,
+            installingApp: null,
+            installedApps: [...osStateRef.current.installedApps, action.name],
+          };
+          redrawOS();
+          showToast(`${action.name} installed`);
+        }, 1300);
+        break;
+      }
     }
   };
 
@@ -2524,26 +2594,42 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
     }, 90);
     keyPressTimeouts.current.set(mesh, t);
 
-    if (osStateRef.current.openApp !== "Word") return;
+    const openApp = osStateRef.current.openApp;
+    const isBrowser = openApp === "Edge" || openApp === "Safari";
+    if (openApp !== "Word" && !isBrowser) return;
+
     const label = (mesh.userData.keyLabel as string) ?? "";
-    let text = osStateRef.current.wordDocText;
+    let text = isBrowser ? osStateRef.current.browserUrl : osStateRef.current.wordDocText;
+
+    if (label === "Enter" && isBrowser) {
+      // "Navigate" -- the address bar text is already live, this just confirms it (the page
+      // content itself is computed from browserUrl at draw time, so nothing else to do here).
+      showToast(`Navigating to ${text || "blank page"}\u2026`);
+      redrawOS();
+      return;
+    }
+
     if (label === "Bksp") {
       text = text.slice(0, -1);
     } else if (label === "Enter") {
       text = text + "\n";
     } else if (label === "Tab") {
+      if (isBrowser) return; // Tab doesn't type into an address bar
       text = text + "    ";
     } else if (label === "") {
       // Blank-labeled wide key in the bottom row is the spacebar in every layout here.
+      if (isBrowser) return; // spaces don't make sense mid-URL -- ignore
       text = text + " ";
     } else if (/^[\x20-\x7E]$/.test(label)) {
       // Single printable ASCII character keys only -- modifiers (Ctrl/Alt/Shift/Fn/Win/Esc/
       // F-keys/arrows/Home/End/etc) have multi-character labels and are intentionally excluded.
-      text = text + label;
+      text = text + (isBrowser ? label.toLowerCase() : label);
     } else {
       return; // modifier/navigation key -- no text effect, press animation already happened
     }
-    osStateRef.current = { ...osStateRef.current, wordDocText: text };
+
+    if (isBrowser) osStateRef.current = { ...osStateRef.current, browserUrl: text };
+    else osStateRef.current = { ...osStateRef.current, wordDocText: text };
     redrawOS();
   };
 
@@ -3222,6 +3308,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   useEffect(() => {
     return () => {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      if (installTimeoutRef.current) clearTimeout(installTimeoutRef.current);
       if (animateOpenRef.current) cancelAnimationFrame(animateOpenRef.current);
       keyPressTimeouts.current.forEach((t) => clearTimeout(t));
       keyPressTimeouts.current.clear();
