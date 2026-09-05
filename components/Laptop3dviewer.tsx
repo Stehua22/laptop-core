@@ -815,6 +815,7 @@ type OSUIState = {
   appleMenuOpen: boolean;
   openApp: string | null; // name of the currently open app window, or null if none
   wordDocText: string; // live text typed via the physical keyboard, shown in the Word app
+  settingsToggles: Record<string, boolean>; // real toggle state for the Settings app
   toastText: string | null;
   toastUntil: number;
   animT: number; // 0-1 ease-in progress for whatever panel/window just opened -- makes it
@@ -824,6 +825,8 @@ type OSUIState = {
 const WIN_APPS = ["Edge", "Word", "Photos", "Mail", "Store", "Settings"];
 const MAC_DOCK = ["Finder", "Safari", "Photos", "Mail", "Music", "Settings"];
 const MAC_MENU_ITEMS = ["About This Mac", "System Settings\u2026", "Sleep", "Restart\u2026", "Shut Down\u2026"];
+const SETTINGS_TOGGLE_ORDER = ["Wi-Fi", "Bluetooth", "Dark mode", "Airplane mode"];
+const SETTINGS_TOGGLE_DEFAULTS: Record<string, boolean> = { "Wi-Fi": true, "Bluetooth": false, "Dark mode": true, "Airplane mode": false };
 
 function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
@@ -1165,6 +1168,23 @@ function hitTestWindowsUI(px: number, py: number, state: OSUIState): OSAction | 
 
   const startX = centerX - 148, startW = 44;
   if (py >= tbY && px >= startX && px <= startX + startW) return { type: "toggleStart" };
+
+  // The search pill previously did nothing when clicked -- real Windows opens Start's
+  // search view from here too, so route it the same way instead of dead space.
+  const searchX = startX + startW + 10, searchW = 130;
+  if (py >= tbY && px >= searchX && px <= searchX + searchW) return { type: "toggleStart" };
+
+  // Taskbar quick-launch icons (folder/globe/mail) were previously decorative -- drawn but
+  // with no click region at all, so they visually looked clickable and did nothing.
+  const taskbarIconApps = ["File Explorer", "Edge", "Mail"];
+  if (py >= tbY) {
+    let ix = searchX + searchW + 30;
+    for (const appName of taskbarIconApps) {
+      if (Math.abs(px - ix) < 18) return { type: "launch", name: appName };
+      ix += 42;
+    }
+  }
+
   if (py >= tbY) return { type: "closeMenus" };
   if (state.startOpen) return { type: "closeMenus" };
   return null;
@@ -1268,7 +1288,7 @@ function hitTestMacUI(px: number, py: number, state: OSUIState): OSAction | null
   return null;
 }
 
-function drawAppWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "mac", appName: string, animT: number = 1, wordText: string = "") {
+function drawAppWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "mac", appName: string, animT: number = 1, wordText: string = "", settingsToggles: Record<string, boolean> = SETTINGS_TOGGLE_DEFAULTS) {
   const winW = OS_CANVAS_W * 0.72, winH = OS_CANVAS_H * 0.68;
   const winX = (OS_CANVAS_W - winW) / 2, winY = (OS_CANVAS_H - winH) / 2 - 20;
   const chromeH = 40;
@@ -1350,13 +1370,13 @@ function drawAppWindow(ctx: CanvasRenderingContext2D, theme: "windows" | "mac", 
   ctx.clip();
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(winX, bodyY, winW, bodyH);
-  drawAppBody(ctx, appName, winX, bodyY, winW, bodyH, wordText);
+  drawAppBody(ctx, appName, winX, bodyY, winW, bodyH, wordText, settingsToggles);
   ctx.restore();
 
   ctx.restore();
 }
 
-function drawAppBody(ctx: CanvasRenderingContext2D, appName: string, x: number, y: number, w: number, h: number, wordText: string = "") {
+function drawAppBody(ctx: CanvasRenderingContext2D, appName: string, x: number, y: number, w: number, h: number, wordText: string = "", settingsToggles: Record<string, boolean> = SETTINGS_TOGGLE_DEFAULTS) {
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
 
@@ -1515,7 +1535,7 @@ function drawAppBody(ctx: CanvasRenderingContext2D, appName: string, x: number, 
       ctx.font = `${i === 0 ? "600" : "400"} 12px 'Segoe UI', sans-serif`;
       ctx.fillText(label, x + 16, y + 30 + i * 30);
     });
-    const toggles: [string, boolean][] = [["Wi-Fi", true], ["Bluetooth", false], ["Dark mode", true], ["Airplane mode", false]];
+    const toggles = SETTINGS_TOGGLE_ORDER.map((label) => [label, settingsToggles[label] ?? SETTINGS_TOGGLE_DEFAULTS[label]] as [string, boolean]);
     toggles.forEach(([label, on], i) => {
       const ty = y + 24 + i * 44;
       ctx.fillStyle = "#111";
@@ -1587,6 +1607,41 @@ function drawAppBody(ctx: CanvasRenderingContext2D, appName: string, x: number, 
       ctx.fillStyle = "#333";
       ctx.font = "16px sans-serif";
       ctx.fillText(sym, x + w / 2 + (i - 1) * 40, barY + 34);
+    });
+    return;
+  }
+
+  if (appName === "File Explorer") {
+    const navW = w * 0.26;
+    ctx.fillStyle = "#f3f3f3";
+    ctx.fillRect(x, y, navW, h);
+    ["Quick access", "This PC", "Documents", "Downloads", "Pictures"].forEach((label, i) => {
+      ctx.fillStyle = i === 0 ? "#222" : "#444";
+      ctx.font = i === 0 ? "600 12px 'Segoe UI', sans-serif" : "12px 'Segoe UI', sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(label, x + 14, y + 24 + i * 26);
+    });
+    const files: [string, string][] = [["Report.docx", "142 KB"], ["Photo.jpg", "2.1 MB"], ["Budget.xlsx", "88 KB"], ["Notes.txt", "4 KB"]];
+    ctx.fillStyle = "#666";
+    ctx.font = "600 10px 'Segoe UI', sans-serif";
+    ctx.fillText("NAME", x + navW + 40, y + 16);
+    ctx.textAlign = "right";
+    ctx.fillText("SIZE", x + w - 20, y + 16);
+    ctx.textAlign = "left";
+    ctx.strokeStyle = "#e0e0e0";
+    ctx.beginPath(); ctx.moveTo(x + navW, y + 24); ctx.lineTo(x + w, y + 24); ctx.stroke();
+    files.forEach(([name, size], i) => {
+      const fy = y + 30 + i * 34;
+      ctx.fillStyle = "#4d9dff";
+      roundRectPath(ctx, x + navW + 16, fy - 10, 16, 16, 3);
+      ctx.fill();
+      ctx.fillStyle = "#222";
+      ctx.font = "12px 'Segoe UI', sans-serif";
+      ctx.fillText(name, x + navW + 40, fy + 2);
+      ctx.fillStyle = "#888";
+      ctx.textAlign = "right";
+      ctx.fillText(size, x + w - 20, fy + 2);
+      ctx.textAlign = "left";
     });
     return;
   }
@@ -2308,7 +2363,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
   const osCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const osCtxRef = useRef<CanvasRenderingContext2D | null>(null);
   const osTextureRef = useRef<THREE.CanvasTexture | null>(null);
-  const osStateRef = useRef<OSUIState>({ startOpen: false, appleMenuOpen: false, openApp: null, wordDocText: "", toastText: null, toastUntil: 0, animT: 1 });
+  const osStateRef = useRef<OSUIState>({ startOpen: false, appleMenuOpen: false, openApp: null, wordDocText: "", settingsToggles: { ...SETTINGS_TOGGLE_DEFAULTS }, toastText: null, toastUntil: 0, animT: 1 });
   const wallpaperImagesRef = useRef<{ windows?: HTMLImageElement; mac?: HTMLImageElement }>({});
   const osThemeRef = useRef<"windows" | "mac">("windows");
   const customDisplayUrlRef = useRef<string>("");
