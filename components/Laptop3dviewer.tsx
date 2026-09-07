@@ -1808,6 +1808,8 @@ function hitTestAppWindow(px: number, py: number, theme: "windows" | "mac", appN
   if (appName === "Store" || appName === "Microsoft Store") {
     // Must match the exact layout math in the Store's draw case above, or clicks and
     // buttons drift apart -- same coupling as every other draw/hit-test pair in this file.
+    // Made deliberately generous: the WHOLE card is clickable, not just the small 60x24
+    // button, removing any dependency on pixel-perfect precision.
     const bodyY = winY + chromeH, bodyX = winX;
     const w = winW;
     const cols = 2, pad = 16;
@@ -1815,11 +1817,7 @@ function hitTestAppWindow(px: number, py: number, theme: "windows" | "mac", appN
     const apps = ["Spotify", "Netflix", "Discord", "Slack"];
     for (let i = 0; i < apps.length; i++) {
       const cx0 = bodyX + pad + (i % cols) * (cellW + pad), cy0 = bodyY + pad + Math.floor(i / cols) * (cellH + pad);
-      const btnX = cx0 + 84, btnY = cy0 + 50, btnW = 60, btnH = 24;
-      if (px >= btnX && px <= btnX + btnW && py >= btnY && py <= btnY + btnH) {
-        // Once installed, this same button becomes "Open" -- it should actually open the
-        // app's window, not try to install it again (which the guard in applyOSAction would
-        // just silently ignore, leaving the button looking broken/unresponsive).
+      if (px >= cx0 && px <= cx0 + cellW && py >= cy0 && py <= cy0 + cellH) {
         return installedApps.includes(apps[i]) ? { type: "launch", name: apps[i] } : { type: "installApp", name: apps[i] };
       }
     }
@@ -3166,7 +3164,7 @@ export default function Laptop3DViewer({ isAdmin = false, studioMode = false }: 
         const py = (1 - hit.uv.y) * OS_CANVAS_H;
         const action = osThemeRef.current === "mac" ? hitTestMacUI(px, py, osStateRef.current) : hitTestWindowsUI(px, py, osStateRef.current);
         if (osStateRef.current.openApp) {
-          console.log("[App window click]", { openApp: osStateRef.current.openApp, px: px.toFixed(0), py: py.toFixed(0), installedApps: osStateRef.current.installedApps, action });
+          console.log(`[App window click] openApp=${osStateRef.current.openApp} px=${px.toFixed(0)} py=${py.toFixed(0)} installedApps=[${osStateRef.current.installedApps.join(",")}] action=${JSON.stringify(action)}`);
         }
         if (action) applyOSAction(action);
         return;
