@@ -1195,14 +1195,15 @@ function hitTestWindowsUI(px: number, py: number, state: OSUIState): OSAction | 
   const centerX = OS_CANVAS_W / 2;
 
   if (state.startOpen) {
-    const panelW = 380, panelH = 380;
+    const appList = winStartAppList(state.installedApps);
+    const { panelW, panelH, cols } = winStartPanelLayout(appList.length);
     const panelX = centerX - panelW / 2, panelY = tbY - panelH - 8;
     if (px >= panelX && px <= panelX + panelW && py >= panelY && py <= panelY + panelH) {
-      const cols = 3, cellW = (panelW - 40) / cols;
-      for (let i = 0; i < WIN_APPS.length; i++) {
+      const cellW = (panelW - 40) / cols;
+      for (let i = 0; i < appList.length; i++) {
         const cx = panelX + 20 + cellW * (i % cols) + cellW / 2;
         const cy = panelY + 100 + Math.floor(i / cols) * 100;
-        if (Math.abs(px - cx) < 30 && Math.abs(py - cy) < 45) return { type: "launch", name: WIN_APPS[i] };
+        if (Math.abs(px - cx) < 30 && Math.abs(py - cy) < 45) return { type: "launch", name: appList[i] };
       }
       return null; // clicked inside panel but not on an icon -- absorb the click, don't fall through
     }
