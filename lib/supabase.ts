@@ -310,3 +310,142 @@ export async function uploadListingImage(userId: string, file: File): Promise<st
   const { data } = supabase.storage.from("listing-images").getPublicUrl(path);
   return data.publicUrl;
 }
+// ---- Messaging: add these types + functions into lib/supabase.ts ----
+// Uses the same `supabase` client instance already exported from this file.
+
+export type Conversation = {
+  id: number;
+  listing_id: number;
+  buyer_id: string;
+  seller_id: string;
+  created_at: string;
+  last_message_at: string;
+};
+
+export type Message = {
+  id: number;
+  conversation_id: number;
+  sender_id: string;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+};
+
+export type ConversationWithDetails = Conversation & {
+  listing: { id: number; brand: string; model: string; images: string[] | null; price: number } | null;
+  otherUserId: string;
+  lastMessageBody: string | null;
+  unreadCount: number;
+};
+
+// Finds the existing conversation for this listing+buyer, or creates one.
+// Call this when a buyer clicks "Message Seller" on a listing.
+export async function getOrCreateConversation(
+  listingId: number,
+  buyerId: string,
+  sellerId: string
+): Promise<Conversation> {
+  const { data: existing } = await supabase
+    .from("conversations")
+    .select("*")
+    .eq("listing_id", listingId)
+    .eq("buyer_id", buyerId)
+    .maybeSingle();
+
+  if (existing) return existing;
+
+  const { data, error } = await supabase
+    .from("conversations")
+    .insert({ listing_id: listingId, buyer_id: buyerId, seller_id: sellerId })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// All conversations a user is part of (as buyer or seller), newest activity first,
+// with the listing info, the last message preview, and an unread count for the inbox list.
+export async function fetchConversations(userId: string): Promise<ConversationWithDetails[]> {
+  const { data: conversations, error } = await supabase
+    .from("conversations")
+    .select("*, listing:listings(id, brand, model, images, price)")
+    .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`)
+    .order("last_message_at", { ascending: false });
+
+  if (error) throw error;
+  if (!conversations || conversations.length === 0) return [];
+
+  const ids = conversations.map((c) => c.id);
+  const { data: messages } = await supabase
+    .from("messages")
+    .select("conversation_id, body, sender_id, read_at, created_at")
+    .in("conversation_id", ids)
+    .order("created_at", { ascending: true });
+
+  return conversations.map((c) => {
+    const convoMessages = (messages ?? []).filter((m) => m.conversation_id === c.id);
+    const last = convoMessages[convoMessages.length - 1];
+    const unreadCount = convoMessages.filter((m) => m.sender_id !== userId && !m.read_at).length;
+    return {
+      ...c,
+      otherUserId: c.buyer_id === userId ? c.seller_id : c.buyer_id,
+      lastMessageBody: last?.body ?? null,
+      unreadCount,
+    };
+  });
+}
+
+export async function fetchMessages(conversationId: number): Promise<Message[]> {
+  const { data, error } = await supabase
+    .from("messages")
+    .select("*")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function sendMessage(conversationId: number, senderId: string, body: string): Promise<Message> {
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({ conversation_id: conversationId, sender_id: senderId, body })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  await supabase
+    .from("conversations")
+    .update({ last_message_at: new Date().toISOString() })
+    .eq("id", conversationId);
+
+  return data;
+}
+
+export async function markMessagesRead(conversationId: number, userId: string): Promise<void> {
+  await supabase
+    .from("messages")
+    .update({ read_at: new Date().toISOString() })
+    .eq("conversation_id", conversationId)
+    .neq("sender_id", userId)
+    .is("read_at", null);
+}
+
+// Live updates: calls onMessage with every new message inserted into this conversation.
+// Call the returned unsubscribe function on cleanup (e.g. in a useEffect return).
+export function subscribeToMessages(conversationId: number, onMessage: (message: Message) => void) {
+  const channel = supabase
+    .channel(`messages:${conversationId}`)
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
+      (payload: any) => onMessage(payload.new as Message)
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
