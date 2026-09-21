@@ -1,6 +1,7 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import {
   fetchConversations,
@@ -30,6 +31,20 @@ function timeAgo(dateString: string): string {
 }
 
 export default function MessagesPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ position: "relative", zIndex: 1, display: "flex" }}>
+        <Sidebar activeKey="messages" />
+        <div style={{ flex: 1, padding: "40px 20px", color: "var(--text-muted)" }}>Loading…</div>
+      </div>
+    }>
+      <MessagesPageInner />
+    </Suspense>
+  );
+}
+
+function MessagesPageInner() {
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
@@ -54,6 +69,17 @@ export default function MessagesPage() {
       .then(setConversations)
       .finally(() => setLoadingConvos(false));
   }, [user]);
+
+  // If arriving via /messages?c=123 (e.g. from a listing's "Message Seller" button),
+  // auto-select that conversation once the list has loaded.
+  useEffect(() => {
+    const c = searchParams.get("c");
+    if (!c) return;
+    const id = Number(c);
+    if (conversations.some((conv) => conv.id === id)) {
+      setSelectedId(id);
+    }
+  }, [conversations, searchParams]);
 
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
 

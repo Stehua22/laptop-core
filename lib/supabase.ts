@@ -218,9 +218,9 @@ export async function saveLaptopDesign(design: LaptopDesign): Promise<void> {
     .upsert({ ...design, updated_at: new Date().toISOString() }, { onConflict: "laptop_id" });
   if (error) throw error;
 }
+
 // ============================================================
-// Refurbished Market — add this block to lib/supabase.ts
-// (paste at the end of the file, after your existing exports)
+// Refurbished Market (peer-to-peer listings)
 // ============================================================
 
 export type Listing = {
@@ -310,8 +310,10 @@ export async function uploadListingImage(userId: string, file: File): Promise<st
   const { data } = supabase.storage.from("listing-images").getPublicUrl(path);
   return data.publicUrl;
 }
-// ---- Messaging: add these types + functions into lib/supabase.ts ----
-// Uses the same `supabase` client instance already exported from this file.
+
+// ============================================================
+// Messaging (buyer <-> seller, per listing)
+// ============================================================
 
 export type Conversation = {
   id: number;
