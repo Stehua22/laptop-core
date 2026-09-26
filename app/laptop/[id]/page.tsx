@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
-import ListingDetailClient from "./ListingDetailClient";
+import LaptopDetailClient from "./LaptopDetailClient";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -9,27 +9,23 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
 
-  const { data: listing } = await supabase
-    .from("listings")
-    .select("brand, model, specs, condition, price, images, description")
+  const { data: laptop } = await supabase
+    .from("laptops")
+    .select("brand, model, specs, retail_price, image_url")
     .eq("id", id)
     .single();
 
-  if (!listing) {
+  if (!laptop) {
     return {
-      title: "Listing Not Found — LaptopCore Marketplace",
-      description: "This marketplace listing could not be found. It may have sold or been removed.",
+      title: "Laptop Not Found — LaptopCore",
+      description: "This laptop listing could not be found.",
     };
   }
 
-  const title = `${listing.brand} ${listing.model} — $${listing.price} CAD | LaptopCore Marketplace`;
-  const description = (
-    listing.description
-      ? `${listing.condition} ${listing.brand} ${listing.model} for $${listing.price} CAD. ${listing.description}`
-      : `${listing.condition} ${listing.brand} ${listing.model} for $${listing.price} CAD.${listing.specs ? ` ${listing.specs}.` : ""} Buy directly from a fellow Canadian laptop shopper on LaptopCore.`
-  ).slice(0, 300);
-
-  const image = listing.images?.[0];
+  const title = `${laptop.brand} ${laptop.model} — Price History & Best Price | LaptopCore`;
+  const description = laptop.retail_price
+    ? `Track the ${laptop.brand} ${laptop.model} price across stores. Current price $${laptop.retail_price} CAD. ${laptop.specs ?? ""}`.trim()
+    : `Compare prices and specs for the ${laptop.brand} ${laptop.model} on LaptopCore.`;
 
   return {
     title,
@@ -37,64 +33,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      images: image ? [image] : undefined,
-      type: "website",
-    },
-    twitter: {
-      card: image ? "summary_large_image" : "summary",
-      title,
-      description,
-      images: image ? [image] : undefined,
+      images: laptop.image_url ? [laptop.image_url] : undefined,
     },
   };
 }
 
-export default async function ListingPage({ params }: Props) {
-  const { id } = await params;
-
-  const { data: listing } = await supabase
-    .from("listings")
-    .select("brand, model, specs, condition, price, images, description, status")
-    .eq("id", id)
-    .single();
-
-  const jsonLd = listing
-    ? {
-        "@context": "https://schema.org",
-        "@type": "Product",
-        name: `${listing.brand} ${listing.model}`,
-        description: listing.description ?? listing.specs ?? undefined,
-        image: listing.images ?? undefined,
-        brand: {
-          "@type": "Brand",
-          name: listing.brand,
-        },
-        offers: {
-          "@type": "Offer",
-          price: listing.price,
-          priceCurrency: "CAD",
-          availability:
-            listing.status === "active"
-              ? "https://schema.org/InStock"
-              : "https://schema.org/OutOfStock",
-          itemCondition:
-            listing.condition?.toLowerCase().includes("new")
-              ? "https://schema.org/NewCondition"
-              : "https://schema.org/UsedCondition",
-        },
-      }
-    : null;
-
-  return (
-    <>
-      {jsonLd && (
-        <script
-          type="application/ld+json"
-          // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
-      )}
-      <ListingDetailClient />
-    </>
-  );
+export default function LaptopPage() {
+  return <LaptopDetailClient />;
 }
