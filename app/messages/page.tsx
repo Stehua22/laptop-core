@@ -30,6 +30,15 @@ function timeAgo(dateString: string): string {
   return new Date(dateString).toLocaleDateString();
 }
 
+function initialsOf(text: string): string {
+  return text
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
+}
+
 export default function MessagesPage() {
   return (
     <Suspense fallback={
@@ -149,11 +158,11 @@ function MessagesPageInner() {
   return (
     <div style={{ position: "relative", zIndex: 1, display: "flex" }}>
       <Sidebar activeKey="messages" />
-      <div style={{ flex: 1, display: "flex", height: "100vh" }}>
+      <div style={{ flex: 1, display: "flex", height: "100vh", background: "var(--surface)" }}>
         {/* Conversation list */}
-        <div style={{ width: 340, flexShrink: 0, borderRight: "1px solid var(--border)", overflowY: "auto" }}>
+        <div style={{ width: 340, flexShrink: 0, borderRight: "1px solid var(--border)", overflowY: "auto", background: "var(--surface)" }}>
           <div style={{ padding: "20px 20px 12px" }}>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.02em" }}>Messages</h1>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.02em" }}>Chats</h1>
           </div>
 
           {loadingConvos ? (
@@ -166,34 +175,50 @@ function MessagesPageInner() {
             conversations.map((c) => {
               const isBuyer = c.buyer_id === user.id;
               const active = c.id === selectedId;
+              const title = c.listing ? `${c.listing.brand} ${c.listing.model}` : "Listing removed";
               return (
                 <button
                   key={c.id}
                   onClick={() => setSelectedId(c.id)}
                   style={{
                     display: "flex", gap: 12, alignItems: "center", width: "100%", textAlign: "left",
-                    padding: "12px 20px", background: active ? "var(--surface-2)" : "transparent",
-                    border: "none", borderBottom: "1px solid var(--border)", cursor: "pointer",
+                    padding: "10px 16px", margin: "2px 8px", width: "calc(100% - 16px)",
+                    borderRadius: 12,
+                    background: active ? "var(--surface-2)" : "transparent",
+                    border: "none", cursor: "pointer",
                   }}
                 >
-                  <div style={{ width: 48, height: 48, borderRadius: 8, background: "var(--surface-2)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                  <div style={{
+                    width: 52, height: 52, borderRadius: "50%", background: "var(--accent)", flexShrink: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+                    position: "relative",
+                  }}>
                     {c.listing?.images?.[0] ? (
                       <img src={c.listing.images[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
-                      <span style={{ fontSize: 16, opacity: 0.2 }}>▭</span>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>{initialsOf(title)}</span>
+                    )}
+                    {c.unreadCount > 0 && (
+                      <span style={{
+                        position: "absolute", top: -1, right: -1, width: 14, height: 14, borderRadius: "50%",
+                        background: "var(--accent)", border: "2px solid var(--surface)",
+                      }} />
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                      <span style={{ fontSize: 13.5, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {c.listing ? `${c.listing.brand} ${c.listing.model}` : "Listing removed"}
+                      <span style={{
+                        fontSize: 14, fontWeight: c.unreadCount > 0 ? 800 : 700, color: "var(--text)",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}>
+                        {title}
                       </span>
                       <span style={{ fontSize: 11, color: "var(--text-dim)", flexShrink: 0, marginLeft: 6 }}>
                         {timeAgo(c.last_message_at)}
                       </span>
                     </div>
-                    <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginBottom: 2 }}>
-                      {isBuyer ? "You're buying" : "You're selling"} · {c.listing ? fmt(c.listing.price) : ""}
+                    <div style={{ fontSize: 11.5, color: "var(--text-dim)", marginBottom: 2 }}>
+                      {isBuyer ? "Buying" : "Selling"} · {c.listing ? fmt(c.listing.price) : ""}
                     </div>
                     <div style={{
                       fontSize: 12.5, color: c.unreadCount > 0 ? "var(--text)" : "var(--text-muted)",
@@ -203,11 +228,6 @@ function MessagesPageInner() {
                       {c.lastMessageBody ?? "Say hello…"}
                     </div>
                   </div>
-                  {c.unreadCount > 0 && (
-                    <span style={{
-                      width: 8, height: 8, borderRadius: "50%", background: "var(--accent)", flexShrink: 0,
-                    }} />
-                  )}
                 </button>
               );
             })
@@ -215,21 +235,38 @@ function MessagesPageInner() {
         </div>
 
         {/* Thread */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg, var(--surface))" }}>
           {!selected ? (
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: 14 }}>
-              Select a conversation to view messages
+              Select a conversation to start chatting
             </div>
           ) : (
             <>
-              <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
-                    {selected.listing ? `${selected.listing.brand} ${selected.listing.model}` : "Listing removed"}
+              <div style={{
+                padding: "12px 24px", borderBottom: "1px solid var(--border)", display: "flex",
+                justifyContent: "space-between", alignItems: "center", background: "var(--surface)",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: "50%", background: "var(--accent)",
+                    display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0,
+                  }}>
+                    {selected.listing?.images?.[0] ? (
+                      <img src={selected.listing.images[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <span style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>
+                        {initialsOf(selected.listing ? `${selected.listing.brand} ${selected.listing.model}` : "?")}
+                      </span>
+                    )}
                   </div>
-                  {selected.listing && (
-                    <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>{fmt(selected.listing.price)}</div>
-                  )}
+                  <div>
+                    <div style={{ fontSize: 14.5, fontWeight: 700, color: "var(--text)" }}>
+                      {selected.listing ? `${selected.listing.brand} ${selected.listing.model}` : "Listing removed"}
+                    </div>
+                    {selected.listing && (
+                      <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{fmt(selected.listing.price)}</div>
+                    )}
+                  </div>
                 </div>
                 {selected.listing && (
                   <Link href={`/refurbished/${selected.listing.id}`} style={{ fontSize: 12.5, color: "var(--accent)", fontWeight: 600 }}>
@@ -238,21 +275,33 @@ function MessagesPageInner() {
                 )}
               </div>
 
-              <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
+              <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 4 }}>
                 {loadingMessages ? (
                   <div style={{ color: "var(--text-muted)", fontSize: 13 }}>Loading…</div>
                 ) : (
-                  messages.map((m) => {
+                  messages.map((m, i) => {
                     const mine = m.sender_id === user.id;
+                    const prev = messages[i - 1];
+                    const next = messages[i + 1];
+                    const startsGroup = !prev || prev.sender_id !== m.sender_id;
+                    const endsGroup = !next || next.sender_id !== m.sender_id;
                     return (
-                      <div key={m.id} style={{ display: "flex", justifyContent: mine ? "flex-end" : "flex-start" }}>
+                      <div
+                        key={m.id}
+                        style={{
+                          display: "flex", justifyContent: mine ? "flex-end" : "flex-start",
+                          marginTop: startsGroup ? 10 : 2,
+                        }}
+                      >
                         <div style={{
-                          maxWidth: "70%", padding: "10px 14px", borderRadius: 14, fontSize: 13.5, lineHeight: 1.4,
+                          maxWidth: "65%", padding: "9px 14px", fontSize: 14, lineHeight: 1.4,
                           background: mine ? "var(--accent)" : "var(--surface-2)",
                           color: mine ? "#fff" : "var(--text)",
+                          borderRadius: 18,
+                          borderBottomRightRadius: mine && endsGroup ? 4 : 18,
+                          borderBottomLeftRadius: !mine && endsGroup ? 4 : 18,
                         }}>
                           {m.body}
-                          <div style={{ fontSize: 10.5, marginTop: 4, opacity: 0.7 }}>{timeAgo(m.created_at)}</div>
                         </div>
                       </div>
                     );
@@ -260,27 +309,31 @@ function MessagesPageInner() {
                 )}
               </div>
 
-              <form onSubmit={handleSend} style={{ padding: "14px 24px", borderTop: "1px solid var(--border)", display: "flex", gap: 10 }}>
+              <form onSubmit={handleSend} style={{ padding: "12px 24px 18px", display: "flex", gap: 10, alignItems: "center" }}>
                 <input
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Type a message…"
+                  placeholder="Aa"
                   style={{
-                    flex: 1, padding: "11px 14px", fontSize: 13.5, border: "1px solid var(--border)",
-                    borderRadius: "var(--btn-radius, 10px)", background: "var(--surface-2)", color: "var(--text)",
+                    flex: 1, padding: "11px 16px", fontSize: 14, border: "none",
+                    borderRadius: 999, background: "var(--surface-2)", color: "var(--text)",
                     fontFamily: "inherit", outline: "none",
                   }}
                 />
                 <button
                   type="submit"
                   disabled={sending || !draft.trim()}
+                  aria-label="Send"
                   style={{
-                    background: "var(--accent)", color: "#fff", border: "none", borderRadius: "var(--btn-radius, 10px)",
-                    padding: "11px 22px", fontWeight: 700, fontSize: 13.5, cursor: sending ? "default" : "pointer",
-                    opacity: sending || !draft.trim() ? 0.6 : 1,
+                    width: 40, height: 40, flexShrink: 0, background: "var(--accent)", color: "#fff", border: "none",
+                    borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: sending ? "default" : "pointer",
+                    opacity: sending || !draft.trim() ? 0.5 : 1,
                   }}
                 >
-                  Send
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
+                  </svg>
                 </button>
               </form>
             </>
