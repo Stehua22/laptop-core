@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import Sidebar from "@/components/Sidebar";
 import { fetchListingById, getOrCreateConversation } from "@/lib/supabase";
 import type { Listing } from "@/lib/supabase";
@@ -11,7 +12,7 @@ import type { User } from "@supabase/supabase-js";
 const fmt = (n: number) =>
   "$" + n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-export default function ListingDetailPage() {
+export default function ListingDetailClient() {
   const params = useParams();
   const router = useRouter();
   const [listing, setListing] = useState<Listing | null>(null);
@@ -111,11 +112,18 @@ export default function ListingDetailPage() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 40 }}>
           {/* Photos */}
           <div>
-            <div style={{ background: "var(--surface-2)", borderRadius: "var(--card-radius, 16px)", height: 380, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginBottom: 10 }}>
+            <div style={{ background: "var(--surface-2)", borderRadius: "var(--card-radius, 16px)", height: 380, position: "relative", overflow: "hidden", marginBottom: 10 }}>
               {listing.images?.length ? (
-                <img src={listing.images[activeImg]} alt={listing.model} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+                <Image
+                  src={listing.images[activeImg]}
+                  alt={`${listing.brand} ${listing.model}`}
+                  fill
+                  sizes="(max-width: 1000px) 100vw, 620px"
+                  style={{ objectFit: "contain" }}
+                  priority
+                />
               ) : (
-                <div style={{ fontSize: 60, opacity: 0.15 }}>▭</div>
+                <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 60, opacity: 0.15 }}>▭</div>
               )}
             </div>
             {listing.images?.length > 1 && (
@@ -126,10 +134,11 @@ export default function ListingDetailPage() {
                     onClick={() => setActiveImg(i)}
                     style={{
                       width: 64, height: 64, borderRadius: 8, overflow: "hidden", padding: 0, cursor: "pointer",
+                      position: "relative",
                       border: `2px solid ${i === activeImg ? "var(--accent)" : "var(--border)"}`, background: "var(--surface-2)",
                     }}
                   >
-                    <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <Image src={url} alt="" fill sizes="64px" style={{ objectFit: "cover" }} />
                   </button>
                 ))}
               </div>
