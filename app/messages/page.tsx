@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -44,7 +44,7 @@ export default function MessagesPage() {
     <Suspense fallback={
       <div style={{ position: "relative", zIndex: 1, display: "flex" }}>
         <Sidebar activeKey="messages" />
-        <div style={{ flex: 1, padding: "40px 20px", color: "var(--text-muted)" }}>Loading…</div>
+        <div style={{ flex: 1, padding: "40px 20px", color: "var(--text-muted)" }}>Loadingâ€¦</div>
       </div>
     }>
       <MessagesPageInner />
@@ -138,7 +138,7 @@ function MessagesPageInner() {
     return (
       <div style={{ position: "relative", zIndex: 1, display: "flex" }}>
         <Sidebar activeKey="messages" />
-        <div style={{ flex: 1, padding: "40px 20px", color: "var(--text-muted)" }}>Loading…</div>
+        <div style={{ flex: 1, padding: "40px 20px", color: "var(--text-muted)" }}>Loadingâ€¦</div>
       </div>
     );
   }
@@ -166,7 +166,7 @@ function MessagesPageInner() {
           </div>
 
           {loadingConvos ? (
-            <div style={{ padding: "20px", color: "var(--text-muted)", fontSize: 13 }}>Loading…</div>
+            <div style={{ padding: "20px", color: "var(--text-muted)", fontSize: 13 }}>Loadingâ€¦</div>
           ) : conversations.length === 0 ? (
             <div style={{ padding: "20px", color: "var(--text-muted)", fontSize: 13 }}>
               No conversations yet. Message a seller from any listing to start one.
@@ -181,7 +181,7 @@ function MessagesPageInner() {
                   key={c.id}
                   onClick={() => setSelectedId(c.id)}
                   style={{
-                    display: "flex", gap: 12, alignItems: "center", width: "100%", textAlign: "left",
+                    display: "flex", gap: 12, alignItems: "center", textAlign: "left",
                     padding: "10px 16px", margin: "2px 8px", width: "calc(100% - 16px)",
                     borderRadius: 12,
                     background: active ? "var(--surface-2)" : "transparent",
@@ -218,14 +218,14 @@ function MessagesPageInner() {
                       </span>
                     </div>
                     <div style={{ fontSize: 11.5, color: "var(--text-dim)", marginBottom: 2 }}>
-                      {isBuyer ? "Buying" : "Selling"} · {c.listing ? fmt(c.listing.price) : ""}
+                      {isBuyer ? "Buying" : "Selling"} Â· {c.listing ? fmt(c.listing.price) : ""}
                     </div>
                     <div style={{
                       fontSize: 12.5, color: c.unreadCount > 0 ? "var(--text)" : "var(--text-muted)",
                       fontWeight: c.unreadCount > 0 ? 700 : 400,
                       overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                     }}>
-                      {c.lastMessageBody ?? "Say hello…"}
+                      {c.lastMessageBody ?? "Say helloâ€¦"}
                     </div>
                   </div>
                 </button>
@@ -270,14 +270,14 @@ function MessagesPageInner() {
                 </div>
                 {selected.listing && (
                   <Link href={`/refurbished/${selected.listing.id}`} style={{ fontSize: 12.5, color: "var(--accent)", fontWeight: 600 }}>
-                    View listing →
+                    View listing â†’
                   </Link>
                 )}
               </div>
 
               <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 4 }}>
                 {loadingMessages ? (
-                  <div style={{ color: "var(--text-muted)", fontSize: 13 }}>Loading…</div>
+                  <div style={{ color: "var(--text-muted)", fontSize: 13 }}>Loadingâ€¦</div>
                 ) : (
                   messages.map((m, i) => {
                     const mine = m.sender_id === user.id;
