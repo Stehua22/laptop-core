@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// Imports Lenovo / HP / Dell laptops (and refreshes CAD prices) from Best Buy Canada.
+// Imports laptops (Lenovo, HP, Dell, ASUS, Acer, Apple and more) (and refreshes CAD prices) from Best Buy Canada.
 //
 //   GET  /api/import-laptops          Vercel cron: fetches from Best Buy, then saves.  (?dry=1 = preview only)
 //   POST /api/import-laptops          Local script: sends already-fetched laptops, this route just saves them.
@@ -13,7 +13,7 @@ export const maxDuration = 60;
 // Needs env vars: CRON_SECRET, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_URL
 // Needs the columns added by migration.sql (external_id, last_price, price_updated_at).
 
-const BRANDS = ["Lenovo", "HP", "Dell"] as const;
+const BRANDS = ["Lenovo", "HP", "Dell", "ASUS", "Acer", "Apple", "Microsoft", "Samsung", "MSI", "Razer", "Gigabyte", "LG"] as const;
 const LAPTOP_CATEGORY = "20352"; // Best Buy Canada "Laptops & MacBooks"
 const PAGE_SIZE = 48;
 const MAX_PAGES = 6; // per brand, keeps the cron inside Vercel's time limit
@@ -78,6 +78,12 @@ async function fetchPage(brand: string, page: number) {
   return { products: json.products ?? [], totalPages: json.totalPages ?? 1 };
 }
 
+// Low-end laptops we don't want in the tracker (HP Stream, Celeron/Pentium/N-series, 4GB RAM, eMMC, tiny storage, or under $350).
+function isJunk(text: string, price: number): boolean {
+  if (price < 350) return true;
+  return /\bstream\b|celeron|pentium|athlon|mediatek|emmc|\bn\d{3,4}\b|\b[24]\s?gb\s+(?:ram|ddr\d?|lpddr\d?x?|memory|sdram)|\b(?:32|64)\s?gb\s+(?:ssd|emmc|storage|flash)/i.test(text);
+}
+
 function parse(brand: string, p: BestBuyProduct): ParsedLaptop | null {
   const name = (p.name ?? "").trim();
   if (!p.sku || !name) return null;
@@ -88,6 +94,7 @@ function parse(brand: string, p: BestBuyProduct): ParsedLaptop | null {
 
   const price = p.salePrice ?? p.regularPrice;
   if (!price || price <= 0) return null;
+  if (isJunk(name, price)) return null;
   const regular = p.regularPrice && p.regularPrice > 0 ? p.regularPrice : price;
 
   // Best Buy names look like:

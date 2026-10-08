@@ -57,15 +57,28 @@ export type PriceEntry = {
   recorded_at: string;
 };
 
+// Supabase returns at most 1000 rows per request, so this reads the table in pages of 1000
+// until everything is loaded (otherwise only the newest 1000 laptops would ever show up).
 export async function fetchLaptops(): Promise<Laptop[]> {
-  const { data: laptops, error } = await supabase
-    .from("laptops")
-    .select("*, price_history(id, price, recorded_at), laptop_links(id, laptop_id, store, url, price, sort_order)")
-    .order("created_at", { ascending: false });
+  const PAGE = 1000;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows: any[] = [];
 
-  if (error) throw error;
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("laptops")
+      .select("*, price_history(id, price, recorded_at), laptop_links(id, laptop_id, store, url, price, sort_order)")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, from + PAGE - 1);
 
-  return (laptops ?? []).map((l) => {
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    rows.push(...data);
+    if (data.length < PAGE) break;
+  }
+
+  return rows.map((l) => {
     const history: PriceEntry[] = (l.price_history ?? []).sort(
       (a: PriceEntry, b: PriceEntry) =>
         new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()
