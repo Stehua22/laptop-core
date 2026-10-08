@@ -1,12 +1,16 @@
 {
-  "crons": [
-    {
-      "path": "/api/laptops/update-prices?secret=lapcore-scan-2026",
-      "schedule": "0 13 * * *"
-    },
-    {
-      "path": "/api/deals/scan?secret=lapcore-scan-2026",
-      "schedule": "0 14 * * *"
-    }
-  ]
+    "crons":  [
+                  {
+                      "path":  "/api/laptops/update-prices?secret=lapcore-scan-2026",
+                      "schedule":  "0 13 * * *"
+                  },
+                  {
+                      "path":  "/api/deals/scan?secret=lapcore-scan-2026",
+                      "schedule":  "0 14 * * *"
+                  },
+                  {
+                      "path":  "/api/import-laptops",
+                      "schedule":  "0 9 * * *"
+                  }
+              ]
 }
