@@ -59,6 +59,7 @@ async function fetchPage(brand: string, page: number) {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(12000),
   });
 
   if (!res.ok) throw new Error(`Best Buy returned ${res.status} for ${brand} page ${page}`);
@@ -135,7 +136,7 @@ export async function GET(req: NextRequest) {
           if (parsed) found.set(parsed.external_id, parsed);
         }
       } catch (e) {
-        errors.push(e instanceof Error ? e.message : String(e));
+        errors.push(`${brand} page ${page}: ${e instanceof Error ? e.message : String(e)}`);
         break;
       }
     }
