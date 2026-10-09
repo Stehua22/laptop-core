@@ -226,7 +226,7 @@ export default function LaptopCard({ laptop, onSelect, onHistory, isAdmin, onMov
             {(laptop as any).image_url && !imgError ? (
               <img
                 src={(laptop as any).image_url} alt={laptop.model}
-                onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)}
+                loading="lazy" decoding="async" onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)}
                 style={{ maxHeight: 110, maxWidth: "85%", objectFit: "contain", opacity: imgLoaded ? 1 : 0, transition: "opacity 0.3s, transform 0.25s", transform: hovered ? "scale(1.04)" : "scale(1)" }}
               />
             ) : (
@@ -309,7 +309,7 @@ export default function LaptopCard({ laptop, onSelect, onHistory, isAdmin, onMov
           {(laptop as any).image_url && !imgError ? (
             <img
               src={(laptop as any).image_url} alt={laptop.model}
-              onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)}
+              loading="lazy" decoding="async" onLoad={() => setImgLoaded(true)} onError={() => setImgError(true)}
               style={{ maxHeight: 120, maxWidth: 150, objectFit: "contain", opacity: imgLoaded ? 1 : 0, transition: "opacity 0.3s, transform 0.25s", transform: hovered ? "scale(1.04)" : "scale(1)" }}
             />
           ) : (

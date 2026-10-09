@@ -1,11 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import type { Laptop } from "@/lib/supabase";
-import { addLaptop, addPriceEntry, deleteLaptop, supabase } from "@/lib/supabase";
+import { addLaptop, addPriceEntry, deleteLaptop, supabase, fetchLaptopsPage, fetchLaptopById, type LaptopFilters } from "@/lib/supabase";
 import Header from "./Header";
-import StatsBar from "./StatsBar";
 import Controls from "./Controls";
 import LaptopGrid from "./LaptopGrid";
 import LaptopModal from "./LaptopModal";
@@ -35,9 +34,45 @@ export function formatPrice(price: number, currency: "CAD" | "USD", rate = CAD_T
   return new Intl.NumberFormat("en-CA", { style: "currency", currency, maximumFractionDigits: 2 }).format(value);
 }
 
-export default function TrackerClient({ initialLaptops, dbError }: { initialLaptops: Laptop[]; dbError: string | null }) {
+// Windowed page numbers with "…" gaps, e.g. 1 … 4 5 [6] 7 8 … 24
+function getPageWindow(current: number, total: number): (number | "gap")[] {
+  const delta = 1;
+  const range: number[] = [];
+  for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) range.push(i);
+
+  const pages: (number | "gap")[] = [1];
+  if (range[0] > 2) pages.push("gap");
+  pages.push(...range);
+  if (range[range.length - 1] < total - 1) pages.push("gap");
+  if (total > 1) pages.push(total);
+  return pages;
+}
+
+export default function TrackerClient({ initialLaptops, initialTotal, brands, dbError }: { initialLaptops: Laptop[]; initialTotal: number; brands: string[]; dbError: string | null }) {
   const [laptops, setLaptops] = useState<Laptop[]>(initialLaptops);
+  const [total, setTotal] = useState(initialTotal);
+  const [listLoading, setListLoading] = useState(false);
   const [search, setSearch] = useState("");
+
+  // QoL: "/" jumps focus to search (unless already typing somewhere), Esc clears it
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement;
+      const isTyping = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+
+      if (e.key === "/" && !isTyping) {
+        e.preventDefault();
+        const input = document.querySelector<HTMLInputElement>('input[placeholder="Search brand, model, specs..."]');
+        input?.focus();
+      }
+      if (e.key === "Escape" && isTyping && (target as HTMLInputElement).placeholder === "Search brand, model, specs...") {
+        (target as HTMLInputElement).blur();
+        setSearch("");
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
   const [brandFilter, setBrandFilter] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [goodForFilter, setGoodForFilter] = useState("");
@@ -97,7 +132,7 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     const savedAnimSpeed = window.localStorage.getItem("lc-anim-speed");
     if (savedAnimSpeed) setAnimSpeed(savedAnimSpeed);
     const savedPerPage = window.localStorage.getItem("lc-per-page");
-    if (savedPerPage) setPerPage(savedPerPage === "all" ? "all" : parseInt(savedPerPage, 10));
+    if (savedPerPage) setPerPage(savedPerPage === "all" ? 96 : parseInt(savedPerPage, 10));
   }, []);
 
   useEffect(() => {
@@ -130,6 +165,24 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     if (bgEffect === "grid") document.documentElement.removeAttribute("data-bg-effect");
     else document.documentElement.setAttribute("data-bg-effect", bgEffect);
     window.localStorage.setItem("lc-bg-effect", bgEffect);
+
+    // Inject or remove extra mist fog layers
+    const existingLayers = document.querySelectorAll(".mist-fog-layer-1, .mist-fog-layer-2");
+    existingLayers.forEach((el) => el.remove());
+
+    if (bgEffect === "mist") {
+      const layer1 = document.createElement("div");
+      layer1.className = "mist-fog-layer-1";
+      const layer2 = document.createElement("div");
+      layer2.className = "mist-fog-layer-2";
+      document.body.appendChild(layer1);
+      document.body.appendChild(layer2);
+    }
+
+    return () => {
+      const layers = document.querySelectorAll(".mist-fog-layer-1, .mist-fog-layer-2");
+      layers.forEach((el) => el.remove());
+    };
   }, [bgEffect]);
 
   useEffect(() => {
@@ -146,6 +199,15 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
   useEffect(() => {
     setCurrentPage(1);
   }, [search, brandFilter, sortBy, goodForFilter, screenFilter, weightFilter, priceMin, priceMax, perPage]);
+
+  // Scrolling pages without moving back to the top left users staring at an
+  // empty area below the fold — scroll the grid back into view on page change.
+  const gridTopRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (gridTopRef.current) {
+      gridTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [currentPage]);
 
   useEffect(() => {
     async function loadRecs() {
@@ -164,11 +226,9 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const historyId = params.get("history");
-    if (historyId && laptops.length > 0) {
-      const found = laptops.find(l => l.id === Number(historyId));
-      if (found) setHistoryLaptop(found);
-    }
-  }, [laptops]);
+    if (!historyId) return;
+    fetchLaptopById(Number(historyId)).then((l) => { if (l) setHistoryLaptop(l); }).catch(() => {});
+  }, []);
 
   const [unlocked, setUnlocked] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -198,62 +258,55 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   }, []);
 
-  const brands = useMemo(() => Array.from(new Set(laptops.map((l) => l.brand))).sort(), [laptops]);
+  const filters: LaptopFilters = useMemo(
+    () => ({ search, brand: brandFilter, goodFor: goodForFilter, screen: screenFilter, weight: weightFilter, priceMin, priceMax, sortBy }),
+    [search, brandFilter, goodForFilter, screenFilter, weightFilter, priceMin, priceMax, sortBy]
+  );
 
-  const filtered = useMemo(() => {
-    let list = laptops.filter((l) => {
-      const term = search.toLowerCase();
-      const matchesSearch =
-        l.brand.toLowerCase().includes(term) ||
-        l.model.toLowerCase().includes(term) ||
-        l.specs?.toLowerCase().includes(term);
-      const matchesBrand = !brandFilter || l.brand === brandFilter;
-
-      const matchesGoodFor =
-        !goodForFilter ||
-        (l.good_for ?? "").split(",").map(s => s.trim().toLowerCase()).includes(goodForFilter);
-
-      const sz = l.screen_size ?? null;
-      const matchesScreen =
-        !screenFilter || (
-          screenFilter === "small"  ? sz !== null && sz <= 13 :
-          screenFilter === "medium" ? sz !== null && sz > 13 && sz < 15 :
-          screenFilter === "large"  ? sz !== null && sz >= 15 && sz < 17 :
-          screenFilter === "xlarge" ? sz !== null && sz >= 17 : true
-        );
-
-      const wt = l.weight_kg ?? null;
-      const matchesWeight =
-        !weightFilter || (
-          weightFilter === "ultralight" ? wt !== null && wt < 1.2 :
-          weightFilter === "light"      ? wt !== null && wt >= 1.2 && wt < 1.6 :
-          weightFilter === "medium"     ? wt !== null && wt >= 1.6 && wt < 2.2 :
-          weightFilter === "heavy"      ? wt !== null && wt >= 2.2 : true
-        );
-
-      const price = l.current_price ?? 0;
-      const matchesPrice =
-        (!priceMin || price >= parseFloat(priceMin)) &&
-        (!priceMax || price <= parseFloat(priceMax));
-
-      return matchesSearch && matchesBrand && matchesGoodFor && matchesScreen && matchesWeight && matchesPrice;
-    });
-
-    switch (sortBy) {
-      case "priceAsc":  list = [...list].sort((a, b) => (a.current_price ?? 0) - (b.current_price ?? 0)); break;
-      case "priceDesc": list = [...list].sort((a, b) => (b.current_price ?? 0) - (a.current_price ?? 0)); break;
-      case "newest":    list = [...list].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()); break;
+  // Only the current page of laptops is ever loaded; filtering and sorting happen in the database.
+  const requestId = useRef(0);
+  const firstLoad = useRef(true);
+  const loadPage = useCallback(async () => {
+    const id = ++requestId.current;
+    setListLoading(true);
+    try {
+      const res = await fetchLaptopsPage(filters, currentPage, perPage === "all" ? 96 : perPage);
+      if (id !== requestId.current) return; // a newer request replaced this one
+      setLaptops(res.laptops);
+      setTotal(res.total);
+    } catch {
+      if (id === requestId.current) showToast("❌ Couldn't load laptops", "error");
+    } finally {
+      if (id === requestId.current) setListLoading(false);
     }
-    return list;
-  }, [laptops, search, brandFilter, sortBy, goodForFilter, screenFilter, weightFilter, priceMin, priceMax]);
+  }, [filters, currentPage, perPage, showToast]);
 
-  const totalPages = perPage === "all" ? 1 : Math.max(1, Math.ceil(filtered.length / perPage));
+  useEffect(() => {
+    if (firstLoad.current) {
+      firstLoad.current = false;
+      // The server already sent page 1 with default settings, no need to fetch it again
+      if (currentPage === 1 && perPage === 24 && sortBy === "newest" &&
+          !search && !brandFilter && !goodForFilter && !screenFilter && !weightFilter && !priceMin && !priceMax) return;
+    }
+    const t = setTimeout(loadPage, search ? 250 : 60);
+    return () => clearTimeout(t);
+  }, [loadPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const paginated = useMemo(() => {
-    if (perPage === "all") return filtered;
-    const start = (currentPage - 1) * perPage;
-    return filtered.slice(start, start + perPage);
-  }, [filtered, perPage, currentPage]);
+  const hasActiveFilters = Boolean(search || brandFilter || goodForFilter || screenFilter || weightFilter || priceMin || priceMax);
+
+  const clearAllFilters = () => {
+    setSearch(""); setBrandFilter(""); setGoodForFilter(""); setScreenFilter("");
+    setWeightFilter(""); setPriceMin(""); setPriceMax("");
+  };
+
+  const pageSize = perPage === "all" ? 96 : perPage;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pageWindow = useMemo(() => getPageWindow(currentPage, totalPages), [currentPage, totalPages]);
+
+  const paginated = laptops;
+
+  const rangeStart = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(total, currentPage * pageSize);
 
   const recommendations = useMemo(() => {
     const ids = recommendationIds[recCategory] ?? [];
@@ -280,27 +333,36 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     setLoading(true);
     try {
       await addLaptop({ ...data, date_added: new Date().toISOString().split("T")[0] }, data.retail_price);
-      const { fetchLaptops } = await import("@/lib/supabase");
-      setLaptops(await fetchLaptops());
+      await loadPage();
       setShowAddModal(false);
       showToast("✅ Laptop added successfully!");
     } catch { showToast("❌ Failed to add laptop", "error"); }
     finally { setLoading(false); }
   };
 
+  const [updatePriceLaptop, setUpdatePriceLaptop] = useState<Laptop | null>(null);
+  const [updatePriceInput, setUpdatePriceInput] = useState("");
+
   const handleUpdatePrice = async (laptopId: number) => {
-    const input = prompt("Enter new price ($):");
-    if (!input) return;
-    const price = parseFloat(input);
+    const laptop = laptops.find((l) => l.id === laptopId);
+    if (!laptop) return;
+    setUpdatePriceInput(String(laptop.current_price ?? ""));
+    setUpdatePriceLaptop(laptop);
+  };
+
+  const submitUpdatePrice = async () => {
+    if (!updatePriceLaptop) return;
+    const price = parseFloat(updatePriceInput);
     if (isNaN(price) || price < 0) { showToast("❌ Invalid price", "error"); return; }
     try {
-      await addPriceEntry(laptopId, price);
+      await addPriceEntry(updatePriceLaptop.id, price);
       setLaptops((prev) => prev.map((l) => {
-        if (l.id !== laptopId) return l;
-        const newEntry = { id: Date.now(), laptop_id: laptopId, price, recorded_at: new Date().toISOString().split("T")[0] };
+        if (l.id !== updatePriceLaptop.id) return l;
+        const newEntry = { id: Date.now(), laptop_id: updatePriceLaptop.id, price, recorded_at: new Date().toISOString().split("T")[0] };
         return { ...l, price_history: [...(l.price_history ?? []), newEntry], current_price: price };
       }));
       showToast("✅ Price updated!");
+      setUpdatePriceLaptop(null);
     } catch { showToast("❌ Failed to update price", "error"); }
   };
 
@@ -309,6 +371,7 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     try {
       await deleteLaptop(id);
       setLaptops((prev) => prev.filter((l) => l.id !== id));
+      setTotal((t) => Math.max(0, t - 1));
       setSelectedLaptop(null);
       showToast("🗑️ Laptop removed");
     } catch { showToast("❌ Failed to delete laptop", "error"); }
@@ -346,19 +409,21 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
     showToast("↺ Settings reset to defaults");
   };
 
-  const pageBtnStyle = (disabled: boolean): React.CSSProperties => ({
-    fontSize: 12, padding: "7px 14px", borderRadius: 8,
-    border: "1px solid var(--border)",
-    background: "var(--surface-2)",
-    color: disabled ? "var(--text-dim)" : "var(--text)",
+  const pageBtnStyle = (active: boolean, disabled = false): React.CSSProperties => ({
+    fontSize: 12, minWidth: 32, height: 32, padding: active ? 0 : "0 12px", borderRadius: 8,
+    border: active ? "1px solid var(--accent)" : "1px solid var(--border)",
+    background: active ? "var(--accent)" : "var(--surface-2)",
+    color: disabled ? "var(--text-dim)" : active ? "#fff" : "var(--text)",
     cursor: disabled ? "not-allowed" : "pointer",
     opacity: disabled ? 0.5 : 1,
     fontWeight: 600,
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    transition: "transform 0.15s, background 0.15s",
   });
 
   return (
-    <div style={{ position: "relative", zIndex: 1, display: "flex" }}>
-      <Sidebar activeKey="home" onSettingsClick={() => setShowSettings(true)} onResetSettings={handleResetSettings} />
+    <div style={{ position: "relative", zIndex: 1, display: "flex", animation: "lc-page-in 0.35s ease both" }}>
+      <Sidebar activeKey="home" onSettingsClick={() => setShowSettings(true)} onResetSettings={handleResetSettings} brands={brands} />
       <div style={{ flex: 1, maxWidth: 1300, margin: "0 auto", padding: "32px 20px" }}>
         {dbError && (
           <div style={{ background: "rgba(247,106,106,0.1)", border: "1px solid rgba(247,106,106,0.3)", borderRadius: 12, padding: "14px 20px", marginBottom: 24, color: "#f76a6a", fontSize: 13 }}>
@@ -382,41 +447,100 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
           onPriceMin={setPriceMin} onPriceMax={setPriceMax}
         />
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
-          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Show</span>
-          <select
-            value={perPage}
-            onChange={(e) => setPerPage(e.target.value === "all" ? "all" : parseInt(e.target.value, 10))}
-            style={{ padding: "6px 10px", fontSize: 12, borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--text)", cursor: "pointer", fontFamily: "inherit" }}
-          >
-            {PER_PAGE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
-            <option value="all">All</option>
-          </select>
-          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>per page</span>
+        <div
+          ref={gridTopRef}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            gap: 8, marginBottom: 20, padding: "12px 16px",
+            background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--card-radius, 12px)",
+          }}
+        >
+          <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
+            {total === 0
+              ? "No results"
+              : <>Showing <strong style={{ color: "var(--text)", fontWeight: 700 }}>{rangeStart}–{rangeEnd}</strong> of <strong style={{ color: "var(--text)", fontWeight: 700 }}>{total}</strong></>}
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                style={{ marginLeft: 10, fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}
+              >
+                Clear filters
+              </button>
+            )}
+          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Show</span>
+            <select
+              value={perPage}
+              onChange={(e) => setPerPage(e.target.value === "all" ? "all" : parseInt(e.target.value, 10))}
+              style={{ padding: "6px 10px", fontSize: 12, borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--text)", cursor: "pointer", fontFamily: "inherit" }}
+            >
+              {PER_PAGE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>per page</span>
+          </div>
         </div>
 
-        <LaptopGrid
-          laptops={paginated} onSelect={setSelectedLaptop} onHistory={setHistoryLaptop}
-          isAdmin={unlocked} onMoveToDeals={(l) => requireAuth(() => handleMoveToDeals(l))}
-          onDelete={(id) => requireAuth(() => handleDeleteLaptop(id))}
-          currency={currency} cadToUsd={cadToUsd}
-          cardLayout={cardLayout}
-        />
+        {total === 0 ? (
+          <div
+            style={{
+              textAlign: "center", padding: "64px 24px", border: "1px dashed var(--border)",
+              borderRadius: 16, color: "var(--text-muted)",
+            }}
+          >
+            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>
+              Nothing matches those filters
+            </div>
+            <div style={{ fontSize: 13, marginBottom: hasActiveFilters ? 18 : 0 }}>
+              Try widening your search or clearing a filter.
+            </div>
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                style={{ fontSize: 13, padding: "8px 18px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--text)", cursor: "pointer", fontWeight: 600 }}
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div key={currentPage} style={{ animation: "lc-grid-in 0.3s ease both", opacity: listLoading ? 0.55 : 1, transition: "opacity 0.15s" }}>
+            <LaptopGrid
+              laptops={paginated} onSelect={setSelectedLaptop} onHistory={setHistoryLaptop}
+              isAdmin={unlocked} onMoveToDeals={(l) => requireAuth(() => handleMoveToDeals(l))}
+              onDelete={(id) => requireAuth(() => handleDeleteLaptop(id))}
+              currency={currency} cadToUsd={cadToUsd}
+              cardLayout={cardLayout}
+            />
+          </div>
+        )}
 
         {perPage !== "all" && totalPages > 1 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 28 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 28, padding: "14px", flexWrap: "wrap", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--card-radius, 12px)" }}>
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              style={pageBtnStyle(currentPage === 1)}
+              style={{ ...pageBtnStyle(false, currentPage === 1), padding: "0 12px" }}
             >‹ Prev</button>
-            <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
-              Page {currentPage} of {totalPages}
-            </span>
+
+            {pageWindow.map((p, i) =>
+              p === "gap" ? (
+                <span key={`gap-${i}`} style={{ fontSize: 12, color: "var(--text-muted)", padding: "0 4px" }}>…</span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setCurrentPage(p)}
+                  style={pageBtnStyle(p === currentPage)}
+                >
+                  {p}
+                </button>
+              )
+            )}
+
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              style={pageBtnStyle(currentPage === totalPages)}
+              style={{ ...pageBtnStyle(false, currentPage === totalPages), padding: "0 12px" }}
             >Next ›</button>
           </div>
         )}
@@ -447,9 +571,9 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
 
       {showAuthModal && (
         <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)" }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)", animation: "lc-overlay-in 0.2s ease both" }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowAuthModal(false); }}>
-          <div className="modal-content" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "1.75rem", width: "100%", maxWidth: 400, margin: "1rem", boxShadow: "var(--shadow-lg)" }}>
+          <div className="modal-content" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "1.75rem", width: "100%", maxWidth: 400, margin: "1rem", boxShadow: "var(--shadow-lg)", animation: "lc-modal-in 0.25s cubic-bezier(0.16,1,0.3,1) both" }}>
             <div style={{ height: 3, background: "linear-gradient(90deg, var(--accent), var(--accent-3))", borderRadius: 99, marginBottom: 20, marginLeft: -28, marginRight: -28, marginTop: -28 }} />
             <p style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>🔒 Admin access</p>
             <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20 }}>Enter the password to unlock admin actions.</p>
@@ -468,9 +592,55 @@ export default function TrackerClient({ initialLaptops, dbError }: { initialLapt
         </div>
       )}
 
+      {updatePriceLaptop && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)", animation: "lc-overlay-in 0.2s ease both" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setUpdatePriceLaptop(null); }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "1.75rem", width: "100%", maxWidth: 380, margin: "1rem", boxShadow: "var(--shadow-lg)", animation: "lc-modal-in 0.25s cubic-bezier(0.16,1,0.3,1) both" }}>
+            <p style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>💲 Update price</p>
+            <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 18 }}>{updatePriceLaptop.brand} {updatePriceLaptop.model}</p>
+            <div style={{ position: "relative" }}>
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--text-muted)" }}>$</span>
+              <input
+                type="number" placeholder="0.00" value={updatePriceInput} min={0} step="0.01"
+                onChange={(e) => setUpdatePriceInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submitUpdatePrice()} autoFocus
+                style={{ width: "100%", padding: "10px 12px 10px 26px", fontSize: 14, fontWeight: 600, border: "1px solid var(--border)", borderRadius: 10, background: "var(--surface-2)", color: "inherit", fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 18 }}>
+              <button onClick={() => setUpdatePriceLaptop(null)} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 9, border: "1px solid var(--border)", background: "transparent", color: "inherit", cursor: "pointer" }}>Cancel</button>
+              <button onClick={submitUpdatePrice} style={{ fontSize: 13, padding: "8px 18px", borderRadius: 9, border: "none", background: "var(--accent)", color: "#fff", cursor: "pointer", fontWeight: 600 }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ position: "fixed", top: 20, right: 20, display: "flex", flexDirection: "column", gap: 10, zIndex: 9999 }}>
         {toasts.map((t) => <Toast key={t.id} message={t.message} type={t.type} />)}
       </div>
+
+      <style>{`
+        @keyframes lc-page-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes lc-grid-in {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes lc-overlay-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes lc-modal-in {
+          from { opacity: 0; transform: translateY(12px) scale(0.97); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation: none !important; }
+        }
+      `}</style>
     </div>
   );
 }
