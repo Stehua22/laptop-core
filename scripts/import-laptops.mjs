@@ -14,10 +14,10 @@ if (!SECRET) {
   process.exit(1);
 }
 
-const BRANDS = ["Lenovo", "HP", "Dell"];
+const BRANDS = ["Lenovo", "HP", "Dell", "ASUS", "Acer", "Apple", "Microsoft", "Samsung", "MSI", "Razer", "Gigabyte", "LG"];
 const LAPTOP_CATEGORY = "20352";
 const PAGE_SIZE = 48;
-const MAX_PAGES = 40; // per brand
+const MAX_PAGES = 100; // per brand
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function fetchPage(brand, page) {
@@ -40,6 +40,12 @@ async function fetchPage(brand, page) {
 }
 
 // <parse>
+// Low-end laptops we don't want in the tracker (HP Stream, Celeron/Pentium/N-series, 4GB RAM, eMMC, tiny storage, or under $350).
+function isJunk(text, price) {
+  if (price < 350) return true;
+  return /\bstream\b|celeron|pentium|athlon|mediatek|emmc|\bn\d{3,4}\b|\b[24]\s?gb\s+(?:ram|ddr\d?|lpddr\d?x?|memory|sdram)|\b(?:32|64)\s?gb\s+(?:ssd|emmc|storage|flash)/i.test(text);
+}
+
 function parse(brand, p) {
   const name = (p.name ?? "").trim();
   if (!p.sku || !name) return null;
@@ -48,6 +54,7 @@ function parse(brand, p) {
 
   const price = p.salePrice ?? p.regularPrice;
   if (!price || price <= 0) return null;
+  if (isJunk(name, price)) return null;
   const regular = p.regularPrice && p.regularPrice > 0 ? p.regularPrice : price;
 
   const paren = name.match(/\(([^()]*)\)\s*$/);
@@ -109,7 +116,8 @@ async function main() {
     }
   }
 
-  const items = [...found.values()];
+  // Cheapest first, so the cheapest colour variant of each laptop is the one that gets saved
+  const items = [...found.values()].sort((a, b) => a.price - b.price);
   console.log(`\nCollected ${items.length} laptops.`);
 
   if (DRY) {
@@ -120,6 +128,7 @@ async function main() {
 
   let added = 0;
   let repriced = 0;
+  let skipped = 0;
   for (let i = 0; i < items.length; i += 100) {
     const chunk = items.slice(i, i + 100);
     const res = await fetch(`${SITE}/api/import-laptops`, {
@@ -141,10 +150,11 @@ async function main() {
     }
     added += json.added ?? 0;
     repriced += json.repriced ?? 0;
-    console.log(`Saved batch ${i / 100 + 1}: +${json.added} new, ${json.repriced} repriced`, json.errors?.length ? json.errors : "");
+    skipped += json.skippedDuplicates ?? 0;
+    console.log(`Saved batch ${i / 100 + 1}: +${json.added} new, ${json.repriced} repriced, ${json.skippedDuplicates ?? 0} duplicates skipped`, json.errors?.length ? json.errors : "");
   }
 
-  console.log(`\nDone. ${added} new laptops added, ${repriced} prices updated.`);
+  console.log(`\nDone. ${added} new laptops added, ${repriced} prices updated, ${skipped} duplicates skipped.`);
 }
 
 main().catch((e) => {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createHash } from "crypto";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -40,6 +41,18 @@ type ParsedLaptop = {
   regular_price: number;
   price: number;
 };
+
+// Two laptops are duplicates when brand + model + the spec parts that contain a number
+// (processor, RAM, storage, graphics, Windows) match. Colour variants only differ by colour.
+// This must stay identical to laptop_dedupe_key() in setup.sql.
+function dedupeKey(brand: string, model: string, specs: string | null): string {
+  const parts = (specs ?? "")
+    .split(" / ")
+    .map((p) => p.trim().toLowerCase())
+    .filter((p) => /[0-9]/.test(p));
+  const raw = `${brand.toLowerCase()}|${model.replace(/\s+/g, " ").trim().toLowerCase()}|${parts.join(" / ")}`;
+  return createHash("md5").update(raw).digest("hex");
+}
 
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -169,9 +182,14 @@ async function writeItems(items: ParsedLaptop[]) {
   const errors: string[] = [];
   let added = 0;
   let repriced = 0;
+  let skipped = 0;
+  const seenKeys = new Set<string>();
 
-  for (let i = 0; i < items.length; i += 100) {
-    const chunk = items.slice(i, i + 100);
+  // Cheapest first, so when several colour variants of the same laptop show up the cheapest one is kept
+  const ordered = [...items].sort((a, b) => a.price - b.price);
+
+  for (let i = 0; i < ordered.length; i += 100) {
+    const chunk = ordered.slice(i, i + 100);
 
     const { data: existing, error: readErr } = await supabase
       .from("laptops")
@@ -190,8 +208,28 @@ async function writeItems(items: ParsedLaptop[]) {
       });
     }
 
-    // New laptops: insert everything, plus their first price point
-    const fresh = chunk.filter((c) => !byExternalId.has(c.external_id));
+    // New laptops, minus any that are duplicates of a laptop we already have
+    const freshCandidates = chunk.filter((c) => !byExternalId.has(c.external_id));
+    let existingKeys = new Set<string>();
+    if (freshCandidates.length > 0) {
+      const { data: keyRows, error: keyErr } = await supabase
+        .from("laptops")
+        .select("dedupe_key")
+        .in("dedupe_key", freshCandidates.map((c) => dedupeKey(c.brand, c.model, c.specs)));
+      if (keyErr) errors.push(keyErr.message);
+      else existingKeys = new Set((keyRows ?? []).map((r) => r.dedupe_key as string));
+    }
+    const fresh = freshCandidates.filter((c) => {
+      const key = dedupeKey(c.brand, c.model, c.specs);
+      if (existingKeys.has(key) || seenKeys.has(key)) {
+        skipped += 1;
+        return false;
+      }
+      seenKeys.add(key);
+      return true;
+    });
+
+    // Insert the new ones, plus their first price point
     if (fresh.length > 0) {
       const { data: inserted, error: insertErr } = await supabase
         .from("laptops")
@@ -264,7 +302,7 @@ async function writeItems(items: ParsedLaptop[]) {
     );
   }
 
-  return { added, repriced, errors };
+  return { added, repriced, skipped, errors };
 }
 
 function isParsedLaptop(x: unknown): x is ParsedLaptop {
@@ -299,6 +337,7 @@ export async function GET(req: NextRequest) {
     found: items.length,
     added: result.added,
     repriced: result.repriced,
+    skippedDuplicates: result.skipped,
     errors: [...errors, ...result.errors],
   });
 }
@@ -317,6 +356,7 @@ export async function POST(req: NextRequest) {
     valid: items.length,
     added: result.added,
     repriced: result.repriced,
+    skippedDuplicates: result.skipped,
     errors: result.errors,
   });
 }

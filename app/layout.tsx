@@ -7,6 +7,7 @@ import TopNav from '@/components/TopNav';
 import ThemeInit from '@/components/ThemeInit';
 import RouteProgress from '@/components/RouteProgress';
 import BackToTop from '@/components/BackToTop';
+import OfflineSupport from '@/components/OfflineSupport';
 
 export const metadata: Metadata = {
   title: "LaptopCore",
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <TopNav />
         {children}
         <BackToTop />
+        <OfflineSupport />
         <Analytics />
         <AIAssistant />
       </body>
