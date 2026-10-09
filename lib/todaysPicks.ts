@@ -5,12 +5,12 @@
 export type SlotKey = "deal" | "gaming" | "budget" | "work" | "bigscreen" | "premium";
 
 export const SLOTS: { key: SlotKey; label: string; blurb: string }[] = [
-  { key: "deal", label: "Deal of the Day", blurb: "One of the biggest price drops on a laptop worth buying" },
-  { key: "gaming", label: "Best for Gaming", blurb: "Gaming laptops that are on sale right now" },
-  { key: "budget", label: "Best Budget Pick", blurb: "Solid laptops between $450 and $900" },
-  { key: "work", label: "Best for Work", blurb: "Business-class laptops with a price cut" },
-  { key: "bigscreen", label: "Best Big Screen", blurb: "15.6 inch and up, for when you want room to work" },
-  { key: "premium", label: "Premium Pick", blurb: "Top-end laptops marked down" },
+  { key: "deal", label: "Deal of the Day", blurb: "One of the best prices compared with similar laptops" },
+  { key: "gaming", label: "Best for Gaming", blurb: "Gaming laptops priced well under the usual" },
+  { key: "budget", label: "Best Budget Pick", blurb: "The strongest laptops between $450 and $900" },
+  { key: "work", label: "Best for Work", blurb: "Business-class laptops priced under the usual" },
+  { key: "bigscreen", label: "Best Big Screen", blurb: "15.6 inch and up, priced under the usual" },
+  { key: "premium", label: "Premium Pick", blurb: "Top-end laptops at a real discount" },
 ];
 
 export function hashString(input: string): number {
@@ -21,7 +21,7 @@ export function hashString(input: string): number {
   return Math.abs(hash);
 }
 
-// pools: for each slot, the best candidates (already sorted by discount).
+// pools: for each slot, the best candidates (already sorted best first).
 // Picks one per slot, never the same laptop twice.
 export function choosePicks<T extends { id: number }>(pools: Record<SlotKey, T[]>, dateKey: string) {
   const used = new Set<number>();

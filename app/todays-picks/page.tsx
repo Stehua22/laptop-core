@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
-import { supabase } from "@/lib/supabase";
-import type { Laptop } from "@/lib/supabase";
-import { SLOTS, choosePicks, type SlotKey } from "@/lib/todaysPicks";
+import { loadPicks } from "@/lib/picksData";
+import { formatStorage } from "@/lib/laptopSpecs";
+import type { Scored } from "@/lib/picksEngine";
 
 // The page is rebuilt every 30 minutes, so the picks switch over shortly after midnight (Toronto time)
 export const revalidate = 1800;
@@ -11,56 +11,34 @@ export const revalidate = 1800;
 export const metadata: Metadata = {
   title: "Today's Picks | Best Canadian Laptop Deals Today | LaptopCore",
   description:
-    "Fresh every day: the best laptop deals in Canada, picked from thousands of laptops we track. Gaming, work, budget and more.",
+    "Fresh every day: laptops priced well below what their specs normally cost in Canada. Modern hardware only, with the numbers shown.",
 };
 
-type PickLaptop = Laptop & { discount_pct?: number | null };
-
-const COLUMNS =
-  "id, brand, model, specs, store, url, image_url, retail_price, current_price, discount_pct, screen_size, weight_kg, good_for";
-
 const fmt = (n: number) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const roundTo10 = (n: number) => Math.round(n / 10) * 10;
 
-// The 12 best-discounted laptops that fit a slot; the date then decides which of them is today's pick
-async function candidates(slot: SlotKey, requireDiscount: boolean): Promise<PickLaptop[]> {
-  let q = supabase.from("laptops").select(COLUMNS).gt("current_price", 0);
-  if (requireDiscount) q = q.gt("discount_pct", 0);
+function PickCard({ label, blurb, laptop }: { label: string; blurb: string; laptop: Scored }) {
+  const { parsed } = laptop;
+  const typical = laptop.peerMedian ? roundTo10(laptop.peerMedian) : null;
+  const below = laptop.below ? Math.round(laptop.below * 100) : 0;
+  const under = typical && typical > laptop.price ? typical - Math.round(laptop.price) : 0;
+  // The store's own "regular price" is only shown when it is believable
+  const d = laptop.discount_pct ?? 0;
+  const showWas = d >= 5 && d <= 45 && laptop.retail_price > laptop.price;
 
-  switch (slot) {
-    case "deal":
-      q = q.gte("current_price", 600);
-      break;
-    case "gaming":
-      q = q.ilike("good_for", "%gaming%").gte("current_price", 700);
-      break;
-    case "budget":
-      q = q.gte("current_price", 450).lte("current_price", 900);
-      break;
-    case "work":
-      q = q.ilike("good_for", "%business%").gte("current_price", 600);
-      break;
-    case "bigscreen":
-      q = q.gte("screen_size", 15.6).gte("current_price", 600);
-      break;
-    case "premium":
-      q = q.gte("current_price", 1800);
-      break;
-  }
+  const specLine = [
+    parsed.cpu?.label,
+    parsed.ramGb ? `${parsed.ramGb}GB RAM` : null,
+    parsed.storageGb ? formatStorage(parsed.storageGb) : null,
+    parsed.gpu.tier > 0 ? parsed.gpu.label : null,
+  ]
+    .filter(Boolean)
+    .join(" \u00b7 ");
 
-  const { data, error } = await q
-    .order("discount_pct", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(12);
-  if (error) throw error;
-  return (data ?? []) as unknown as PickLaptop[];
-}
-
-function PickCard({ label, blurb, laptop }: { label: string; blurb: string; laptop: PickLaptop }) {
-  const price = laptop.current_price ?? laptop.retail_price;
-  const was = laptop.retail_price;
-  const savings = was > price ? Math.round(was - price) : 0;
-  const percent = laptop.discount_pct && laptop.discount_pct > 0 ? Math.round(laptop.discount_pct) : 0;
-  const specLine = (laptop.specs ?? "").split(" / ").slice(0, 4).join(" \u00b7 ");
+  const reasons: string[] = [];
+  if (typical) reasons.push(`${below}% below the usual ${fmt(typical)} for a laptop with these specs`);
+  if (laptop.lowestEver) reasons.push("Lowest price we have tracked for it");
+  if (parsed.cpu) reasons.push(`Current-generation processor (${parsed.cpu.year})`);
 
   return (
     <article
@@ -122,11 +100,11 @@ function PickCard({ label, blurb, laptop }: { label: string; blurb: string; lapt
       </div>
 
       <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap", marginTop: "auto" }}>
-        <span style={{ fontSize: 28, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.02em" }}>{fmt(price)}</span>
-        {savings > 0 && (
-          <span style={{ fontSize: 13, color: "var(--text-dim)", textDecoration: "line-through" }}>{fmt(was)}</span>
+        <span style={{ fontSize: 28, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.02em" }}>{fmt(laptop.price)}</span>
+        {showWas && (
+          <span style={{ fontSize: 13, color: "var(--text-dim)", textDecoration: "line-through" }}>{fmt(laptop.retail_price)}</span>
         )}
-        {percent > 0 && (
+        {below > 0 && (
           <span
             style={{
               fontSize: 12,
@@ -137,11 +115,22 @@ function PickCard({ label, blurb, laptop }: { label: string; blurb: string; lapt
               padding: "3px 9px",
             }}
           >
-            {percent}% off
+            {below}% under usual
           </span>
         )}
       </div>
-      {savings > 0 && <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: -6 }}>You save {fmt(savings)}</div>}
+      {under > 0 && <div style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: -6 }}>{fmt(under)} less than these specs normally cost</div>}
+
+      {reasons.length > 0 && (
+        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+          {reasons.map((r) => (
+            <li key={r} style={{ fontSize: 12, color: "var(--text-muted)", display: "flex", gap: 6, lineHeight: 1.4 }}>
+              <span style={{ color: "#1f9d55", fontWeight: 800 }}>{"\u2713"}</span>
+              <span>{r}</span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div style={{ display: "flex", gap: 8 }}>
         <Link
@@ -194,16 +183,10 @@ export default async function TodaysPicksPage() {
     timeZone: "America/Toronto",
   });
 
-  let picks: { slot: (typeof SLOTS)[number]; laptop: PickLaptop }[] = [];
+  let picks: Awaited<ReturnType<typeof loadPicks>>["picks"] = [];
   let failed = false;
-
   try {
-    const keys = SLOTS.map((s) => s.key);
-    let pools = await Promise.all(keys.map((k) => candidates(k, true)));
-    // If nothing is discounted right now, still show the best-priced options instead of an empty page
-    if (pools.every((p) => p.length === 0)) pools = await Promise.all(keys.map((k) => candidates(k, false)));
-    const byKey = Object.fromEntries(keys.map((k, i) => [k, pools[i]])) as Record<SlotKey, PickLaptop[]>;
-    picks = choosePicks(byKey, dateKey);
+    picks = (await loadPicks(dateKey)).picks;
   } catch {
     failed = true;
   }
@@ -219,8 +202,10 @@ export default async function TodaysPicksPage() {
           <h1 style={{ fontSize: 32, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.03em", marginBottom: 8 }}>
             Today&apos;s Picks
           </h1>
-          <p style={{ fontSize: 14.5, color: "var(--text-muted)", maxWidth: 620, lineHeight: 1.6 }}>
-            Fresh every day. We look through every laptop we track and pull out the best deals for how you actually use a laptop.
+          <p style={{ fontSize: 14.5, color: "var(--text-muted)", maxWidth: 680, lineHeight: 1.6 }}>
+            Fresh every day. A pick only qualifies if it has a modern processor and is priced clearly below what a laptop with
+            the same specs normally costs. We don&apos;t trust a store&apos;s &ldquo;regular price&rdquo;, so a fake markdown on an old
+            laptop can&apos;t sneak in.
           </p>
         </header>
 
@@ -236,7 +221,7 @@ export default async function TodaysPicksPage() {
               fontSize: 14,
             }}
           >
-            Today&apos;s picks aren&apos;t ready yet. Check back in a few minutes, or{" "}
+            No laptop is a clear bargain right now, and we&apos;d rather show nothing than a bad deal. Check back tomorrow, or{" "}
             <Link href="/tracker" style={{ color: "var(--accent)", fontWeight: 700 }}>
               browse every laptop
             </Link>
@@ -251,8 +236,9 @@ export default async function TodaysPicksPage() {
         )}
 
         <p style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 28, lineHeight: 1.6 }}>
-          Picks change every day at midnight (Toronto time). Prices are checked daily and can change at any time, so
-          always confirm the price at the store before you buy.
+          Picks change every day at midnight (Toronto time). &ldquo;Usual price&rdquo; is an estimate from the laptops we track, so
+          treat it as a guide. Prices are checked daily and can change at any time, so always confirm the price at the store before
+          you buy.
         </p>
       </main>
     </div>
