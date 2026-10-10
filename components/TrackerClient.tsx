@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import type { Laptop } from "@/lib/supabase";
-import { addLaptop, addPriceEntry, deleteLaptop, supabase, fetchLaptopsPage, fetchLaptopById, type LaptopFilters } from "@/lib/supabase";
+import { addLaptop, addPriceEntry, deleteLaptop, supabase, fetchLaptopById } from "@/lib/supabase";
+import { fetchLaptopsSmart, parseSmartQuery, removePhrase, DEFAULT_SMART, type SmartFilters, type Chip } from "@/lib/smartFilters";
 import Header from "./Header";
 import Controls from "./Controls";
 import LaptopGrid from "./LaptopGrid";
@@ -62,10 +63,10 @@ export default function TrackerClient({ initialLaptops, initialTotal, brands, db
 
       if (e.key === "/" && !isTyping) {
         e.preventDefault();
-        const input = document.querySelector<HTMLInputElement>('input[placeholder="Search brand, model, specs..."]');
+        const input = document.querySelector<HTMLInputElement>("input[data-lc-search]");
         input?.focus();
       }
-      if (e.key === "Escape" && isTyping && (target as HTMLInputElement).placeholder === "Search brand, model, specs...") {
+      if (e.key === "Escape" && isTyping && target.hasAttribute("data-lc-search")) {
         (target as HTMLInputElement).blur();
         setSearch("");
       }
@@ -80,6 +81,12 @@ export default function TrackerClient({ initialLaptops, initialTotal, brands, db
   const [weightFilter, setWeightFilter] = useState("");
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
+  const [ramMin, setRamMin] = useState("");
+  const [storageMin, setStorageMin] = useState("");
+  const [cpuVendor, setCpuVendor] = useState("");
+  const [gpuFilter, setGpuFilter] = useState("");
+  const [modernOnly, setModernOnly] = useState(false);
+  const [dealsOnly, setDealsOnly] = useState(false);
   const [recCategory, setRecCategory] = useState("student");
   const [recommendationIds, setRecommendationIds] = useState<Record<string, number[]>>(DEFAULT_RECOMMENDATION_IDS);
   const [selectedLaptop, setSelectedLaptop] = useState<Laptop | null>(null);
@@ -198,7 +205,7 @@ export default function TrackerClient({ initialLaptops, initialTotal, brands, db
   // Reset to page 1 whenever filters, search, sort, or per-page setting change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, brandFilter, sortBy, goodForFilter, screenFilter, weightFilter, priceMin, priceMax, perPage]);
+  }, [search, brandFilter, sortBy, goodForFilter, screenFilter, weightFilter, priceMin, priceMax, ramMin, storageMin, cpuVendor, gpuFilter, modernOnly, dealsOnly, perPage]);
 
   // Scrolling pages without moving back to the top left users staring at an
   // empty area below the fold — scroll the grid back into view on page change.
@@ -258,10 +265,37 @@ export default function TrackerClient({ initialLaptops, initialTotal, brands, db
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   }, []);
 
-  const filters: LaptopFilters = useMemo(
-    () => ({ search, brand: brandFilter, goodFor: goodForFilter, screen: screenFilter, weight: weightFilter, priceMin, priceMax, sortBy }),
-    [search, brandFilter, goodForFilter, screenFilter, weightFilter, priceMin, priceMax, sortBy]
-  );
+  // Plain-English search: "gaming laptop under $1500 16gb" becomes filters. Anything picked in the
+  // controls takes priority over what was understood from the text.
+  const smart = useMemo(() => parseSmartQuery(search, brands), [search, brands]);
+  const filters: SmartFilters = useMemo(() => {
+    const p = smart.patch;
+    return {
+      search: smart.text,
+      brand: brandFilter || p.brand || "",
+      goodFor: goodForFilter || p.goodFor || "",
+      screen: screenFilter || p.screen || "",
+      weight: weightFilter,
+      priceMin: priceMin || p.priceMin || "",
+      priceMax: priceMax || p.priceMax || "",
+      sortBy: sortBy !== "newest" ? sortBy : p.sortBy || "newest",
+      ramMin: ramMin || p.ramMin || "",
+      storageMin: storageMin || p.storageMin || "",
+      cpuVendor: cpuVendor || p.cpuVendor || "",
+      gpu: gpuFilter || p.gpu || "",
+      modernOnly: modernOnly || Boolean(p.modernOnly),
+      dealsOnly: dealsOnly || Boolean(p.dealsOnly),
+    };
+  }, [smart, brandFilter, goodForFilter, screenFilter, weightFilter, priceMin, priceMax, sortBy, ramMin, storageMin, cpuVendor, gpuFilter, modernOnly, dealsOnly]);
+
+  // Chips for what the search box understood (hidden when a control already overrides that part)
+  const shownChips: Chip[] = useMemo(() => {
+    const overridden: Record<string, string> = {
+      brand: brandFilter, goodFor: goodForFilter, screen: screenFilter, priceMin, priceMax, ramMin, storageMin, cpuVendor,
+      gpu: gpuFilter, modernOnly: modernOnly ? "1" : "", dealsOnly: dealsOnly ? "1" : "", sortBy: sortBy !== "newest" ? sortBy : "",
+    };
+    return smart.chips.filter((c) => !overridden[c.field as string]);
+  }, [smart, brandFilter, goodForFilter, screenFilter, priceMin, priceMax, ramMin, storageMin, cpuVendor, gpuFilter, modernOnly, dealsOnly, sortBy]);
 
   // Only the current page of laptops is ever loaded; filtering and sorting happen in the database.
   const requestId = useRef(0);
@@ -270,7 +304,7 @@ export default function TrackerClient({ initialLaptops, initialTotal, brands, db
     const id = ++requestId.current;
     setListLoading(true);
     try {
-      const res = await fetchLaptopsPage(filters, currentPage, perPage === "all" ? 96 : perPage);
+      const res = await fetchLaptopsSmart(filters, currentPage, perPage === "all" ? 96 : perPage);
       if (id !== requestId.current) return; // a newer request replaced this one
       setLaptops(res.laptops);
       setTotal(res.total);
@@ -285,18 +319,30 @@ export default function TrackerClient({ initialLaptops, initialTotal, brands, db
     if (firstLoad.current) {
       firstLoad.current = false;
       // The server already sent page 1 with default settings, no need to fetch it again
-      if (currentPage === 1 && perPage === 24 && sortBy === "newest" &&
-          !search && !brandFilter && !goodForFilter && !screenFilter && !weightFilter && !priceMin && !priceMax) return;
+      if (currentPage === 1 && perPage === 24 && JSON.stringify(filters) === JSON.stringify(DEFAULT_SMART)) return;
     }
     const t = setTimeout(loadPage, search ? 250 : 60);
     return () => clearTimeout(t);
   }, [loadPage]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const hasActiveFilters = Boolean(search || brandFilter || goodForFilter || screenFilter || weightFilter || priceMin || priceMax);
+  const hasActiveFilters = Boolean(
+    search || brandFilter || goodForFilter || screenFilter || weightFilter || priceMin || priceMax ||
+    ramMin || storageMin || cpuVendor || gpuFilter || modernOnly || dealsOnly
+  );
 
   const clearAllFilters = () => {
     setSearch(""); setBrandFilter(""); setGoodForFilter(""); setScreenFilter("");
     setWeightFilter(""); setPriceMin(""); setPriceMax("");
+    setRamMin(""); setStorageMin(""); setCpuVendor(""); setGpuFilter(""); setModernOnly(false); setDealsOnly(false);
+  };
+
+  // The quick-pick buttons just set several filters at once
+  const applyPreset = (patch: { goodFor?: string; priceMax?: string; modernOnly?: boolean; dealsOnly?: boolean; sortBy?: string }) => {
+    if (patch.goodFor !== undefined) setGoodForFilter(patch.goodFor);
+    if (patch.priceMax !== undefined) setPriceMax(patch.priceMax);
+    if (patch.modernOnly !== undefined) setModernOnly(patch.modernOnly);
+    if (patch.dealsOnly !== undefined) setDealsOnly(patch.dealsOnly);
+    if (patch.sortBy !== undefined) setSortBy(patch.sortBy);
   };
 
   const pageSize = perPage === "all" ? 96 : perPage;
@@ -438,6 +484,7 @@ export default function TrackerClient({ initialLaptops, initialTotal, brands, db
 
         <Controls
           search={search} onSearch={setSearch}
+          smartChips={shownChips} onRemoveChip={(c) => setSearch((q) => removePhrase(q, c.match))}
           brands={brands} brandFilter={brandFilter} onBrandFilter={setBrandFilter}
           sortBy={sortBy} onSort={setSortBy}
           goodForFilter={goodForFilter} onGoodForFilter={setGoodForFilter}
@@ -445,6 +492,13 @@ export default function TrackerClient({ initialLaptops, initialTotal, brands, db
           weightFilter={weightFilter} onWeightFilter={setWeightFilter}
           priceMin={priceMin} priceMax={priceMax}
           onPriceMin={setPriceMin} onPriceMax={setPriceMax}
+          ramMin={ramMin} onRamMin={setRamMin}
+          storageMin={storageMin} onStorageMin={setStorageMin}
+          cpuVendor={cpuVendor} onCpuVendor={setCpuVendor}
+          gpuFilter={gpuFilter} onGpuFilter={setGpuFilter}
+          modernOnly={modernOnly} onModernOnly={setModernOnly}
+          dealsOnly={dealsOnly} onDealsOnly={setDealsOnly}
+          onApplyPreset={applyPreset} onClearAll={clearAllFilters}
         />
 
         <div

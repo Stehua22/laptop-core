@@ -63,7 +63,7 @@ export function parseCpu(input: string): Cpu | null {
   }
 
   // Intel Core Ultra (2024 and newer)
-  m = t.match(/core\s*ultra\s*([3579])\s*(?:processor\s*)?(\d{3})([A-Z]{0,2})\b/i);
+  m = t.match(/(?:core\s*)?\bultra\s*([3579])\s*(?:processor\s*)?(\d{3})([A-Z]{0,2})\b/i);
   if (m) {
     const tier = m[1];
     const num = m[2];
@@ -107,6 +107,21 @@ export function parseCpu(input: string): Cpu | null {
       label: `Intel Core i${tier}-${digits}${suffix.toUpperCase()}`,
       year,
       perf: TIER_BASE[tier] + suffixBoost(suffix) + genBonus,
+    };
+  }
+
+  // "i5-120U" style (people often write the new Core 5 120U naming this way)
+  m = t.match(/\bi([357])[-\s]?(\d{3})([A-Z]{1,2})\b/i);
+  if (m) {
+    const tier = m[1];
+    const num = m[2];
+    const suffix = m[3];
+    const series = Number(num.charAt(0));
+    return {
+      vendor: "intel",
+      label: `Intel Core ${tier} ${num}${suffix.toUpperCase()}`,
+      year: series <= 1 ? 2024 : series === 2 ? 2025 : 2026,
+      perf: (CORE_BASE[tier] ?? 34) + suffixBoost(suffix) + series * 2,
     };
   }
 

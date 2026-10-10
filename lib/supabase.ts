@@ -57,12 +57,12 @@ export type PriceEntry = {
   recorded_at: string;
 };
 
-const LAPTOP_SELECT =
+export const LAPTOP_SELECT =
   "*, price_history(id, price, recorded_at), laptop_links(id, laptop_id, store, url, price, sort_order)";
 
 // Turns a raw database row into a Laptop (sorted price history + buy-links + current price).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function shapeLaptop(l: any): Laptop {
+export function shapeLaptop(l: any): Laptop {
   const history: PriceEntry[] = (l.price_history ?? []).sort(
     (a: PriceEntry, b: PriceEntry) =>
       new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()

@@ -155,6 +155,17 @@ async function main() {
   }
 
   console.log(`\nDone. ${added} new laptops added, ${repriced} prices updated, ${skipped} duplicates skipped.`);
+
+  // Refresh what the tracker's smart filters use (RAM, storage, processor, graphics, value) for every laptop
+  console.log("\nRefreshing the smart filter data...");
+  try {
+    const er = await fetch(`${SITE}/api/enrich-laptops`, { headers: { Authorization: `Bearer ${SECRET}` }, signal: AbortSignal.timeout(90000) });
+    const ej = await er.json().catch(() => null);
+    if (er.ok && ej) console.log(`Done. ${ej.updated} of ${ej.laptops} laptops updated.`, ej.errors && ej.errors.length ? ej.errors : "");
+    else console.log(`Could not refresh it (the server replied ${er.status}). You can run it by opening ${SITE}/api/enrich-laptops?key=YOUR_SECRET in a browser.`);
+  } catch (e) {
+    console.log("Could not refresh it:", e.message);
+  }
 }
 
 main().catch((e) => {
