@@ -97,7 +97,8 @@ export async function fetchLaptopsSmart(
   else if (filters.gpu === "integrated") q = q.eq("gpu_tier", 0);
 
   if (filters.modernOnly) q = q.gte("cpu_year", 2022);
-  if (filters.dealsOnly) q = q.gte("value_pct", 10);
+  // Credible deals only: clearly under the usual price for the specs, but not so far under it that it looks fake
+  if (filters.dealsOnly) q = q.gte("value_pct", 10).lte("value_pct", 40).gte("current_price", 400);
 
   const sorted =
     filters.sortBy === "priceAsc"

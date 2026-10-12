@@ -108,7 +108,9 @@ function parse(brand: string, p: BestBuyProduct): ParsedLaptop | null {
   const price = p.salePrice ?? p.regularPrice;
   if (!price || price <= 0) return null;
   if (isJunk(name, price)) return null;
-  const regular = p.regularPrice && p.regularPrice > 0 ? p.regularPrice : price;
+  // A "regular price" far above the real price is a pricing trick, not a discount: ignore it
+  const listed = p.regularPrice && p.regularPrice > 0 ? p.regularPrice : price;
+  const regular = listed > price * 1.6 ? price : listed;
 
   // Best Buy names look like:
   //   Lenovo IdeaPad Slim 3i 15.3" Laptop - Intel Core Ultra 7 355 - 16GB DDR5 - 512GB SSD - Windows 11 Home - Luna Grey
@@ -142,6 +144,32 @@ function parse(brand: string, p: BestBuyProduct): ParsedLaptop | null {
     regular_price: regular,
     price,
   };
+}
+
+// The same laptop is often listed several times (colours, third-party sellers, refurbished stock priced like new).
+// Keep ONE listing per laptop, and never an outlier: a listing far below the others (under 70% of their median)
+// is far more likely to be refurbished, used or mislabeled than a real bargain, so it never wins.
+function pickRepresentatives(items: ParsedLaptop[]): ParsedLaptop[] {
+  const groups = new Map<string, ParsedLaptop[]>();
+  for (const item of items) {
+    const key = dedupeKey(item.brand, item.model, item.specs);
+    const group = groups.get(key);
+    if (group) group.push(item);
+    else groups.set(key, [item]);
+  }
+  const chosen: ParsedLaptop[] = [];
+  groups.forEach((group) => {
+    if (group.length === 1) {
+      chosen.push(group[0]);
+      return;
+    }
+    const prices = group.map((g) => g.price).sort((a, b) => a - b);
+    const mid = Math.floor(prices.length / 2);
+    const median = prices.length % 2 ? prices[mid] : (prices[mid - 1] + prices[mid]) / 2;
+    const sane = group.filter((g) => g.price >= median * 0.7).sort((a, b) => a.price - b.price);
+    chosen.push(sane[0]);
+  });
+  return chosen;
 }
 
 async function collectFromBestBuy(errors: string[]): Promise<ParsedLaptop[]> {
@@ -326,7 +354,7 @@ export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const errors: string[] = [];
-  const items = await collectFromBestBuy(errors);
+  const items = pickRepresentatives(await collectFromBestBuy(errors));
 
   if (req.nextUrl.searchParams.get("dry") === "1") {
     return NextResponse.json({ dry: true, found: items.length, errors, sample: items.slice(0, 8) });

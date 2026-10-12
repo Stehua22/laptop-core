@@ -30,6 +30,9 @@ function Row({ s }: { s: Scored }) {
       <td style={td}>{p.cpu ? `${p.cpu.label} (${p.cpu.year})` : "unknown"}</td>
       <td style={td}>{p.ramGb ?? "?"}GB / {p.storageGb ?? "?"}GB / gpu {p.gpu.tier}</td>
       <td style={td}>{s.reason ? REASON_TEXT[s.reason] : "qualifies"}</td>
+      <td style={td}>
+        <a href={s.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", textDecoration: "none" }}>{s.store ?? "store"}{" \u2197"}</a>
+      </td>
     </tr>
   );
 }
@@ -46,10 +49,15 @@ export default async function PicksDiagnostics() {
     .sort((a, b) => (b.discount_pct ?? 0) - (a.discount_pct ?? 0))
     .slice(0, 20);
   const topQualifying = scored.filter((s) => s.reason === null).sort((a, b) => b.score - a.score).slice(0, 15);
+  // The cheapest laptops with a modern processor: this is where a "$300 deal" would show up, and why it was or was not accepted
+  const cheapestModern = scored
+    .filter((s) => s.parsed.cpu && s.parsed.cpu.year >= 2022 && s.price > 0)
+    .sort((a, b) => a.price - b.price)
+    .slice(0, 20);
 
   const head = (
     <tr>
-      {["Laptop", "Price", "Expected", "Under expected", "Store discount", "Processor", "RAM / storage / gpu tier", "Result"].map((h) => (
+      {["Laptop", "Price", "Expected", "Under expected", "Store discount", "Processor", "RAM / storage / gpu tier", "Result", "Listing"].map((h) => (
         <th key={h} style={th}>{h}</th>
       ))}
     </tr>
@@ -93,6 +101,14 @@ export default async function PicksDiagnostics() {
         <table style={{ borderCollapse: "collapse", width: "100%" }}>
           <thead>{head}</thead>
           <tbody>{bigDiscountsLeftOut.map((s) => <Row key={s.id} s={s} />)}</tbody>
+        </table>
+      </div>
+
+      <h2 style={{ fontSize: 16, fontWeight: 800, margin: "22px 0 8px" }}>The 20 cheapest laptops with a modern processor, and why each was accepted or rejected</h2>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%" }}>
+          <thead>{head}</thead>
+          <tbody>{cheapestModern.map((s) => <Row key={s.id} s={s} />)}</tbody>
         </table>
       </div>
 

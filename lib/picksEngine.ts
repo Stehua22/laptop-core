@@ -3,7 +3,9 @@
 // A laptop only qualifies if:
 //   1. it has a modern processor (2022 or newer), at least 8GB RAM and 256GB storage
 //   2. its price is clearly BELOW what a laptop with those specs normally costs
-//   3. the price looks believable (not 3x the usual, not a suspicious 60% under)
+//   3. the price looks believable: not under $400 (that is usually refurbished, used or a third-party
+//      listing), not more than 40% under normal (too good to be true), and the store's own "regular price"
+//      is not wildly inflated (a 50%+ markdown is a pricing trick, not a deal)
 //
 // "Normally costs" is learned from the whole catalog: how much each extra bit of processor speed,
 // RAM, storage and graphics adds to a price, fitted on every laptop we track (ignoring the odd
@@ -36,6 +38,8 @@ export type ExcludeReason =
   | "low-storage"
   | "no-peers"
   | "price-looks-wrong"
+  | "too-cheap"
+  | "inflated-markdown"
   | "not-cheaper";
 
 export const REASON_TEXT: Record<ExcludeReason, string> = {
@@ -46,7 +50,9 @@ export const REASON_TEXT: Record<ExcludeReason, string> = {
   "low-ram": "Less than 8GB RAM",
   "low-storage": "Less than 256GB storage",
   "no-peers": "Too few similar laptops to compare against",
-  "price-looks-wrong": "Price looks wrong next to similar laptops",
+  "price-looks-wrong": "Price is far from normal for its specs (too good to be true, or too high)",
+  "too-cheap": "Under $400 for a modern laptop (usually refurbished, used or third-party)",
+  "inflated-markdown": "The store's regular price looks inflated (50%+ markdown)",
   "not-cheaper": "Not clearly cheaper than similar laptops",
 };
 
@@ -66,6 +72,9 @@ const MIN_RAM = 8;
 const MIN_STORAGE = 256;
 const MIN_PEERS = 6;
 const MIN_BELOW = 0.07;
+export const MIN_PRICE = 400; // below this, a modern laptop is almost always refurbished, used or third-party
+const MAX_BELOW = 0.4; // more than 40% under normal is not a deal, it's a red flag
+const MAX_MARKDOWN = 50; // a store "regular price" more than this far above the price is not believable
 
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -73,7 +82,7 @@ function median(values: number[]): number {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-function basicReason(p: ParsedSpecs, price: number): ExcludeReason | null {
+function basicReason(p: ParsedSpecs, price: number, markdownPct: number): ExcludeReason | null {
   if (!price || price <= 0) return "price-looks-wrong";
   if (!p.cpu) return "unknown-cpu";
   if (p.cpu.vendor === "entry") return "entry-cpu";
@@ -81,6 +90,8 @@ function basicReason(p: ParsedSpecs, price: number): ExcludeReason | null {
   if (p.ramGb === null || p.storageGb === null) return "unknown-memory";
   if (p.ramGb < MIN_RAM) return "low-ram";
   if (p.storageGb < MIN_STORAGE) return "low-storage";
+  if (price < MIN_PRICE) return "too-cheap";
+  if (markdownPct > MAX_MARKDOWN) return "inflated-markdown";
   return null;
 }
 
@@ -158,7 +169,7 @@ export function scoreAll(laptops: RawLaptop[]): { scored: Scored[]; model: Price
   const base = laptops.map((l) => {
     const price = l.current_price ?? l.retail_price;
     const parsed = parseSpecs(`${l.model} ${l.specs ?? ""}`);
-    return { l, price, parsed, reason: basicReason(parsed, price), x: featuresOf(parsed, `${l.brand} ${l.model}`) };
+    return { l, price, parsed, reason: basicReason(parsed, price, Number(l.discount_pct ?? 0)), x: featuresOf(parsed, `${l.brand} ${l.model}`) };
   });
 
   // Learn what specs cost, from every laptop that has readable specs
@@ -240,7 +251,7 @@ export function scoreAll(laptops: RawLaptop[]): { scored: Scored[]; model: Price
 
     const ratio = price / expected;
     result.below = 1 - ratio;
-    if (ratio > 3 || ratio < 0.4) {
+    if (ratio > 3 || result.below > MAX_BELOW) {
       result.reason = "price-looks-wrong";
       return result;
     }

@@ -55,7 +55,9 @@ function parse(brand, p) {
   const price = p.salePrice ?? p.regularPrice;
   if (!price || price <= 0) return null;
   if (isJunk(name, price)) return null;
-  const regular = p.regularPrice && p.regularPrice > 0 ? p.regularPrice : price;
+  // A "regular price" far above the real price is a pricing trick, not a discount: ignore it
+  const listed = p.regularPrice && p.regularPrice > 0 ? p.regularPrice : price;
+  const regular = listed > price * 1.6 ? price : listed;
 
   const paren = name.match(/\(([^()]*)\)\s*$/);
   const head = paren ? name.replace(/\s*\([^()]*\)\s*$/, "") : name;
@@ -89,6 +91,49 @@ function parse(brand, p) {
 }
 // </parse>
 
+// The same laptop is often listed several times (colours, third-party sellers, refurbished stock priced like new).
+// Keep ONE listing per laptop, and never an outlier: a listing far below the others (under 70% of their median)
+// is far more likely to be refurbished, used or mislabeled than a real bargain, so it never wins.
+function dedupeKey(brand, model, specs) {
+  const parts = (specs ?? "").split(" / ").map((x) => x.trim().toLowerCase()).filter((x) => /[0-9]/.test(x));
+  return `${brand.toLowerCase()}|${model.replace(/\s+/g, " ").trim().toLowerCase()}|${parts.join(" / ")}`;
+}
+
+function pickRepresentatives(items) {
+  const groups = new Map();
+  for (const item of items) {
+    const key = dedupeKey(item.brand, item.model, item.specs);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+  const chosen = [];
+  for (const group of groups.values()) {
+    if (group.length === 1) {
+      chosen.push(group[0]);
+      continue;
+    }
+    const prices = group.map((g) => g.price).sort((a, b) => a - b);
+    const mid = Math.floor(prices.length / 2);
+    const median = prices.length % 2 ? prices[mid] : (prices[mid - 1] + prices[mid]) / 2;
+    chosen.push(group.filter((g) => g.price >= median * 0.7).sort((a, b) => a.price - b.price)[0]);
+  }
+  return chosen;
+}
+
+// What fields does Best Buy send? (printed with --dry or --fields, to help spot third-party / refurbished listings)
+const fieldInfo = new Map();
+function recordFields(product) {
+  for (const [key, value] of Object.entries(product)) {
+    let info = fieldInfo.get(key);
+    if (!info) fieldInfo.set(key, (info = { count: 0, values: new Map() }));
+    info.count += 1;
+    if (/seller|market|vendor|condition|open|refurb|clearance|availab|type/i.test(key) && ["string", "boolean", "number"].includes(typeof value)) {
+      const v = String(value).slice(0, 40);
+      info.values.set(v, (info.values.get(v) ?? 0) + 1);
+    }
+  }
+}
+
 async function main() {
   const found = new Map();
 
@@ -106,6 +151,7 @@ async function main() {
       totalPages = result.totalPages;
       let brandHits = 0;
       for (const product of result.products) {
+        recordFields(product);
         if (brandRe.test((product.name ?? "").trim())) brandHits += 1;
         const parsed = parse(brand, product);
         if (parsed) found.set(parsed.external_id, parsed);
@@ -116,9 +162,20 @@ async function main() {
     }
   }
 
-  // Cheapest first, so the cheapest colour variant of each laptop is the one that gets saved
-  const items = [...found.values()].sort((a, b) => a.price - b.price);
-  console.log(`\nCollected ${items.length} laptops.`);
+  // One listing per laptop (never a suspiciously cheap outlier), cheapest first
+  const everything = [...found.values()];
+  const items = pickRepresentatives(everything).sort((a, b) => a.price - b.price);
+  console.log(`\nCollected ${everything.length} listings, ${items.length} distinct laptops.`);
+
+  if (DRY || process.argv.includes("--fields")) {
+    console.log("\nFields Best Buy sends:", [...fieldInfo.keys()].join(", "));
+    for (const [key, info] of fieldInfo) {
+      if (info.values.size > 0 && info.values.size <= 12) console.log(`  ${key}: ${[...info.values].map(([v, n]) => `${v} x${n}`).join(", ")}`);
+    }
+    const cheapest = [...everything].sort((a, b) => a.price - b.price).slice(0, 12);
+    console.log("\nThe 12 cheapest listings found:");
+    for (const c of cheapest) console.log(`  $${c.price}  ${c.brand} ${c.model.slice(0, 50)}  |  ${(c.specs ?? "").slice(0, 60)}`);
+  }
 
   if (DRY) {
     console.log("Dry run, nothing saved. Sample:");

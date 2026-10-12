@@ -1,8 +1,8 @@
 "use client";
 import "./deals.css";
 import { useState, useEffect } from "react";
-import type { Laptop } from "@/lib/supabase";
-import { fetchLaptops, addLaptop, deleteLaptop, supabase } from "@/lib/supabase";
+import { addLaptop, deleteLaptop, supabase } from "@/lib/supabase";
+import { loadDeals, dealInfo, sortDeals, type DealLaptop } from "@/lib/dealsData";
 import { useRouter } from "next/navigation";
 
 type ScannedDeal = {
@@ -30,7 +30,7 @@ const fmt = (n: number) => "$" + n.toLocaleString("en-US", { minimumFractionDigi
 
 export default function DealsPage() {
   const router = useRouter();
-  const [laptops, setLaptops] = useState<Laptop[]>([]);
+  const [laptops, setLaptops] = useState<DealLaptop[]>([]);
   const [loading, setLoading] = useState(true);
   const [unlocked, setUnlocked] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -39,7 +39,7 @@ export default function DealsPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [form, setForm] = useState({ brand: "", model: "", specs: "", store: "", url: "", retail_price: "", current_price: "" });
-  const [sortBy, setSortBy] = useState("discount");
+  const [sortBy, setSortBy] = useState("value");
   const [bbDeals, setBbDeals] = useState<any[]>([]);
   const [bbLoading, setBbLoading] = useState(false);
   const [bbScannedAt, setBbScannedAt] = useState<string | null>(null);
@@ -59,7 +59,7 @@ export default function DealsPage() {
   };
 
   useEffect(() => {
-    fetchLaptops().then((data) => { setLaptops(data); setLoading(false); });
+    loadDeals().then((data) => { setLaptops(data); setLoading(false); }).catch(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -75,26 +75,7 @@ export default function DealsPage() {
       });
   }, []);
 
-  const hasValidDeal = (l: Laptop) =>
-    typeof l.retail_price === "number" &&
-    typeof l.current_price === "number" &&
-    l.retail_price > l.current_price &&
-    l.current_price > 0;
-
-  const deals = laptops
-    .filter(hasValidDeal)
-    .sort((a, b) => {
-      let diff = 0;
-      if (sortBy === "discount") {
-        diff = ((b.retail_price! - b.current_price!) / b.retail_price!) - ((a.retail_price! - a.current_price!) / a.retail_price!);
-      } else if (sortBy === "savings") {
-        diff = (b.retail_price! - b.current_price!) - (a.retail_price! - a.current_price!);
-      } else {
-        diff = (a.current_price ?? 0) - (b.current_price ?? 0);
-      }
-      // Stable tiebreaker so equal-ranked deals don't reorder between renders/reloads
-      return diff !== 0 ? diff : a.id - b.id;
-    });
+  const deals = sortDeals(laptops, sortBy);
 
   const submitAuth = () => {
     if (authInput === ADMIN_PASSWORD) { setUnlocked(true); setShowAuth(false); setShowAddForm(true); }
@@ -112,8 +93,7 @@ export default function DealsPage() {
         release_year: null,
         date_added: new Date().toISOString().split("T")[0],
       }, parseFloat(form.current_price));
-      const updated = await fetchLaptops();
-      setLaptops(updated);
+      setLaptops(await loadDeals());
       setForm({ brand: "", model: "", specs: "", store: "", url: "", retail_price: "", current_price: "" });
       setShowAddForm(false);
     } finally { setAddLoading(false); }
@@ -126,6 +106,7 @@ export default function DealsPage() {
   };
 
   const topDeal = deals[0];
+  const topInfo = topDeal ? dealInfo(topDeal) : null;
   const restDeals = deals.slice(1);
 
   return (
@@ -140,18 +121,19 @@ export default function DealsPage() {
 
         <div className="fade-up" style={{ animationDelay: "0.05s", display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 40, flexWrap: "wrap", gap: 16 }}>
           <div>
-            <div className="mono" style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "#fb923c", marginBottom: 10, opacity: 0.8 }}>// crazy deals</div>
+            <div className="mono" style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "#fb923c", marginBottom: 10, opacity: 0.8 }}>// verified deals</div>
             <h1 style={{ fontSize: "clamp(2rem, 5vw, 3rem)", fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 1, color: "#f0f4ff" }}>
               🔥 Best Deals
             </h1>
             <p className="mono" style={{ fontSize: 12, color: "#2a3248", marginTop: 10 }}>
-              {deals.length} laptops · biggest price drops
+              {deals.length} laptops · priced well under what their specs usually cost
             </p>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-              <option value="discount">Biggest % Off</option>
+              <option value="value">Best Value</option>
               <option value="savings">Most Savings</option>
+              <option value="discount">Biggest % Off Store Price</option>
               <option value="price">Lowest Price</option>
             </select>
             <button className="add-btn" onClick={() => unlocked ? setShowAddForm(!showAddForm) : setShowAuth(true)}>
@@ -161,7 +143,7 @@ export default function DealsPage() {
         </div>
 
         {/* Top deal hero card */}
-        {!loading && topDeal && (
+        {!loading && topDeal && topInfo && (
           <div className="fade-up" style={{ animationDelay: "0.1s", background: "linear-gradient(135deg, rgba(251,146,60,0.08), rgba(239,68,68,0.04))", border: "1px solid rgba(251,146,60,0.2)", borderRadius: 18, padding: "28px 32px", marginBottom: 16, position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: 0, right: 0, width: 200, height: 200, background: "radial-gradient(circle at top right, rgba(251,146,60,0.1), transparent 70%)", pointerEvents: "none" }} />
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
@@ -176,11 +158,11 @@ export default function DealsPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontWeight: 900, fontSize: "2rem", color: "#10b981", fontFamily: "'JetBrains Mono', monospace", letterSpacing: "-0.03em" }}>{fmt(topDeal.current_price!)}</span>
-                    <span style={{ fontSize: 14, color: "#2a3248", textDecoration: "line-through", fontFamily: "'JetBrains Mono', monospace" }}>{fmt(topDeal.retail_price!)}</span>
+                    <span style={{ fontWeight: 900, fontSize: "2rem", color: "#10b981", fontFamily: "'JetBrains Mono', monospace", letterSpacing: "-0.03em" }}>{fmt(topInfo.price)}</span>
+                    {topInfo.showWas && <span style={{ fontSize: 14, color: "#2a3248", textDecoration: "line-through", fontFamily: "'JetBrains Mono', monospace" }}>{fmt(topInfo.retail)}</span>}
                   </div>
                   <div style={{ background: "rgba(251,146,60,0.12)", color: "#fb923c", borderRadius: 6, padding: "4px 12px", fontSize: 12, fontFamily: "'JetBrains Mono', monospace", display: "inline-block" }}>
-                    -{Math.round(((topDeal.retail_price! - topDeal.current_price!) / topDeal.retail_price!) * 100)}% · Save {fmt(topDeal.retail_price! - topDeal.current_price!)}
+                    {topInfo.value !== null ? `${Math.round(topInfo.value)}% under usual` : `-${Math.round(topInfo.markdown)}%`} · Save {fmt(topInfo.saving)}
                   </div>
                 </div>
                 {topDeal.url && (
@@ -240,8 +222,7 @@ export default function DealsPage() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {restDeals.map((l, i) => {
-              const savings = l.retail_price! - l.current_price!;
-              const pct = Math.round((savings / l.retail_price!) * 100);
+              const info = dealInfo(l);
               return (
                 <div key={l.id} className="deal-row fade-up" style={{ animationDelay: `${0.15 + i * 0.04}s` }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 200 }}>
@@ -256,11 +237,11 @@ export default function DealsPage() {
                   <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 7, justifyContent: "flex-end", marginBottom: 5 }}>
-                        <span style={{ fontWeight: 800, fontSize: 20, color: "#10b981", fontFamily: "'JetBrains Mono', monospace" }}>{fmt(l.current_price!)}</span>
-                        <span className="mono" style={{ fontSize: 12, color: "#2a3248", textDecoration: "line-through" }}>{fmt(l.retail_price!)}</span>
+                        <span style={{ fontWeight: 800, fontSize: 20, color: "#10b981", fontFamily: "'JetBrains Mono', monospace" }}>{fmt(info.price)}</span>
+                        {info.showWas && <span className="mono" style={{ fontSize: 12, color: "#2a3248", textDecoration: "line-through" }}>{fmt(info.retail)}</span>}
                       </div>
                       <div style={{ background: "rgba(251,146,60,0.1)", color: "#fb923c", borderRadius: 5, padding: "3px 9px", fontSize: 11, fontFamily: "'JetBrains Mono', monospace", display: "inline-block" }}>
-                        -{pct}% · {fmt(savings)} off
+                        {info.value !== null ? `${Math.round(info.value)}% under usual` : `-${Math.round(info.markdown)}%`} · save {fmt(info.saving)}
                       </div>
                     </div>
                     {l.url && (
