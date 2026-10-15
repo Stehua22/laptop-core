@@ -1,17 +1,50 @@
 // Runs on YOUR PC: pulls Lenovo / HP / Dell laptops from Best Buy Canada,
 // then sends them to your site (/api/import-laptops) which saves them to Supabase.
 //
-//   $env:CRON_SECRET = "your-secret"
-//   node scripts\import-laptops.mjs --dry     (preview only, nothing is saved)
-//   node scripts\import-laptops.mjs           (import for real)
+//   node scripts\import-laptops.mjs --dry     (preview only, nothing is saved, no secret needed)
+//   node scripts\import-laptops.mjs           (import for real; it asks for your CRON_SECRET)
+//
+// You can also set the secret first so it doesn't ask:  $env:CRON_SECRET = "the-real-value"
 
 const SITE = process.env.SITE_URL || "https://www.laptopcore.ca";
-const SECRET = process.env.CRON_SECRET;
 const DRY = process.argv.includes("--dry");
+let SECRET = process.env.CRON_SECRET;
 
-if (!SECRET) {
-  console.error('Set your secret first:  $env:CRON_SECRET = "your-secret"');
-  process.exit(1);
+// Example text like "YOUR_SECRET" gets pasted by mistake all the time, so ask for the real one instead
+if (!DRY && (!SECRET || /your[_ -]?secret|paste|example|secret[_ -]?here|the-real-value/i.test(SECRET))) {
+  const readline = await import("node:readline/promises");
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  SECRET = (await rl.question("Paste your CRON_SECRET (the same value as in Vercel > Settings > Environment Variables): ")).trim();
+  rl.close();
+}
+
+// Check the secret NOW, so a wrong one fails in a second instead of after minutes of downloading
+if (!DRY) {
+  if (!SECRET) {
+    console.error("No secret entered, so nothing can be saved.");
+    process.exit(1);
+  }
+  let pre;
+  try {
+    pre = await fetch(`${SITE}/api/import-laptops`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${SECRET}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [] }),
+      signal: AbortSignal.timeout(30000),
+    });
+  } catch (e) {
+    console.error(`Could not reach ${SITE}: ${e.message}`);
+    process.exit(1);
+  }
+  if (pre.status === 401) {
+    console.error("\nThat secret was rejected (401). It has to be exactly the CRON_SECRET value in Vercel > Settings > Environment Variables (Production). Nothing was saved.");
+    process.exit(1);
+  }
+  if (!pre.ok) {
+    console.error(`\nThe site replied ${pre.status}. If you just pushed, wait until the latest deploy in Vercel says Ready, then try again.`);
+    process.exit(1);
+  }
+  console.log("Secret accepted. Collecting laptops from Best Buy...\n");
 }
 
 const BRANDS = ["Lenovo", "HP", "Dell", "ASUS", "Acer", "Apple", "Microsoft", "Samsung", "MSI", "Razer", "Gigabyte", "LG"];
@@ -193,6 +226,10 @@ async function main() {
       headers: { Authorization: `Bearer ${SECRET}`, "Content-Type": "application/json" },
       body: JSON.stringify({ items: chunk }),
     });
+    if (res.status === 401) {
+      console.error("\nThe secret was rejected (401) while saving. Nothing more was saved.");
+      process.exit(1);
+    }
     const text = await res.text();
     let json;
     try {

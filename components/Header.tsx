@@ -79,7 +79,7 @@ export default function Header({
         </button>
         <button className="lc-deals-btn" onClick={onDeals}
           style={{ background: "rgba(247,194,106,0.12)", color: "var(--accent-2)", border: "1px solid rgba(247,194,106,0.4)", borderRadius: 10, padding: "11px 22px", fontWeight: 600, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
-          🔥 Crazy Deals
+          🔥 Deals
         </button>
         <button className="lc-add-btn" onClick={onAdd}
           style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-3))", color: "#fff", border: "none", borderRadius: 10, padding: "11px 22px", fontWeight: 700, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 16px rgba(139,179,245,0.3)" }}>
