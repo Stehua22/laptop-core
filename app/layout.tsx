@@ -1,6 +1,7 @@
 ﻿import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import "./globals.css";
+import "./theme-refresh.css";
 import { Analytics } from "@vercel/analytics/react";
 import AIAssistant from '@/components/AIAssistant';
 import TopNav from '@/components/TopNav';
