@@ -1,65 +1,69 @@
 /*
-  LaptopCore theme refresh.
-  Put this file next to globals.css (src/app/theme-refresh.css) and import it
-  AFTER globals.css in layout.tsx. It only redefines the CSS variables your
-  components already use, so no class names or components change.
+  LaptopCore theme refresh v2.
+  Save this as app/theme-refresh.css (replace the old one).
 
-  Rules are written with :not([data-accent]) and :not([data-ui-theme]) so your
-  Settings panel (accent colours and UI themes) keeps working and still wins.
+  v1 only applied when no data-accent / data-ui-theme / data-bg-effect
+  attribute existed, so when your theme script ran after page load and
+  set one of them, the new design switched off. v2 always applies.
+  The neutral colours use !important so inline styles or a script can't undo them.
+  The accent colour still respects a real choice made in Settings.
 */
 
-/* ---------- Shared ---------- */
 :root {
-    --card-radius: 10px;
+    --card-radius: 10px !important;
   }
   
   /* ---------- Light ---------- */
-  :root[data-theme="light"]:not([data-accent]):not([data-ui-theme]) {
-    --bg: #f3f5fa;
-    --background: #f3f5fa;
-    --surface: #ffffff;
-    --surface-2: #f6f7fb;
-    --surface-3: #eceff6;
-    --border: #e0e4ee;
-    --text: #12151f;
-    --text-muted: #667085;
-    --text-dim: #98a1b3;
-  
-    --accent: #4a74e0;
-    --accent-2: #4a74e0;
-    --accent-3: #4a74e0; /* same as accent, so old gradient bars and text become flat */
-  
-    --shadow: 0 1px 2px rgba(18, 21, 31, 0.06);
-    --shadow-lg: 0 8px 28px rgba(18, 21, 31, 0.12);
+  :root[data-theme="light"] {
+    --bg: #f3f5fa !important;
+    --background: #f3f5fa !important;
+    --surface: #ffffff !important;
+    --surface-2: #f6f7fb !important;
+    --surface-3: #eceff6 !important;
+    --border: #e0e4ee !important;
+    --text: #12151f !important;
+    --text-muted: #667085 !important;
+    --text-dim: #98a1b3 !important;
+    --shadow: 0 1px 2px rgba(18, 21, 31, 0.06) !important;
+    --shadow-lg: 0 8px 28px rgba(18, 21, 31, 0.12) !important;
   }
   
-  /* ---------- Dark (your default) ---------- */
-  :root[data-theme="dark"]:not([data-accent]):not([data-ui-theme]) {
-    --bg: #0f1219;
-    --background: #0f1219;
-    --surface: #171b25;
-    --surface-2: #1e2330;
-    --surface-3: #262c3a;
-    --border: #262c3a;
-    --text: #eef0f5;
-    --text-muted: #98a1b3;
-    --text-dim: #6b7385;
-  
-    --accent: #6f93f0;
-    --accent-2: #6f93f0;
-    --accent-3: #6f93f0;
-  
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-    --shadow-lg: 0 10px 32px rgba(0, 0, 0, 0.5);
+  /* ---------- Dark ---------- */
+  :root[data-theme="dark"] {
+    --bg: #0f1219 !important;
+    --background: #0f1219 !important;
+    --surface: #171b25 !important;
+    --surface-2: #1e2330 !important;
+    --surface-3: #262c3a !important;
+    --border: #262c3a !important;
+    --text: #eef0f5 !important;
+    --text-muted: #98a1b3 !important;
+    --text-dim: #6b7385 !important;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35) !important;
+    --shadow-lg: 0 10px 32px rgba(0, 0, 0, 0.5) !important;
   }
   
-  /* ---------- Page background: flat, no grid or glow ---------- */
-  :root[data-theme]:not([data-accent]):not([data-ui-theme]):not([data-bg-effect]) body {
-    background-color: var(--bg);
-    background-image: none;
+  /* ---------- Accent: default blue, unless a real accent is picked in Settings ---------- */
+  :root[data-theme="light"]:not([data-accent]),
+  :root[data-theme="light"][data-accent="default"] {
+    --accent: #4a74e0 !important;
+    --accent-2: #4a74e0 !important;
+    --accent-3: #4a74e0 !important;
   }
-  :root[data-theme]:not([data-accent]):not([data-ui-theme]):not([data-bg-effect]) body::before,
-  :root[data-theme]:not([data-accent]):not([data-ui-theme]):not([data-bg-effect]) body::after {
-    background-image: none;
-    opacity: 0;
+  :root[data-theme="dark"]:not([data-accent]),
+  :root[data-theme="dark"][data-accent="default"] {
+    --accent: #6f93f0 !important;
+    --accent-2: #6f93f0 !important;
+    --accent-3: #6f93f0 !important;
+  }
+  
+  /* ---------- Page background: flat ---------- */
+  body {
+    background-color: var(--bg) !important;
+    background-image: none !important;
+  }
+  body::before,
+  body::after {
+    background-image: none !important;
+    opacity: 0 !important;
   }
