@@ -10,6 +10,9 @@ const SITE_IMAGES_BUCKET = 'site-images';
 // Cache-bust per page load so a browser that cached an old 404 is forced to re-check.
 const logoUrl = `${supabaseBrowser.storage.from(SITE_IMAGES_BUCKET).getPublicUrl('logo.png').data.publicUrl}?t=${Date.now()}`;
 
+// Change this one number to make the logo bigger or smaller.
+const LOGO_HEIGHT = 76;
+
 export default function TopNav() {
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [email, setEmail] = useState<string | null>(null);
@@ -38,15 +41,14 @@ export default function TopNav() {
       style={{
         // sticky (not fixed) — this makes TopNav take up real space in
         // the page flow, so it can never overlap a page's own nav below it.
-        // No paddingTop hacks needed on any page, ever.
         position: 'sticky',
         top: 0,
-        minHeight: 72,
+        minHeight: LOGO_HEIGHT + 16,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 10,
-        padding: '8px 20px',
+        padding: '8px 24px',
         background: 'var(--surface, #0f1220)',
         borderBottom: '1px solid var(--border, rgba(255,255,255,0.06))',
         zIndex: 900,
@@ -58,10 +60,8 @@ export default function TopNav() {
         {logoOk && (
           <img
             src={logoUrl}
-            alt=""
-            width={88}
-            height={88}
-            style={{ objectFit: 'contain', maxHeight: 56, width: 'auto' }}
+            alt="LaptopCore"
+            style={{ height: LOGO_HEIGHT, width: 'auto', maxWidth: 320, objectFit: 'contain', display: 'block' }}
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).style.display = 'none'; // hide instantly, no broken-icon flash
               setLogoOk(false);
@@ -70,35 +70,29 @@ export default function TopNav() {
         )}
       </Link>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         <ThemeToggle />
 
         {loggedIn === null ? null : loggedIn ? (
           <>
             <Link
               href="/premium"
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: '#d97706',
-                textDecoration: 'none',
-              }}
+              style={{ fontSize: 13, fontWeight: 600, color: '#d97706', textDecoration: 'none' }}
             >
-              ⭐ Premium
+              Premium
             </Link>
-            <span className="lc-topnav-email" style={{ fontSize: 13, color: 'inherit', opacity: 0.7 }}>
+            <span className="lc-topnav-email" style={{ fontSize: 13, color: 'var(--text-muted)' }}>
               {email}
             </span>
             <button
               onClick={handleLogout}
               style={{
                 fontSize: 13,
-                border: '1px solid currentColor',
+                border: '1px solid var(--border)',
                 background: 'transparent',
-                color: 'inherit',
-                opacity: 0.8,
-                borderRadius: 6,
-                padding: '5px 10px',
+                color: 'var(--text)',
+                borderRadius: 8,
+                padding: '6px 12px',
                 cursor: 'pointer',
               }}
             >
@@ -109,13 +103,7 @@ export default function TopNav() {
           <>
             <Link
               href="/login"
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: 'inherit',
-                textDecoration: 'none',
-                padding: '6px 10px',
-              }}
+              style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', textDecoration: 'none', padding: '6px 10px' }}
             >
               Log in
             </Link>
@@ -125,10 +113,10 @@ export default function TopNav() {
                 fontSize: 13,
                 fontWeight: 600,
                 color: '#fff',
-                background: 'var(--accent-color, #2563eb)',
+                background: 'var(--accent)',
                 textDecoration: 'none',
-                padding: '6px 14px',
-                borderRadius: 7,
+                padding: '7px 14px',
+                borderRadius: 8,
               }}
             >
               Sign up

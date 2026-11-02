@@ -1,5 +1,5 @@
 /*
-  LaptopCore theme refresh v3.
+  LaptopCore theme refresh (final).
   Save this as app/theme-refresh.css (replace the old one).
 
   v1 only applied when no data-accent / data-ui-theme / data-bg-effect
@@ -68,44 +68,8 @@
     opacity: 0 !important;
   }
   
-  /* ---------- v3: bigger corner logo ---------- */
-  /* Matches your logo image wherever it is used (top-left corner). */
-  img[src*="site-images/logo"] {
-    height: 64px !important;
-    width: auto !important;
-    max-height: none !important;
-    max-width: 260px !important;
-    object-fit: contain !important;
-  }
-  
-  /* ---------- v3: less "AI look" ---------- */
-  /* No gradient text anywhere: titles become plain text colour. */
-  [style*="background-clip"] {
-    background: none !important;
-    -webkit-background-clip: border-box !important;
-    background-clip: border-box !important;
-    -webkit-text-fill-color: currentColor !important;
-    color: var(--text) !important;
-  }
-  
-  /* No glow behind buttons, cards or headings. */
-  button,
-  a,
-  [style*="box-shadow"] {
-    text-shadow: none !important;
-  }
-  button:not(:focus-visible) {
-    box-shadow: none !important;
-  }
-  
-  /* Calmer focus ring instead of a glow. */
+  /* Plain focus outline instead of a glow. */
   :focus-visible {
     outline: 2px solid var(--accent) !important;
     outline-offset: 2px !important;
-    box-shadow: none !important;
-  }
-  
-  /* Tighter, flatter headings. */
-  h1, h2, h3 {
-    letter-spacing: -0.02em;
   }
